@@ -77,7 +77,6 @@ void __htmlParseContent(void *ctx);
  */
 void __xmlGlobalInitMutexLock(void);
 void __xmlGlobalInitMutexUnlock(void);
-void __xmlGlobalInitMutexDestroy(void);
 
 #ifdef IN_LIBXML
 #ifdef __GNUC__
