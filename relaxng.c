@@ -6495,6 +6495,8 @@ xmlRelaxNGParseGrammar(xmlRelaxNGParserCtxtPtr ctxt, xmlNodePtr nodes)
                     ctxt);
     }
 
+    /* @@@@ */
+
     ctxt->grammar = old;
     return (ret);
 }
@@ -8812,6 +8814,8 @@ xmlRelaxNGValidateValue(xmlRelaxNGValidCtxtPtr ctxt,
             }
         case XML_RELAXNG_REF:
         case XML_RELAXNG_PARENTREF:
+	    if (define->content == NULL) {
+	    }
             ret = xmlRelaxNGValidateValue(ctxt, define->content);
             break;
         default:

@@ -95,7 +95,7 @@
  * A couple portability macros
  */
 #ifndef _WINSOCKAPI_
-#ifndef __BEOS__
+#if !defined(__BEOS__) || defined(__HAIKU__)
 #define closesocket(s) close(s)
 #endif
 #define SOCKET int
@@ -844,7 +844,7 @@ xmlNanoHTTPConnectAttempt(struct sockaddr *addr)
 	status = ioctl(s, FIONBIO, &enable);
     }
 #else /* VMS */
-#if defined(__BEOS__)
+#if defined(__BEOS__) && !defined(__HAIKU__)
 	{
 		bool noblock = true;
 		status = setsockopt(s, SOL_SOCKET, SO_NONBLOCK, &noblock, sizeof(noblock));
@@ -1332,13 +1332,23 @@ retry:
     if (headers != NULL)
 	blen += strlen(headers) + 2;
     if (contentType && *contentType)
+	/* reserve for string plus 'Content-Type: \r\n" */
 	blen += strlen(*contentType) + 16;
     if (ctxt->query != NULL)
+	/* 1 for '?' */
 	blen += strlen(ctxt->query) + 1;
     blen += strlen(method) + strlen(ctxt->path) + 24;
 #ifdef HAVE_ZLIB_H
+    /* reserve for possible 'Accept-Encoding: gzip' string */
     blen += 23;
 #endif
+    if (ctxt->port != 80) {
+	/* reserve space for ':xxxxx', incl. potential proxy */
+	if (proxy)
+	    blen += 12;
+	else
+	    blen += 6;
+    }
     bp = (char*)xmlMallocAtomic(blen);
     if ( bp == NULL ) {
         xmlNanoHTTPFreeCtxt( ctxt );
