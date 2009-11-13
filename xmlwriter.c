@@ -626,9 +626,10 @@ xmlTextWriterStartDocument(xmlTextWriterPtr writer, const char *version,
  * xmlTextWriterEndDocument:
  * @writer:  the xmlTextWriterPtr
  *
- * End an xml document. All open elements are closed
+ * End an xml document. All open elements are closed, and
+ * the content is flushed to the output.
  *
- * Returns the bytes written (may be 0 because of buffering) or -1 in case of error
+ * Returns the bytes written or -1 in case of error
  */
 int
 xmlTextWriterEndDocument(xmlTextWriterPtr writer)
@@ -702,6 +703,9 @@ xmlTextWriterEndDocument(xmlTextWriterPtr writer)
             return -1;
         sum += count;
     }
+
+    sum += xmlTextWriterFlush(writer);
+
     return sum;
 }
 
@@ -1236,8 +1240,16 @@ xmlTextWriterFullEndElement(xmlTextWriterPtr writer)
             if (count < 0)
                 return -1;
             sum += count;
+            if (writer->indent)
+                writer->doindent = 0;
             /* fallthrough */
         case XML_TEXTWRITER_TEXT:
+            if ((writer->indent) && (writer->doindent)) {
+                count = xmlTextWriterWriteIndent(writer);
+                sum += count;
+                writer->doindent = 1;
+            } else
+                writer->doindent = 1;
             count = xmlOutputBufferWriteString(writer->out, "</");
             if (count < 0)
                 return -1;
@@ -2610,6 +2622,7 @@ xmlTextWriterStartCDATA(xmlTextWriterPtr writer)
         if (p != 0) {
             switch (p->state) {
                 case XML_TEXTWRITER_NONE:
+		case XML_TEXTWRITER_TEXT:
                 case XML_TEXTWRITER_PI:
                 case XML_TEXTWRITER_PI_TEXT:
                     break;

@@ -1703,7 +1703,7 @@ xmlIconvWrapper(iconv_t cd, unsigned char *out, int *outlen,
     }
     icv_inlen = *inlen;
     icv_outlen = *outlen;
-    ret = iconv(cd, (char **) &icv_in, &icv_inlen, &icv_out, &icv_outlen);
+    ret = iconv(cd, (ICONV_CONST char **) &icv_in, &icv_inlen, &icv_out, &icv_outlen);
     *inlen -= icv_inlen;
     *outlen -= icv_outlen;
     if ((icv_inlen != 0) || (ret == -1)) {
@@ -1768,9 +1768,10 @@ xmlCharEncFirstLine(xmlCharEncodingHandler *handler, xmlBufferPtr out,
      * echo '<?xml version="1.0" encoding="UCS4"?>' | wc -c => 38
      * 45 chars should be sufficient to reach the end of the encoding
      * declaration without going too far inside the document content.
+     * on UTF-16 this means 90bytes, on UCS4 this means 180
      */
-    if (toconv > 45)
-	toconv  = 45;
+    if (toconv > 180)
+	toconv  = 180;
     if (toconv * 2 >= written) {
         xmlBufferGrow(out, toconv);
 	written = out->size - out->use - 1;
@@ -1991,16 +1992,18 @@ retry:
     toconv = in->use;
     if (toconv == 0)
 	return(0);
-    if (toconv * 2 >= written) {
-        xmlBufferGrow(out, toconv * 2);
+    if (toconv * 4 >= written) {
+        xmlBufferGrow(out, toconv * 4);
 	written = out->size - out->use - 1;
     }
     if (handler->output != NULL) {
 	ret = handler->output(&out->content[out->use], &written,
 	                      in->content, &toconv);
-	xmlBufferShrink(in, toconv);
-	out->use += written;
-	writtentot += written;
+	if (written > 0) {
+	    xmlBufferShrink(in, toconv);
+	    out->use += written;
+	    writtentot += written;
+	} 
 	out->content[out->use] = 0;
     }
 #ifdef LIBXML_ICONV_ENABLED

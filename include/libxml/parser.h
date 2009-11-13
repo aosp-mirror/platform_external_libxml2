@@ -297,6 +297,8 @@ struct _xmlParserCtxt {
      */
     xmlError          lastError;
     xmlParserMode     parseMode;    /* the parser mode */
+    unsigned long    nbentities;    /* number of entities references */
+    unsigned long  sizeentities;    /* size of parsed entities */
 };
 
 /**
@@ -592,7 +594,7 @@ typedef void (*cdataBlockSAXFunc) (
  * Display and format a warning messages, callback.
  */
 typedef void (XMLCDECL *warningSAXFunc) (void *ctx,
-				const char *msg, ...);
+				const char *msg, ...) ATTRIBUTE_PRINTF(2,3);
 /**
  * errorSAXFunc:
  * @ctx:  an XML parser context
@@ -602,7 +604,7 @@ typedef void (XMLCDECL *warningSAXFunc) (void *ctx,
  * Display and format an error messages, callback.
  */
 typedef void (XMLCDECL *errorSAXFunc) (void *ctx,
-				const char *msg, ...);
+				const char *msg, ...) ATTRIBUTE_PRINTF(2,3);
 /**
  * fatalErrorSAXFunc:
  * @ctx:  an XML parser context
@@ -614,7 +616,7 @@ typedef void (XMLCDECL *errorSAXFunc) (void *ctx,
  *       get all the callbacks for errors.
  */
 typedef void (XMLCDECL *fatalErrorSAXFunc) (void *ctx,
-				const char *msg, ...);
+				const char *msg, ...) ATTRIBUTE_PRINTF(2,3);
 /**
  * isStandaloneSAXFunc:
  * @ctx:  the user data (XML parser context)
@@ -1089,9 +1091,13 @@ typedef enum {
     XML_PARSE_NSCLEAN	= 1<<13,/* remove redundant namespaces declarations */
     XML_PARSE_NOCDATA	= 1<<14,/* merge CDATA as text nodes */
     XML_PARSE_NOXINCNODE= 1<<15,/* do not generate XINCLUDE START/END nodes */
-    XML_PARSE_COMPACT   = 1<<16 /* compact small text nodes; no modification of
+    XML_PARSE_COMPACT   = 1<<16,/* compact small text nodes; no modification of
                                    the tree allowed afterwards (will possibly
 				   crash if you try to modify the tree) */
+    XML_PARSE_OLD10	= 1<<17,/* parse using XML-1.0 before update 5 */
+    XML_PARSE_NOBASEFIX = 1<<18,/* do not fixup XINCLUDE xml:base uris */
+    XML_PARSE_HUGE      = 1<<19, /* relax any hardcoded limit from the parser */
+    XML_PARSE_OLDSAX    = 1<<20 /* parse using SAX2 interface from before 2.7.0 */
 } xmlParserOption;
 
 XMLPUBFUN void XMLCALL
