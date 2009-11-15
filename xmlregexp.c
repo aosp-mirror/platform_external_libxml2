@@ -1532,6 +1532,8 @@ xmlFAGenerateCountedTransition(xmlRegParserCtxtPtr ctxt,
 static int
 xmlFAGenerateTransitions(xmlRegParserCtxtPtr ctxt, xmlRegStatePtr from,
 	                 xmlRegStatePtr to, xmlRegAtomPtr atom) {
+    xmlRegStatePtr end;
+
     if (atom == NULL) {
 	ERROR("genrate transition: atom == NULL");
 	return(-1);
@@ -1689,12 +1691,31 @@ xmlFAGenerateTransitions(xmlRegParserCtxtPtr ctxt, xmlRegStatePtr from,
 	else {
 	    return(-1);
 	}
+    } 
+    end = to;
+    if ((atom->quant == XML_REGEXP_QUANT_MULT) || 
+        (atom->quant == XML_REGEXP_QUANT_PLUS)) {
+	/*
+	 * Do not pollute the target state by adding transitions from
+	 * it as it is likely to be the shared target of multiple branches.
+	 * So isolate with an epsilon transition.
+	 */
+        xmlRegStatePtr tmp;
+	
+	tmp = xmlRegNewState(ctxt);
+	if (tmp != NULL)
+	    xmlRegStatePush(ctxt, tmp);
+	else {
+	    return(-1);
+	}
+	xmlFAGenerateEpsilonTransition(ctxt, tmp, to);
+	to = tmp;
     }
     if (xmlRegAtomPush(ctxt, atom) < 0) {
 	return(-1);
     }
     xmlRegStateAddTrans(ctxt, from, atom, to, -1, -1);
-    ctxt->state = to;
+    ctxt->state = end;
     switch (atom->quant) {
 	case XML_REGEXP_QUANT_OPT:
 	    atom->quant = XML_REGEXP_QUANT_ONCE;
@@ -3141,7 +3162,8 @@ xmlFARegExec(xmlRegexpPtr comp, const xmlChar *content) {
 	exec->counts = NULL;
     while ((exec->status == 0) &&
 	   ((exec->inputString[exec->index] != 0) ||
-	    (exec->state->type != XML_REGEXP_FINAL_STATE))) {
+	    ((exec->state != NULL) &&
+	     (exec->state->type != XML_REGEXP_FINAL_STATE)))) {
 	xmlRegTransPtr trans;
 	xmlRegAtomPtr atom;
 
@@ -4885,64 +4907,6 @@ xmlFAParseCharClassEsc(xmlRegParserCtxtPtr ctxt) {
 }
 
 /**
- * xmlFAParseCharRef:
- * @ctxt:  a regexp parser context
- *
- * [19]   XmlCharRef   ::=   ( '&#' [0-9]+ ';' ) | (' &#x' [0-9a-fA-F]+ ';' )
- */
-static int
-xmlFAParseCharRef(xmlRegParserCtxtPtr ctxt) {
-    int ret = 0, cur;
-
-    if ((CUR != '&') || (NXT(1) != '#'))
-	return(-1);
-    NEXT;
-    NEXT;
-    cur = CUR;
-    if (cur == 'x') {
-	NEXT;
-	cur = CUR;
-	if (((cur >= '0') && (cur <= '9')) ||
-	    ((cur >= 'a') && (cur <= 'f')) ||
-	    ((cur >= 'A') && (cur <= 'F'))) {
-	    while (((cur >= '0') && (cur <= '9')) ||
-	           ((cur >= 'a') && (cur <= 'f')) ||
-		   ((cur >= 'A') && (cur <= 'F'))) {
-		if ((cur >= '0') && (cur <= '9'))
-		    ret = ret * 16 + cur - '0';
-		else if ((cur >= 'a') && (cur <= 'f'))
-		    ret = ret * 16 + 10 + (cur - 'a');
-		else
-		    ret = ret * 16 + 10 + (cur - 'A');
-		NEXT;
-		cur = CUR;
-	    }
-	} else {
-	    ERROR("Char ref: expecting [0-9A-F]");
-	    return(-1);
-	}
-    } else {
-	if ((cur >= '0') && (cur <= '9')) {
-	    while ((cur >= '0') && (cur <= '9')) {
-		ret = ret * 10 + cur - '0';
-		NEXT;
-		cur = CUR;
-	    }
-	} else {
-	    ERROR("Char ref: expecting [0-9]");
-	    return(-1);
-	}
-    }
-    if (cur != ';') {
-	ERROR("Char ref: expecting ';'");
-	return(-1);
-    } else {
-	NEXT;
-    }
-    return(ret);
-}
-
-/**
  * xmlFAParseCharRange:
  * @ctxt:  a regexp parser context
  *
@@ -4963,12 +4927,6 @@ xmlFAParseCharRange(xmlRegParserCtxtPtr ctxt) {
 	return;
     }
 
-    if ((CUR == '&') && (NXT(1) == '#')) {
-	end = start = xmlFAParseCharRef(ctxt);
-        xmlRegAtomAddRange(ctxt, ctxt->atom, ctxt->neg,
-	                   XML_REGEXP_CHARVAL, start, end, NULL);
-	return;
-    }
     cur = CUR;
     if (cur == '\\') {
 	NEXT;
@@ -5052,7 +5010,7 @@ xmlFAParseCharRange(xmlRegParserCtxtPtr ctxt) {
 static void
 xmlFAParsePosCharGroup(xmlRegParserCtxtPtr ctxt) {
     do {
-	if ((CUR == '\\') || (CUR == '.')) {
+	if (CUR == '\\') {
 	    xmlFAParseCharClassEsc(ctxt);
 	} else {
 	    xmlFAParseCharRange(ctxt);

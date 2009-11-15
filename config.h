@@ -1,3 +1,7 @@
+/* config.h.  Generated from config.h.in by configure.  */
+/* config.h.in.  Generated from configure.in by autoheader.  */
+#define PACKAGE "libxml2"
+#define VERSION "2.7.3"
 /* #undef HAVE_LIBZ */
 /* #undef HAVE_LIBM */
 #define HAVE_ISINF 
@@ -71,7 +75,7 @@
 #define HAVE_FTIME 1
 
 /* Define if getaddrinfo is there */
-/* #undef HAVE_GETADDRINFO */
+/* #undef HAVE_GETADDRINFO  */
 
 /* Define to 1 if you have the `gettimeofday' function. */
 #define HAVE_GETTIMEOFDAY 1
@@ -81,6 +85,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
+
+/* Define to 1 if you have the <inttypes.h.h> header file. */
+/* #undef HAVE_INTTYPES_H_H */
 
 /* Define if isinf is there */
 #define HAVE_ISINF 
@@ -101,13 +108,16 @@
 /* #undef HAVE_LIBREADLINE */
 
 /* Have compression library */
-//#define HAVE_LIBZ 1
+/* #undef HAVE_LIBZ */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
 
 /* Define to 1 if you have the `localtime' function. */
 #define HAVE_LOCALTIME 1
+
+/* Define to 1 if you have the <malloc.h> header file. */
+/* #undef HAVE_MALLOC_H 1 Already defined in AndroidConfig.h */
 
 /* Define to 1 if you have the <math.h> header file. */
 #define HAVE_MATH_H 1
@@ -232,10 +242,61 @@
 #define HAVE_VSPRINTF 1
 
 /* Define to 1 if you have the <zlib.h> header file. */
-//#define HAVE_ZLIB_H 1
+/* #undef HAVE_ZLIB_H */
 
 /* Define to 1 if you have the `_stat' function. */
 /* #undef HAVE__STAT */
 
 /* Whether __va_copy() is available */
 /* #undef HAVE___VA_COPY */
+
+/* Define as const if the declaration of iconv() needs const. */
+/* #undef ICONV_CONST */
+
+/* Name of package */
+#define PACKAGE "libxml2"
+
+/* Define to the address where bug reports for this package should be sent. */
+#define PACKAGE_BUGREPORT ""
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME ""
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING ""
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME ""
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION ""
+
+/* Define to 1 if the C compiler supports function prototypes. */
+#define PROTOTYPES 1
+
+/* Define to 1 if you have the ANSI C header files. */
+#define STDC_HEADERS 1
+
+/* Support for IPv6 */
+/* #undef SUPPORT_IP6 */
+
+/* Version number of package */
+#define VERSION "2.7.3"
+
+/* Determine what socket length (socklen_t) data type is */
+#define XML_SOCKLEN_T socklen_t
+
+/* Using the Win32 Socket implementation */
+/* #undef _WINSOCKAPI_ */
+
+/* Define like PROTOTYPES; this can be used by system headers. */
+#define __PROTOTYPES 1
+
+/* Win32 Std C name mangling work-around */
+/* #undef snprintf */
+
+/* ss_family is not defined here, use __ss_family instead */
+/* #undef ss_family */
+
+/* Win32 Std C name mangling work-around */
+/* #undef vsnprintf */

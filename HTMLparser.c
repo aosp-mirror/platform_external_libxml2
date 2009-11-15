@@ -2143,6 +2143,7 @@ htmlNewDocNoDtD(const xmlChar *URI, const xmlChar *ExternalID) {
     cur->refs = NULL;
     cur->_private = NULL;
     cur->charset = XML_CHAR_ENCODING_UTF8;
+    cur->properties = XML_DOC_HTML | XML_DOC_USERBUILT;
     if ((ExternalID != NULL) ||
 	(URI != NULL))
 	xmlCreateIntSubset(cur, BAD_CAST "html", ExternalID, URI);
@@ -2767,6 +2768,7 @@ htmlParseCharData(htmlParserCtxtPtr ctxt) {
     xmlChar buf[HTML_PARSER_BIG_BUFFER_SIZE + 5];
     int nbchar = 0;
     int cur, l;
+    int chunk = 0;
 
     SHRINK;
     cur = CUR_CHAR(l);
@@ -2797,6 +2799,12 @@ htmlParseCharData(htmlParserCtxtPtr ctxt) {
 	    nbchar = 0;
 	}
 	NEXTL(l);
+        chunk++;
+        if (chunk > HTML_PARSER_BUFFER_SIZE) {
+            chunk = 0;
+            SHRINK;
+            GROW;
+        }
 	cur = CUR_CHAR(l);
 	if (cur == 0) {
 	    SHRINK;
@@ -3115,9 +3123,9 @@ htmlParseCharRef(htmlParserCtxtPtr ctxt) {
 	        val = val * 16 + (CUR - 'A') + 10;
 	    else {
 	        htmlParseErr(ctxt, XML_ERR_INVALID_HEX_CHARREF,
-		             "htmlParseCharRef: invalid hexadecimal value\n",
+		             "htmlParseCharRef: missing semicolumn\n",
 			     NULL, NULL);
-		return(0);
+		break;
 	    }
 	    NEXT;
 	}
@@ -3130,9 +3138,9 @@ htmlParseCharRef(htmlParserCtxtPtr ctxt) {
 	        val = val * 10 + (CUR - '0');
 	    else {
 	        htmlParseErr(ctxt, XML_ERR_INVALID_DEC_CHARREF,
-		             "htmlParseCharRef: invalid decimal value\n",
+		             "htmlParseCharRef: missing semicolumn\n",
 			     NULL, NULL);
-		return(0);
+		break;
 	    }
 	    NEXT;
 	}
@@ -3423,7 +3431,7 @@ htmlCheckMeta(htmlParserCtxtPtr ctxt, const xmlChar **atts) {
  *
  * [NS 10] EmptyElement ::= '<' QName (S Attribute)* S? '/>'
  *
- * Returns 0 in case of success and -1 in case of error.
+ * Returns 0 in case of success, -1 in case of error and 1 if discarded
  */
 
 static int
@@ -3436,6 +3444,7 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
     int maxatts;
     int meta = 0;
     int i;
+    int discardtag = 0;
 
     if ((ctxt == NULL) || (ctxt->input == NULL)) {
 	htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
@@ -3480,14 +3489,16 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
 	htmlParseErr(ctxt, XML_HTML_STRUCURE_ERROR,
 	             "htmlParseStartTag: misplaced <html> tag\n",
 		     name, NULL);
-	return 0;
+	discardtag = 1;
+	ctxt->depth++;
     }
     if ((ctxt->nameNr != 1) && 
 	(xmlStrEqual(name, BAD_CAST"head"))) {
 	htmlParseErr(ctxt, XML_HTML_STRUCURE_ERROR,
 	             "htmlParseStartTag: misplaced <head> tag\n",
 		     name, NULL);
-	return 0;
+	discardtag = 1;
+	ctxt->depth++;
     }
     if (xmlStrEqual(name, BAD_CAST"body")) {
 	int indx;
@@ -3496,9 +3507,8 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
 		htmlParseErr(ctxt, XML_HTML_STRUCURE_ERROR,
 		             "htmlParseStartTag: misplaced <body> tag\n",
 			     name, NULL);
-		while ((IS_CHAR_CH(CUR)) && (CUR != '>'))
-		    NEXT;
-		return 0;
+		discardtag = 1;
+		ctxt->depth++;
 	    }
 	}
     }
@@ -3597,12 +3607,14 @@ failed:
     /*
      * SAX: Start of Element !
      */
-    htmlnamePush(ctxt, name);
-    if ((ctxt->sax != NULL) && (ctxt->sax->startElement != NULL)) {
-	if (nbatts != 0)
-            ctxt->sax->startElement(ctxt->userData, name, atts);
-	else
-            ctxt->sax->startElement(ctxt->userData, name, NULL);
+    if (!discardtag) {
+	htmlnamePush(ctxt, name);
+	if ((ctxt->sax != NULL) && (ctxt->sax->startElement != NULL)) {
+	    if (nbatts != 0)
+		ctxt->sax->startElement(ctxt->userData, name, atts);
+	    else
+		ctxt->sax->startElement(ctxt->userData, name, NULL);
+	}
     }
 
     if (atts != NULL) {
@@ -3612,7 +3624,7 @@ failed:
 	}
     }
 
-    return 0;
+    return(discardtag);
 }
 
 /**
@@ -3647,7 +3659,6 @@ htmlParseEndTag(htmlParserCtxtPtr ctxt)
     name = htmlParseHTMLName(ctxt);
     if (name == NULL)
         return (0);
-
     /*
      * We should definitely be at the ending "S? '>'" part
      */
@@ -3666,6 +3677,18 @@ htmlParseEndTag(htmlParserCtxtPtr ctxt)
 	}
     } else
         NEXT;
+
+    /*
+     * if we ignored misplaced tags in htmlParseStartTag don't pop them
+     * out now.
+     */
+    if ((ctxt->depth > 0) &&
+        (xmlStrEqual(name, BAD_CAST "html") ||
+         xmlStrEqual(name, BAD_CAST "body") ||
+	 xmlStrEqual(name, BAD_CAST "head"))) {
+	ctxt->depth--;
+	return (0);
+    }
 
     /*
      * If the name read is not one of the element in the parsing stack
@@ -3991,7 +4014,7 @@ htmlParseElement(htmlParserCtxtPtr ctxt) {
 
     failed = htmlParseStartTag(ctxt);
     name = ctxt->name;
-    if (failed || (name == NULL)) {
+    if ((failed == -1) || (name == NULL)) {
 	if (CUR == '>')
 	    NEXT;
         return;
@@ -4097,6 +4120,8 @@ htmlParseElement(htmlParserCtxtPtr ctxt) {
 
 int
 htmlParseDocument(htmlParserCtxtPtr ctxt) {
+    xmlChar start[4];
+    xmlCharEncoding enc;
     xmlDtdPtr dtd;
 
     xmlInitParser();
@@ -4115,6 +4140,23 @@ htmlParseDocument(htmlParserCtxtPtr ctxt) {
      */
     if ((ctxt->sax) && (ctxt->sax->setDocumentLocator))
         ctxt->sax->setDocumentLocator(ctxt->userData, &xmlDefaultSAXLocator);
+
+    if ((ctxt->encoding == (const xmlChar *)XML_CHAR_ENCODING_NONE) &&
+        ((ctxt->input->end - ctxt->input->cur) >= 4)) {
+	/*
+	 * Get the 4 first bytes and decode the charset
+	 * if enc != XML_CHAR_ENCODING_NONE
+	 * plug some encoding conversion routines.
+	 */
+	start[0] = RAW;
+	start[1] = NXT(1);
+	start[2] = NXT(2);
+	start[3] = NXT(3);
+	enc = xmlDetectCharEncoding(&start[0], 4);
+	if (enc != XML_CHAR_ENCODING_NONE) {
+	    xmlSwitchEncoding(ctxt, enc);
+	}
+    }
 
     /*
      * Wipe out everything which is before the first '<'
@@ -4135,10 +4177,10 @@ htmlParseDocument(htmlParserCtxtPtr ctxt) {
     while (((CUR == '<') && (NXT(1) == '!') &&
             (NXT(2) == '-') && (NXT(3) == '-')) ||
 	   ((CUR == '<') && (NXT(1) == '?'))) {
-        htmlParseComment(ctxt);	   
-        htmlParsePI(ctxt);	   
+        htmlParseComment(ctxt);
+        htmlParsePI(ctxt);
 	SKIP_BLANKS;
-    }	   
+    }
 
 
     /*
@@ -4893,7 +4935,7 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 
 		failed = htmlParseStartTag(ctxt);
 		name = ctxt->name;
-		if (failed ||
+		if ((failed == -1) ||
 		    (name == NULL)) {
 		    if (CUR == '>')
 			NEXT;
@@ -5957,8 +5999,12 @@ htmlDoRead(htmlParserCtxtPtr ctxt, const char *URL, const char *encoding,
         xmlCharEncodingHandlerPtr hdlr;
 
 	hdlr = xmlFindCharEncodingHandler(encoding);
-	if (hdlr != NULL)
+	if (hdlr != NULL) {
 	    xmlSwitchToEncoding(ctxt, hdlr);
+	    if (ctxt->input->encoding != NULL)
+	      xmlFree((xmlChar *) ctxt->input->encoding);
+            ctxt->input->encoding = xmlStrdup((xmlChar *)encoding);
+        }
     }
     if ((URL != NULL) && (ctxt->input != NULL) &&
         (ctxt->input->filename == NULL))
