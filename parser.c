@@ -937,6 +937,12 @@ xmlHasFeature(xmlFeature feature)
 #else
             return(0);
 #endif
+        case XML_WITH_ICU:
+#ifdef LIBXML_ICU_ENABLED
+            return(1);
+#else
+            return(0);
+#endif
         default:
 	    break;
      }
@@ -8189,6 +8195,7 @@ xmlGetNamespace(xmlParserCtxtPtr ctxt, const xmlChar *prefix) {
 	        return(NULL);
 	    return(ctxt->nsTab[i + 1]);
 	}
+    if (ctxt->nsParent) return xmlGetNamespace(ctxt->nsParent, prefix);
     return(NULL);
 }
 
@@ -12537,6 +12544,8 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
     ctxt->str_xml = xmlDictLookup(ctxt->dict, BAD_CAST "xml", 3);
     ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
     ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
+
+    ctxt->nsParent = oldctxt;
 
     oldsax = ctxt->sax;
     ctxt->sax = oldctxt->sax;

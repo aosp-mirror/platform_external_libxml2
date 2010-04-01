@@ -276,6 +276,7 @@ struct _xmlParserCtxt {
     int                nsNr;          /* the number of inherited namespaces */
     int                nsMax;         /* the size of the arrays */
     const xmlChar *   *nsTab;         /* the array of prefix/namespace name */
+    struct _xmlParserCtxt *nsParent;  /* parent context to inherit namespaces from * */
     int               *attallocs;     /* which attribute were allocated */
     void *            *pushTab;       /* array of data for push */
     xmlHashTablePtr    attsDefault;   /* defaulted attributes if any */
@@ -1213,6 +1214,7 @@ typedef enum {
     XML_WITH_DEBUG_MEM = 29,
     XML_WITH_DEBUG_RUN = 30,
     XML_WITH_ZLIB = 31,
+    XML_WITH_ICU = 32,
     XML_WITH_NONE = 99999 /* just to be sure of allocation size */
 } xmlFeature;
 
@@ -1223,4 +1225,3 @@ XMLPUBFUN int XMLCALL
 }
 #endif
 #endif /* __XML_PARSER_H__ */
-
