@@ -102,7 +102,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the DOM like tree manipulation API support is configured in
  */
-#if 0
+#if 1
 #define LIBXML_TREE_ENABLED
 #endif
 
@@ -237,7 +237,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether XPath is configured in
  */
-#if 0
+#if 1
 #define LIBXML_XPATH_ENABLED
 #endif
 
@@ -246,7 +246,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether XPointer is configured in
  */
-#if 0
+#if 1
 #define LIBXML_XPTR_ENABLED
 #endif
 
@@ -336,7 +336,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the automata interfaces are compiled in
  */
-#if 0
+#if 1
 #define LIBXML_AUTOMATA_ENABLED
 #endif
 
@@ -372,7 +372,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the module interfaces are compiled in
  */
-#if 0
+#if 1
 #define LIBXML_MODULES_ENABLED
 /**
  * LIBXML_MODULE_EXTENSION:
