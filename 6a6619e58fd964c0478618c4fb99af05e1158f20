@@ -1,0 +1,8 @@
+Change-Id: I6a6619e58fd964c0478618c4fb99af05e1158f20
+Code-Review+2: Jean-Baptiste Queru <jbq@google.com>
+Verified+1: Jean-Baptiste Queru <jbq@google.com>
+Submitted-by: Jean-Baptiste Queru <jbq@google.com>
+Submitted-at: Wed, 18 Mar 2009 18:05:22 -0700
+Reviewed-on: https://review.source.android.com/9279
+Project: platform/external/libxml2
+Branch: refs/heads/master
