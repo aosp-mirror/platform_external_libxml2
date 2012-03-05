@@ -1105,24 +1105,33 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
 	return;
     }
 
+#ifdef LIBXML_HTML_ENABLED
+    if ((ctxt->html) &&
+        (value == NULL) && (htmlIsBooleanAttr(fullname))) {
+            nval = xmlStrdup(fullname);
+            value = (const xmlChar *) nval;
+    } else
+#endif
+    {
 #ifdef LIBXML_VALID_ENABLED
-    /*
-     * Do the last stage of the attribute normalization
-     * Needed for HTML too:
-     *   http://www.w3.org/TR/html4/types.html#h-6.2
-     */
-    ctxt->vctxt.valid = 1;
-    nval = xmlValidCtxtNormalizeAttributeValue(&ctxt->vctxt,
-	                                   ctxt->myDoc, ctxt->node,
-					   fullname, value);
-    if (ctxt->vctxt.valid != 1) {
-	ctxt->valid = 0;
-    }
-    if (nval != NULL)
-	value = nval;
+        /*
+         * Do the last stage of the attribute normalization
+         * Needed for HTML too:
+         *   http://www.w3.org/TR/html4/types.html#h-6.2
+         */
+        ctxt->vctxt.valid = 1;
+        nval = xmlValidCtxtNormalizeAttributeValue(&ctxt->vctxt,
+                                               ctxt->myDoc, ctxt->node,
+                                               fullname, value);
+        if (ctxt->vctxt.valid != 1) {
+            ctxt->valid = 0;
+        }
+        if (nval != NULL)
+            value = nval;
 #else
-    nval = NULL;
+        nval = NULL;
 #endif /* LIBXML_VALID_ENABLED */
+    }
 
     /*
      * Check whether it's a namespace definition
@@ -1246,30 +1255,32 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
     }
 
     if (ns != NULL) {
-	xmlAttrPtr prop;
 	namespace = xmlSearchNs(ctxt->myDoc, ctxt->node, ns);
+
 	if (namespace == NULL) {
 	    xmlNsErrMsg(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
 		    "Namespace prefix %s of attribute %s is not defined\n",
 		             ns, name);
-	}
+	} else {
+            xmlAttrPtr prop;
 
-	prop = ctxt->node->properties;
-	while (prop != NULL) {
-	    if (prop->ns != NULL) {
-		if ((xmlStrEqual(name, prop->name)) &&
-		    ((namespace == prop->ns) ||
-		     (xmlStrEqual(namespace->href, prop->ns->href)))) {
-			xmlNsErrMsg(ctxt, XML_ERR_ATTRIBUTE_REDEFINED,
-			        "Attribute %s in %s redefined\n",
-			                 name, namespace->href);
-		    ctxt->wellFormed = 0;
-		    if (ctxt->recovery == 0) ctxt->disableSAX = 1;
-		    goto error;
-		}
-	    }
-	    prop = prop->next;
-	}
+            prop = ctxt->node->properties;
+            while (prop != NULL) {
+                if (prop->ns != NULL) {
+                    if ((xmlStrEqual(name, prop->name)) &&
+                        ((namespace == prop->ns) ||
+                         (xmlStrEqual(namespace->href, prop->ns->href)))) {
+                            xmlNsErrMsg(ctxt, XML_ERR_ATTRIBUTE_REDEFINED,
+                                    "Attribute %s in %s redefined\n",
+                                             name, namespace->href);
+                        ctxt->wellFormed = 0;
+                        if (ctxt->recovery == 0) ctxt->disableSAX = 1;
+                        goto error;
+                    }
+                }
+                prop = prop->next;
+            }
+        }
     } else {
 	namespace = NULL;
     }
@@ -1420,6 +1431,10 @@ process_external_subset:
 		    } else {
 			fulln = xmlStrdup(attr->name);
 		    }
+                    if (fulln == NULL) {
+                        xmlSAX2ErrMemory(ctxt, "xmlSAX2StartElement");
+                        break;
+                    }
 
 		    /*
 		     * Check that the attribute is not declared in the
@@ -1442,6 +1457,7 @@ process_external_subset:
 				    (const char *)fulln,
 				    (const char *)attr->elem);
 		    }
+                    xmlFree(fulln);
 		}
 		attr = attr->nexth;
 	    }
@@ -2147,6 +2163,7 @@ xmlSAX2StartElementNs(void *ctx,
     xmlNodePtr parent;
     xmlNsPtr last = NULL, ns;
     const xmlChar *uri, *pref;
+    xmlChar *lname = NULL;
     int i, j;
 
     if (ctx == NULL) return;
@@ -2166,6 +2183,20 @@ xmlSAX2StartElementNs(void *ctx,
     }
 
     /*
+     * Take care of the rare case of an undefined namespace prefix
+     */
+    if ((prefix != NULL) && (URI == NULL)) {
+        if (ctxt->dictNames) {
+	    const xmlChar *fullname;
+
+	    fullname = xmlDictQLookup(ctxt->dict, prefix, localname);
+	    if (fullname != NULL)
+	        localname = fullname;
+	} else {
+	    lname = xmlBuildQName(localname, prefix, NULL, 0);
+	}
+    }
+    /*
      * allocate the node
      */
     if (ctxt->freeElems != NULL) {
@@ -2178,7 +2209,10 @@ xmlSAX2StartElementNs(void *ctx,
 	if (ctxt->dictNames)
 	    ret->name = localname;
 	else {
-	    ret->name = xmlStrdup(localname);
+	    if (lname == NULL)
+		ret->name = xmlStrdup(localname);
+	    else
+	        ret->name = lname;
 	    if (ret->name == NULL) {
 	        xmlSAX2ErrMemory(ctxt, "xmlSAX2StartElementNs");
 		return;
@@ -2190,8 +2224,11 @@ xmlSAX2StartElementNs(void *ctx,
 	if (ctxt->dictNames)
 	    ret = xmlNewDocNodeEatName(ctxt->myDoc, NULL, 
 	                               (xmlChar *) localname, NULL);
-	else
+	else if (lname == NULL)
 	    ret = xmlNewDocNode(ctxt->myDoc, NULL, localname, NULL);
+	else
+	    ret = xmlNewDocNodeEatName(ctxt->myDoc, NULL, 
+	                               (xmlChar *) lname, NULL);
 	if (ret == NULL) {
 	    xmlSAX2ErrMemory(ctxt, "xmlSAX2StartElementNs");
 	    return;
@@ -2226,8 +2263,12 @@ xmlSAX2StartElementNs(void *ctx,
 	    if ((URI != NULL) && (prefix == pref))
 		ret->ns = ns;
 	} else {
-	    xmlSAX2ErrMemory(ctxt, "xmlSAX2StartElementNs");
-	    return;
+            /*
+             * any out of memory error would already have been raised
+             * but we can't be garanteed it's the actual error due to the
+             * API, best is to skip in this case
+             */
+	    continue;
 	}
 #ifdef LIBXML_VALID_ENABLED
 	if ((!ctxt->html) && ctxt->validate && ctxt->wellFormed &&
@@ -2278,9 +2319,14 @@ xmlSAX2StartElementNs(void *ctx,
 	        xmlSAX2ErrMemory(ctxt, "xmlSAX2StartElementNs");
 		return;
 	    }
-	    xmlNsWarnMsg(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
-			"Namespace prefix %s was not found\n",
-			prefix, NULL);
+            if (prefix != NULL)
+                xmlNsWarnMsg(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
+                             "Namespace prefix %s was not found\n",
+                             prefix, NULL);
+            else
+                xmlNsWarnMsg(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
+                             "Namespace default prefix was not found\n",
+                             NULL, NULL);
 	}
     }
 
@@ -2289,8 +2335,33 @@ xmlSAX2StartElementNs(void *ctx,
      */
     if (nb_attributes > 0) {
         for (j = 0,i = 0;i < nb_attributes;i++,j+=5) {
+	    /*
+	     * Handle the rare case of an undefined atribute prefix
+	     */
+	    if ((attributes[j+1] != NULL) && (attributes[j+2] == NULL)) {
+		if (ctxt->dictNames) {
+		    const xmlChar *fullname;
+
+		    fullname = xmlDictQLookup(ctxt->dict, attributes[j+1],
+		                              attributes[j]);
+		    if (fullname != NULL) {
+			xmlSAX2AttributeNs(ctxt, fullname, NULL,
+			                   attributes[j+3], attributes[j+4]);
+		        continue;
+		    }
+		} else {
+		    lname = xmlBuildQName(attributes[j], attributes[j+1],
+		                          NULL, 0);
+		    if (lname != NULL) {
+			xmlSAX2AttributeNs(ctxt, lname, NULL,
+			                   attributes[j+3], attributes[j+4]);
+			xmlFree(lname);
+		        continue;
+		    }
+		}
+	    }
 	    xmlSAX2AttributeNs(ctxt, attributes[j], attributes[j+1],
-	                       attributes[j+3], attributes[j+4]);
+			       attributes[j+3], attributes[j+4]);
 	}
     }
 
@@ -2554,7 +2625,6 @@ xmlSAX2ProcessingInstruction(void *ctx, const xmlChar *target,
 
     ret = xmlNewDocPI(ctxt->myDoc, target, data);
     if (ret == NULL) return;
-    parent = ctxt->node;
 
     if (ctxt->linenumbers) {
 	if (ctxt->input != NULL) {

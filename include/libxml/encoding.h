@@ -26,24 +26,9 @@
 
 #ifdef LIBXML_ICONV_ENABLED
 #include <iconv.h>
-#else
+#endif
 #ifdef LIBXML_ICU_ENABLED
 #include <unicode/ucnv.h>
-#if 0
-/* Forward-declare UConverter here rather than pulling in <unicode/ucnv.h>
- * to prevent unwanted ICU symbols being exposed to users of libxml2.
- * One particular case is Qt4 conflicting on UChar32.
- */
-#include <stdint.h>
-struct UConverter;
-typedef struct UConverter UConverter;
-#ifdef _MSC_VER
-typedef wchar_t UChar;
-#else
-typedef uint16_t UChar;
-#endif
-#endif
-#endif
 #endif
 #ifdef __cplusplus
 extern "C" {
