@@ -46,7 +46,8 @@ common_SRC_FILES := \
 	xmlsave.c \
 	xmlmodule.c \
 	xmlwriter.c \
-	schematron.c
+	schematron.c \
+	buf.c \
 
 common_C_INCLUDES += \
 	$(LOCAL_PATH)/include
