@@ -52,13 +52,12 @@ common_SRC_FILES := \
 common_C_INCLUDES += \
 	$(LOCAL_PATH)/include
 
-# Turn off warnings to prevent log message spam
-# These warnings are not disabled because they are not supported by gcc 4.2.1
-# which is used by darwin.
-# -Wno-enum-compare
-# -Wno-array-bounds
-
+# Turn off warnings to prevent log message spam. Set unknown-warning to
+# no-error to prevent exit when GCC does not understand warning options.
 DISABLED_WARNING_FLAGS := \
+	-Wno-error=unknown-warning \
+	-Wno-enum-compare \
+	-Wno-array-bounds \
 	-Wno-format \
 	-Wno-pointer-sign \
 	-Wno-sign-compare
