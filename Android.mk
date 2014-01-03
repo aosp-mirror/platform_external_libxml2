@@ -53,8 +53,6 @@ common_C_INCLUDES += \
 
 # Turn off warnings to prevent log message spam
 DISABLED_WARNING_FLAGS := \
-	-Wno-array-bounds \
-	-Wno-enum-compare \
 	-Wno-format \
 	-Wno-pointer-sign \
 	-Wno-sign-compare
