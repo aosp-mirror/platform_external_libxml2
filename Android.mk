@@ -1,3 +1,4 @@
+#test
 LOCAL_PATH:= $(call my-dir)
 
 # We need to build this for both the device (as a shared library)
