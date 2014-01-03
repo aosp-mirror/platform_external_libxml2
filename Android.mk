@@ -52,9 +52,12 @@ common_C_INCLUDES += \
 	$(LOCAL_PATH)/include
 
 # Turn off warnings to prevent log message spam
+# These warnings are not disabled because they are not supported by gcc 4.2.1
+# which is used by darwin.
+# -Wno-enum-compare
+# -Wno-array-bounds
+
 DISABLED_WARNING_FLAGS := \
-	-Wno-array-bounds \
-	-Wno-enum-compare \
 	-Wno-format \
 	-Wno-pointer-sign \
 	-Wno-sign-compare
