@@ -255,7 +255,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether XInclude is configured in
  */
-#if 0
+#if 1
 #define LIBXML_XINCLUDE_ENABLED
 #endif
 
