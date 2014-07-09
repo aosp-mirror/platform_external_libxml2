@@ -49,7 +49,8 @@ common_SRC_FILES := \
 	schematron.c
 
 common_C_INCLUDES += \
-	$(LOCAL_PATH)/include
+	$(LOCAL_PATH)/include \
+	external/icu/icu4c/source/common \
 
 # Turn off warnings to prevent log message spam
 # These warnings are not disabled because they are not supported by gcc 4.2.1
@@ -68,7 +69,7 @@ DISABLED_WARNING_FLAGS := \
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := $(common_SRC_FILES)
-LOCAL_C_INCLUDES += $(common_C_INCLUDES) external/icu4c/common
+LOCAL_C_INCLUDES += $(common_C_INCLUDES)
 LOCAL_SHARED_LIBRARIES += $(common_SHARED_LIBRARIES)
 LOCAL_CFLAGS += -fvisibility=hidden
 LOCAL_CFLAGS += $(DISABLED_WARNING_FLAGS)
@@ -83,7 +84,7 @@ include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
-LOCAL_C_INCLUDES += $(common_C_INCLUDES) external/icu4c/common
+LOCAL_C_INCLUDES += $(common_C_INCLUDES)
 LOCAL_CFLAGS += $(DISABLED_WARNING_FLAGS)
 LOCAL_SHARED_LIBRARIES += $(common_SHARED_LIBRARIES)
 LOCAL_MODULE:= libxml2
