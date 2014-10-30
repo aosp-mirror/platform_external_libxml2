@@ -1,99 +1,81 @@
-LOCAL_PATH:= $(call my-dir)
+#
+# Copyright (C) 2014 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-# We need to build this for both the device (as a shared library)
-# and the host (as a static library for tools to use).
+LOCAL_PATH := $(call my-dir)
 
-common_SRC_FILES := \
-	SAX.c \
-	entities.c \
-	encoding.c \
-	error.c \
-	parserInternals.c \
-	parser.c \
-	tree.c \
-	hash.c \
-	list.c \
-	xmlIO.c \
-	xmlmemory.c \
-	uri.c \
-	valid.c \
-	xlink.c \
-	HTMLparser.c \
-	HTMLtree.c \
-	debugXML.c \
-	xpath.c \
-	xpointer.c \
-	xinclude.c \
-	nanohttp.c \
-	nanoftp.c \
-	DOCBparser.c \
-	catalog.c \
-	globals.c \
-	threads.c \
-	c14n.c \
-	xmlstring.c \
-	xmlregexp.c \
-	xmlschemas.c \
-	xmlschemastypes.c \
-	xmlunicode.c \
-	xmlreader.c \
-	relaxng.c \
-	dict.c \
-	SAX2.c \
-	legacy.c \
-	chvalid.c \
-	pattern.c \
-	xmlsave.c \
-	xmlmodule.c \
-	xmlwriter.c \
-	schematron.c \
-	buf.c \
+#
+# To update:
+#
+
+#  git remote add libxml2 git://git.gnome.org/libxml2
+#  git fetch libxml2
+#  git merge libxml2/master
+#  mm -j32
+#  # (Make any necessary Android.mk changes and test the new libxml2.)
+#  git push aosp HEAD:master  # Push directly, avoiding gerrit.
+#  git push aosp HEAD:refs/for/master  # Push to gerrit.
+#
+#  # Now commit any necessary Android.mk changes like normal:
+#  repo start post-sync .
+#  git commit -a
+#
+
+# This comes from the automake-generated Makefile.
+# We deliberately exclude nanoftp.c and nanohttp.c, and the trio library.
+common_SRC_FILES := SAX.c entities.c encoding.c error.c \
+        parserInternals.c parser.c tree.c hash.c list.c xmlIO.c \
+        xmlmemory.c uri.c valid.c xlink.c HTMLparser.c HTMLtree.c \
+        debugXML.c xpath.c xpointer.c xinclude.c \
+        DOCBparser.c catalog.c globals.c threads.c c14n.c xmlstring.c \
+        buf.c xmlregexp.c xmlschemas.c xmlschemastypes.c xmlunicode.c \
+        xmlreader.c relaxng.c dict.c SAX2.c \
+        xmlwriter.c legacy.c chvalid.c pattern.c xmlsave.c xmlmodule.c \
+        schematron.c xzlib.c
 
 common_C_INCLUDES += \
-	$(LOCAL_PATH)/include \
-	external/icu/icu4c/source/common \
+    $(LOCAL_PATH)/include \
+    external/icu/icu4c/source/common \
+    external/zlib \
 
-# Turn off warnings to prevent log message spam
-# These warnings are not disabled because they are not supported by gcc 4.2.1
-# which is used by darwin.
-# -Wno-enum-compare
-# -Wno-array-bounds
+common_CFLAGS += -fvisibility=hidden
 
-DISABLED_WARNING_FLAGS := \
-	-Wno-format \
-	-Wno-pointer-sign \
-	-Wno-sign-compare
+common_CFLAGS += -DLIBXML_THREAD_ENABLED=1
 
-# For the device
-# =====================================================
+common_CFLAGS += \
+    -Wno-missing-field-initializers \
+    -Wno-self-assign \
+    -Wno-sign-compare \
+    -Wno-tautological-pointer-compare \
 
 include $(CLEAR_VARS)
-
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
+LOCAL_CFLAGS += $(common_CFLAGS)
 LOCAL_SHARED_LIBRARIES += $(common_SHARED_LIBRARIES)
-LOCAL_CFLAGS += -fvisibility=hidden
-LOCAL_CFLAGS += $(DISABLED_WARNING_FLAGS)
-
-LOCAL_CFLAGS += -DLIBXML_SCHEMAS_ENABLED
-LOCAL_CFLAGS += -DLIBXML_REGEXP_ENABLED
-LOCAL_CFLAGS += -DLIBXML_AUTOMATA_ENABLED
-LOCAL_CFLAGS += -DLIBXML_PATTERN_ENABLED
-LOCAL_CFLAGS += -DLIBXML_UNICODE_ENABLED
-LOCAL_CFLAGS += -DLIBXML_VALID_ENABLED
-
-LOCAL_MODULE:= libxml2
-
+LOCAL_MODULE := libxml2
+LOCAL_CLANG := true
+LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
 include $(BUILD_STATIC_LIBRARY)
 
-
-# For the host
-# ========================================================
-
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
-LOCAL_CFLAGS += $(DISABLED_WARNING_FLAGS)
+LOCAL_CFLAGS += $(common_CFLAGS)
 LOCAL_SHARED_LIBRARIES += $(common_SHARED_LIBRARIES)
-LOCAL_MODULE:= libxml2
+LOCAL_MODULE := libxml2
+LOCAL_CLANG := true
+LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
 include $(BUILD_HOST_STATIC_LIBRARY)

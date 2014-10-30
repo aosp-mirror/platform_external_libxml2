@@ -15,7 +15,6 @@ aclocal.m4
 autom4te.cache
 bissect*
 config.guess
-config.h
 config.h.in
 config.h.in~
 config.log
