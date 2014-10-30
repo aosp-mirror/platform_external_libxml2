@@ -34,7 +34,7 @@ LOCAL_PATH := $(call my-dir)
 #
 
 # This comes from the automake-generated Makefile.
-# We deliberately exclude nanoftp.c and nanohttp.c, and the trio library.
+# We deliberately exclude nanoftp.c and nanohttp.c, the trio library, and zlib.
 common_SRC_FILES := SAX.c entities.c encoding.c error.c \
         parserInternals.c parser.c tree.c hash.c list.c xmlIO.c \
         xmlmemory.c uri.c valid.c xlink.c HTMLparser.c HTMLtree.c \
@@ -43,7 +43,7 @@ common_SRC_FILES := SAX.c entities.c encoding.c error.c \
         buf.c xmlregexp.c xmlschemas.c xmlschemastypes.c xmlunicode.c \
         xmlreader.c relaxng.c dict.c SAX2.c \
         xmlwriter.c legacy.c chvalid.c pattern.c xmlsave.c xmlmodule.c \
-        schematron.c xzlib.c
+        schematron.c
 
 common_C_INCLUDES += \
     $(LOCAL_PATH)/include \
