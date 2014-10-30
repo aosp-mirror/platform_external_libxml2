@@ -174,7 +174,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the FTP support is configured in
  */
-#if 1
+#if 0
 #define LIBXML_FTP_ENABLED
 #endif
 
@@ -183,7 +183,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the HTTP support is configured in
  */
-#if 1
+#if 0
 #define LIBXML_HTTP_ENABLED
 #endif
 
@@ -210,7 +210,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the deprecated APIs are compiled in for compatibility
  */
-#if 1
+#if 0
 #define LIBXML_LEGACY_ENABLED
 #endif
 
@@ -396,7 +396,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the Zlib support is compiled in
  */
-#if 1
+#if 0
 #define LIBXML_ZLIB_ENABLED
 #endif
 
