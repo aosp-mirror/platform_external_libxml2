@@ -45,10 +45,7 @@ common_SRC_FILES := SAX.c entities.c encoding.c error.c \
         xmlwriter.c legacy.c chvalid.c pattern.c xmlsave.c xmlmodule.c \
         schematron.c
 
-common_C_INCLUDES += \
-    $(LOCAL_PATH)/include \
-    external/icu/icu4c/source/common \
-    external/zlib \
+common_C_INCLUDES += $(LOCAL_PATH)/include
 
 common_CFLAGS += -fvisibility=hidden
 
@@ -64,7 +61,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
 LOCAL_CFLAGS += $(common_CFLAGS)
-LOCAL_SHARED_LIBRARIES += $(common_SHARED_LIBRARIES)
+LOCAL_SHARED_LIBRARIES += libicuuc
 LOCAL_MODULE := libxml2
 LOCAL_CLANG := true
 LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
@@ -74,7 +71,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
 LOCAL_CFLAGS += $(common_CFLAGS)
-LOCAL_SHARED_LIBRARIES += $(common_SHARED_LIBRARIES)
+LOCAL_SHARED_LIBRARIES += libicuuc-host
 LOCAL_MODULE := libxml2
 LOCAL_CLANG := true
 LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
