@@ -47,8 +47,9 @@ common_SRC_FILES := SAX.c entities.c encoding.c error.c \
 
 common_C_INCLUDES += \
     $(LOCAL_PATH)/include \
-    external/icu/icu4c/source/common \
     external/zlib \
+
+common_SHARED_LIBRARIES += libicuuc
 
 common_CFLAGS += -fvisibility=hidden
 
