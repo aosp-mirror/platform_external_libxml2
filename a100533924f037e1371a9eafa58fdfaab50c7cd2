@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a185ac8b_46a04676",
+        "filename": "CleanSpec.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 1014443
+      },
+      "writtenOn": "2014-12-30T12:15:06Z",
+      "side": 1,
+      "message": "Ying: should these really be necessary ? I found that for STATIC_LIBRARY rules, the $(intermediates)/import_includes was not being regenerated after changes to LOCAL_SHARED_LIBRARIES for the given module (as it should).",
+      "revId": "a100533924f037e1371a9eafa58fdfaab50c7cd2",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": false
+    }
+  ]
+}
