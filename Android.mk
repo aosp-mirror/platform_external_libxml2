@@ -47,8 +47,6 @@ common_SRC_FILES := SAX.c entities.c encoding.c error.c \
 
 common_C_INCLUDES += $(LOCAL_PATH)/include
 
-common_CFLAGS += -fvisibility=hidden
-
 common_CFLAGS += -DLIBXML_THREAD_ENABLED=1
 
 common_CFLAGS += \
@@ -57,20 +55,39 @@ common_CFLAGS += \
     -Wno-sign-compare \
     -Wno-tautological-pointer-compare \
 
+# Static library
+#=======================================================
+
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
-LOCAL_CFLAGS += $(common_CFLAGS)
+LOCAL_CFLAGS += $(common_CFLAGS) -fvisibility=hidden
 LOCAL_SHARED_LIBRARIES += libicuuc
 LOCAL_MODULE := libxml2
 LOCAL_CLANG := true
 LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
 include $(BUILD_STATIC_LIBRARY)
 
+# Shared library
+#=======================================================
+
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := $(common_SRC_FILES)
+LOCAL_C_INCLUDES := $(common_C_INCLUDES)
+LOCAL_CFLAGS += $(common_CFLAGS)
+LOCAL_SHARED_LIBRARIES := libicuuc
+LOCAL_MODULE:= libxml2
+LOCAL_CLANG := true
+LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
+include $(BUILD_SHARED_LIBRARY)
+
+# For the host
+# ========================================================
+
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
-LOCAL_CFLAGS += $(common_CFLAGS)
+LOCAL_CFLAGS += $(common_CFLAGS) -fvisibility=hidden
 LOCAL_SHARED_LIBRARIES += libicuuc-host
 LOCAL_MODULE := libxml2
 LOCAL_CLANG := true
