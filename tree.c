@@ -2799,8 +2799,27 @@ xmlSetTreeDoc(xmlNodePtr tree, xmlDocPtr doc) {
 	if(tree->type == XML_ELEMENT_NODE) {
 	    prop = tree->properties;
 	    while (prop != NULL) {
+                if (prop->atype == XML_ATTRIBUTE_ID) {
+                    xmlRemoveID(tree->doc, prop);
+                }
+
 		prop->doc = doc;
 		xmlSetListDoc(prop->children, doc);
+
+                /*
+                 * TODO: ID attributes should be also added to the new
+                 * document, but this breaks things like xmlReplaceNode.
+                 * The underlying problem is that xmlRemoveID is only called
+                 * if a node is destroyed, not if it's unlinked.
+                 */
+#if 0
+                if (xmlIsID(doc, tree, prop)) {
+                    xmlChar *idVal = xmlNodeListGetString(doc, prop->children,
+                                                          1);
+                    xmlAddID(NULL, doc, idVal, prop);
+                }
+#endif
+
 		prop = prop->next;
 	    }
 	}
