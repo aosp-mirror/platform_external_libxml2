@@ -3264,12 +3264,17 @@ htmlParseComment(htmlParserCtxtPtr ctxt) {
 	ctxt->instate = state;
 	return;
     }
+    len = 0;
+    buf[len] = 0;
     q = CUR_CHAR(ql);
+    if (!IS_CHAR(q))
+        goto unfinished;
     NEXTL(ql);
     r = CUR_CHAR(rl);
+    if (!IS_CHAR(r))
+        goto unfinished;
     NEXTL(rl);
     cur = CUR_CHAR(l);
-    len = 0;
     while (IS_CHAR(cur) &&
            ((cur != '>') ||
 	    (r != '-') || (q != '-'))) {
@@ -3300,18 +3305,20 @@ htmlParseComment(htmlParserCtxtPtr ctxt) {
 	}
     }
     buf[len] = 0;
-    if (!IS_CHAR(cur)) {
-	htmlParseErr(ctxt, XML_ERR_COMMENT_NOT_FINISHED,
-	             "Comment not terminated \n<!--%.50s\n", buf, NULL);
-	xmlFree(buf);
-    } else {
+    if (IS_CHAR(cur)) {
         NEXT;
 	if ((ctxt->sax != NULL) && (ctxt->sax->comment != NULL) &&
 	    (!ctxt->disableSAX))
 	    ctxt->sax->comment(ctxt->userData, buf);
 	xmlFree(buf);
+	ctxt->instate = state;
+	return;
     }
-    ctxt->instate = state;
+
+unfinished:
+    htmlParseErr(ctxt, XML_ERR_COMMENT_NOT_FINISHED,
+		 "Comment not terminated \n<!--%.50s\n", buf, NULL);
+    xmlFree(buf);
 }
 
 /**
@@ -5728,17 +5735,17 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 				if (ctxt->keepBlanks) {
 				    if (ctxt->sax->characters != NULL)
 					ctxt->sax->characters(
-						ctxt->userData, &cur, 1);
+						ctxt->userData, &in->cur[0], 1);
 				} else {
 				    if (ctxt->sax->ignorableWhitespace != NULL)
 					ctxt->sax->ignorableWhitespace(
-						ctxt->userData, &cur, 1);
+						ctxt->userData, &in->cur[0], 1);
 				}
 			    } else {
 				htmlCheckParagraph(ctxt);
 				if (ctxt->sax->characters != NULL)
 				    ctxt->sax->characters(
-					    ctxt->userData, &cur, 1);
+					    ctxt->userData, &in->cur[0], 1);
 			    }
 			}
 			ctxt->token = 0;
