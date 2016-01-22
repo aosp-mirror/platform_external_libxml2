@@ -54,6 +54,7 @@ common_CFLAGS += \
     -Wno-self-assign \
     -Wno-sign-compare \
     -Wno-tautological-pointer-compare \
+    -Wno-unused-parameter \
 
 # Static library
 #=======================================================
