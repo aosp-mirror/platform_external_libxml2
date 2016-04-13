@@ -37,7 +37,7 @@ LOCAL_PATH := $(call my-dir)
 # We deliberately exclude nanoftp.c and nanohttp.c, the trio library, and zlib.
 common_SRC_FILES := SAX.c entities.c encoding.c error.c \
         parserInternals.c parser.c tree.c hash.c list.c xmlIO.c \
-        xmlmemory.c uri.c valid.c xlink.c HTMLparser.c HTMLtree.c \
+        xmlmemory.c uri.c valid.c xlink.c \
         debugXML.c xpath.c xpointer.c xinclude.c \
         DOCBparser.c catalog.c globals.c threads.c c14n.c xmlstring.c \
         buf.c xmlregexp.c xmlschemas.c xmlschemastypes.c xmlunicode.c \
