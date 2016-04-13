@@ -201,7 +201,12 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the HTML support is configured in
  */
-#if 1
+// BEGIN android-changed
+// Was: #if 1
+// HTML support has security vulnerabilities (b/27338391)
+// and is not needed in Android.
+#if 0
+// END android-changed
 #define LIBXML_HTML_ENABLED
 #endif
 
