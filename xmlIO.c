@@ -3826,7 +3826,7 @@ xmlParserGetDirectory(const char *filename) {
 #if defined(WIN32) && !defined(__CYGWIN__)
 #   define IS_XMLPGD_SEP(ch) ((ch=='/')||(ch=='\\'))
 #else
-#   define IS_XMLPGD_SEP(ch) (ch=='/')
+#   define IS_XMLPGD_SEP(ch) ((ch)=='/')
 #endif
 
     strncpy(dir, filename, 1023);
