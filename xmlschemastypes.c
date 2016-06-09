@@ -1110,18 +1110,18 @@ xmlSchemaGetBuiltInListSimpleTypeItemType(xmlSchemaTypePtr type)
  ****************************************************************/
 
 #define IS_TZO_CHAR(c)						\
-	((c == 0) || (c == 'Z') || (c == '+') || (c == '-'))
+	(((c) == 0) || ((c) == 'Z') || ((c) == '+') || ((c) == '-'))
 
-#define VALID_YEAR(yr)          (yr != 0)
-#define VALID_MONTH(mon)        ((mon >= 1) && (mon <= 12))
+#define VALID_YEAR(yr)          ((yr) != 0)
+#define VALID_MONTH(mon)        (((mon) >= 1) && ((mon) <= 12))
 /* VALID_DAY should only be used when month is unknown */
-#define VALID_DAY(day)          ((day >= 1) && (day <= 31))
-#define VALID_HOUR(hr)          ((hr >= 0) && (hr <= 23))
-#define VALID_MIN(min)          ((min >= 0) && (min <= 59))
-#define VALID_SEC(sec)          ((sec >= 0) && (sec < 60))
-#define VALID_TZO(tzo)          ((tzo > -840) && (tzo < 840))
+#define VALID_DAY(day)          (((day) >= 1) && ((day) <= 31))
+#define VALID_HOUR(hr)          (((hr) >= 0) && ((hr) <= 23))
+#define VALID_MIN(min)          (((min) >= 0) && ((min) <= 59))
+#define VALID_SEC(sec)          (((sec) >= 0) && ((sec) < 60))
+#define VALID_TZO(tzo)          (((tzo) > -840) && ((tzo) < 840))
 #define IS_LEAP(y)						\
-	(((y % 4 == 0) && (y % 100 != 0)) || (y % 400 == 0))
+	((((y) % 4 == 0) && ((y) % 100 != 0)) || ((y) % 400 == 0))
 
 static const unsigned int daysInMonth[12] =
 	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
@@ -1129,19 +1129,19 @@ static const unsigned int daysInMonthLeap[12] =
 	{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 #define MAX_DAYINMONTH(yr,mon)                                  \
-        (IS_LEAP(yr) ? daysInMonthLeap[mon - 1] : daysInMonth[mon - 1])
+        (IS_LEAP(yr) ? daysInMonthLeap[(mon) - 1] : daysInMonth[(mon) - 1])
 
 #define VALID_MDAY(dt)						\
-	(IS_LEAP(dt->year) ?				        \
-	    (dt->day <= daysInMonthLeap[dt->mon - 1]) :	        \
-	    (dt->day <= daysInMonth[dt->mon - 1]))
+	(IS_LEAP((dt)->year) ?				        \
+	    ((dt)->day <= daysInMonthLeap[(dt)->mon - 1]) :	\
+	    ((dt)->day <= daysInMonth[(dt)->mon - 1]))
 
 #define VALID_DATE(dt)						\
-	(VALID_YEAR(dt->year) && VALID_MONTH(dt->mon) && VALID_MDAY(dt))
+	(VALID_YEAR((dt)->year) && VALID_MONTH((dt)->mon) && VALID_MDAY(dt))
 
 #define VALID_TIME(dt)						\
-	(VALID_HOUR(dt->hour) && VALID_MIN(dt->min) &&		\
-	 VALID_SEC(dt->sec) && VALID_TZO(dt->tzo))
+	(VALID_HOUR((dt)->hour) && VALID_MIN((dt)->min) &&	\
+	 VALID_SEC((dt)->sec) && VALID_TZO((dt)->tzo))
 
 #define VALID_DATETIME(dt)					\
 	(VALID_DATE(dt) && VALID_TIME(dt))
@@ -1157,20 +1157,20 @@ static const long dayInLeapYearByMonth[12] =
 
 #define DAY_IN_YEAR(day, month, year)				\
         ((IS_LEAP(year) ?					\
-                dayInLeapYearByMonth[month - 1] :		\
-                dayInYearByMonth[month - 1]) + day)
+                dayInLeapYearByMonth[(month) - 1] :		\
+                dayInYearByMonth[(month) - 1]) + (day))
 
 #ifdef DEBUG
 #define DEBUG_DATE(dt)                                                  \
     xmlGenericError(xmlGenericErrorContext,                             \
         "type=%o %04ld-%02u-%02uT%02u:%02u:%03f",                       \
-        dt->type,dt->value.date.year,dt->value.date.mon,                \
-        dt->value.date.day,dt->value.date.hour,dt->value.date.min,      \
-        dt->value.date.sec);                                            \
-    if (dt->value.date.tz_flag)                                         \
-        if (dt->value.date.tzo != 0)                                    \
+        (dt)->type,(dt)->value.date.year,(dt)->value.date.mon,          \
+        (dt)->value.date.day,(dt)->value.date.hour,(dt)->value.date.min,\
+        (dt)->value.date.sec);                                          \
+    if ((dt)->value.date.tz_flag)                                       \
+        if ((dt)->value.date.tzo != 0)                                  \
             xmlGenericError(xmlGenericErrorContext,                     \
-                "%+05d\n",dt->value.date.tzo);                          \
+                "%+05d\n",(dt)->value.date.tzo);                        \
         else                                                            \
             xmlGenericError(xmlGenericErrorContext, "Z\n");             \
     else                                                                \
@@ -1240,12 +1240,12 @@ _xmlSchemaParseGYear (xmlSchemaValDatePtr dt, const xmlChar **str) {
  * @cur are undefined.
  */
 #define PARSE_2_DIGITS(num, cur, invalid)			\
-	if ((cur[0] < '0') || (cur[0] > '9') ||			\
-	    (cur[1] < '0') || (cur[1] > '9'))			\
-	    invalid = 1;					\
+	if (((cur)[0] < '0') || ((cur)[0] > '9') ||		\
+	    ((cur)[1] < '0') || ((cur)[1] > '9'))		\
+	    (invalid) = 1;					\
 	else							\
-	    num = (cur[0] - '0') * 10 + (cur[1] - '0');		\
-	cur += 2;
+	    (num) = ((cur)[0] - '0') * 10 + ((cur)[1] - '0');	\
+	(cur) += 2;
 
 /**
  * PARSE_FLOAT:
@@ -1261,15 +1261,15 @@ _xmlSchemaParseGYear (xmlSchemaValDatePtr dt, const xmlChar **str) {
  */
 #define PARSE_FLOAT(num, cur, invalid)				\
 	PARSE_2_DIGITS(num, cur, invalid);			\
-	if (!invalid && (*cur == '.')) {			\
+	if (!(invalid) && (*(cur) == '.')) {			\
 	    double mult = 1;				        \
-	    cur++;						\
-	    if ((*cur < '0') || (*cur > '9'))			\
-		invalid = 1;					\
-	    while ((*cur >= '0') && (*cur <= '9')) {		\
+	    (cur)++;						\
+	    if ((*(cur) < '0') || (*(cur) > '9'))		\
+		(invalid) = 1;					\
+	    while ((*(cur) >= '0') && (*(cur) <= '9')) {	\
 		mult /= 10;					\
-		num += (*cur - '0') * mult;			\
-		cur++;						\
+		(num) += (*(cur) - '0') * mult;			\
+		(cur)++;					\
 	    }							\
 	}
 
@@ -1496,12 +1496,12 @@ _xmlSchemaBase64Decode (const xmlChar ch) {
  * @cur are undefined.
  */
 #define PARSE_DIGITS(num, cur, num_type)	                \
-	if ((*cur < '0') || (*cur > '9'))			\
-	    num_type = -1;					\
+	if ((*(cur) < '0') || (*(cur) > '9'))			\
+	    (num_type) = -1;					\
         else                                                    \
-	    while ((*cur >= '0') && (*cur <= '9')) {		\
-	        num = num * 10 + (*cur - '0');		        \
-	        cur++;                                          \
+	    while ((*(cur) >= '0') && (*(cur) <= '9')) {	\
+	        (num) = (num) * 10 + (*(cur) - '0');		\
+	        (cur)++;                                        \
             }
 
 /**
@@ -1520,17 +1520,17 @@ _xmlSchemaBase64Decode (const xmlChar ch) {
 #define PARSE_NUM(num, cur, num_type)				\
         num = 0;                                                \
 	PARSE_DIGITS(num, cur, num_type);	                \
-	if (!num_type && (*cur == '.')) {			\
+	if (!(num_type) && (*(cur) == '.')) {			\
 	    double mult = 1;				        \
-	    cur++;						\
-	    if ((*cur < '0') || (*cur > '9'))			\
-		num_type = -1;					\
+	    (cur)++;						\
+	    if ((*(cur) < '0') || (*(cur) > '9'))		\
+		(num_type) = -1;				\
             else                                                \
-                num_type = 1;                                   \
-	    while ((*cur >= '0') && (*cur <= '9')) {		\
+                (num_type) = 1;                                 \
+	    while ((*(cur) >= '0') && (*(cur) <= '9')) {	\
 		mult /= 10;					\
-		num += (*cur - '0') * mult;			\
-		cur++;						\
+		(num) += (*(cur) - '0') * mult;			\
+		(cur)++;					\
 	    }							\
 	}
 
@@ -3637,10 +3637,10 @@ xmlSchemaCompareDurations(xmlSchemaValPtr x, xmlSchemaValPtr y)
 /*
  * macros for adding date/times and durations
  */
-#define FQUOTIENT(a,b)                  (floor(((double)a/(double)b)))
-#define MODULO(a,b)                     (a - FQUOTIENT(a,b) * b)
-#define FQUOTIENT_RANGE(a,low,high)     (FQUOTIENT((a-low),(high-low)))
-#define MODULO_RANGE(a,low,high)        ((MODULO((a-low),(high-low)))+low)
+#define FQUOTIENT(a,b)                  (floor(((double)(a)/(double)(b))))
+#define MODULO(a,b)                     ((a) - FQUOTIENT(a,b) * (b))
+#define FQUOTIENT_RANGE(a,low,high)     (FQUOTIENT(((a)-(low)),((high)-(low))))
+#define MODULO_RANGE(a,low,high)        ((MODULO(((a)-(low)),((high)-(low))))+(low))
 
 /**
  * xmlSchemaDupVal:
@@ -3975,10 +3975,10 @@ _xmlSchemaDateCastYMToDays (const xmlSchemaValPtr dt)
  * Returns seconds.
  */
 #define TIME_TO_NUMBER(dt)                              \
-    ((double)((dt->value.date.hour * SECS_PER_HOUR) +   \
-              (dt->value.date.min * SECS_PER_MIN) +	\
-              (dt->value.date.tzo * SECS_PER_MIN)) +	\
-               dt->value.date.sec)
+    ((double)(((dt)->value.date.hour * SECS_PER_HOUR) + \
+              ((dt)->value.date.min * SECS_PER_MIN) +	\
+              ((dt)->value.date.tzo * SECS_PER_MIN)) +	\
+               (dt)->value.date.sec)
 
 /**
  * xmlSchemaCompareDates:

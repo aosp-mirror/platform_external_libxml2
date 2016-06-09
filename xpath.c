@@ -1186,7 +1186,7 @@ xmlXPathCompExprAdd(ctxt->comp, (ch1), (ch2), (op),			\
 
 /* #define XP_DEFAULT_CACHE_ON */
 
-#define XP_HAS_CACHE(c) ((c != NULL) && ((c)->cache != NULL))
+#define XP_HAS_CACHE(c) (((c) != NULL) && ((c)->cache != NULL))
 
 typedef struct _xmlXPathContextCache xmlXPathContextCache;
 typedef xmlXPathContextCache *xmlXPathContextCachePtr;
@@ -3049,11 +3049,11 @@ xmlXPathPopExternal (xmlXPathParserContextPtr ctxt) {
 #define SKIP(val) ctxt->cur += (val)
 #define NXT(val) ctxt->cur[(val)]
 #define CUR_PTR ctxt->cur
-#define CUR_CHAR(l) xmlXPathCurrentChar(ctxt, &l)
+#define CUR_CHAR(l) xmlXPathCurrentChar(ctxt, &(l))
 
 #define COPY_BUF(l,b,i,v)                                              \
-    if (l == 1) b[i++] = (xmlChar) v;                                  \
-    else i += xmlCopyChar(l,&b[i],v)
+    if ((l) == 1) (b)[(i)++] = (xmlChar) (v);                          \
+    else (i) += xmlCopyChar(l,&(b)[i],v)
 
 #define NEXTL(l)  ctxt->cur += l
 
@@ -5521,11 +5521,11 @@ xmlXPathFreeObject(xmlXPathObjectPtr obj) {
 static void
 xmlXPathReleaseObject(xmlXPathContextPtr ctxt, xmlXPathObjectPtr obj)
 {
-#define XP_CACHE_ADD(sl, o) if (sl == NULL) { \
-	sl = xmlPointerListCreate(10); if (sl == NULL) goto free_obj; } \
+#define XP_CACHE_ADD(sl, o) if ((sl) == NULL) { \
+	(sl) = xmlPointerListCreate(10); if ((sl) == NULL) goto free_obj; } \
     if (xmlPointerListAddSize(sl, obj, 0) == -1) goto free_obj;
 
-#define XP_CACHE_WANTS(sl, n) ((sl == NULL) || ((sl)->number < n))
+#define XP_CACHE_WANTS(sl, n) (((sl) == NULL) || ((sl)->number < (n)))
 
     if (obj == NULL)
 	return;
@@ -6176,7 +6176,7 @@ xmlXPathFreeContext(xmlXPathContextPtr ctxt) {
  ************************************************************************/
 
 #define CHECK_CTXT(ctxt)						\
-    if (ctxt == NULL) {						\
+    if ((ctxt) == NULL) {						\
 	__xmlRaiseError(NULL, NULL, NULL,				\
 		NULL, NULL, XML_FROM_XPATH,				\
 		XML_ERR_INTERNAL_ERROR, XML_ERR_FATAL,			\
@@ -6187,7 +6187,7 @@ xmlXPathFreeContext(xmlXPathContextPtr ctxt) {
     }									\
 
 #define CHECK_CTXT_NEG(ctxt)						\
-    if (ctxt == NULL) {						\
+    if ((ctxt) == NULL) {						\
 	__xmlRaiseError(NULL, NULL, NULL,				\
 		NULL, NULL, XML_FROM_XPATH,				\
 		XML_ERR_INTERNAL_ERROR, XML_ERR_FATAL,			\
@@ -6199,8 +6199,8 @@ xmlXPathFreeContext(xmlXPathContextPtr ctxt) {
 
 
 #define CHECK_CONTEXT(ctxt)						\
-    if ((ctxt == NULL) || (ctxt->doc == NULL) ||			\
-        (ctxt->doc->children == NULL)) {				\
+    if (((ctxt) == NULL) || ((ctxt)->doc == NULL) ||			\
+        ((ctxt)->doc->children == NULL)) {				\
 	xmlXPatherror(ctxt, __FILE__, __LINE__, XPATH_INVALID_CTXT);	\
 	return(NULL);							\
     }
@@ -9644,7 +9644,7 @@ xmlXPathSumFunction(xmlXPathParserContextPtr ctxt, int nargs) {
  */
 #define XTRUNC(f, v)            \
     f = fmod((v), INT_MAX);     \
-    f = (v) - (f) + (double)((int)(f));
+    (f) = (v) - (f) + (double)((int)(f));
 
 /**
  * xmlXPathFloorFunction:

@@ -220,7 +220,7 @@ XMLPUBFUN void * XMLCALL
  * object.
  */
 #define xmlXPathStackIsExternal(ctxt)					\
-	((ctxt->value != NULL) && (ctxt->value->type == XPATH_USERS))
+	(((ctxt)->value != NULL) && ((ctxt)->value->type == XPATH_USERS))
 
 /**
  * xmlXPathEmptyNodeSet:
@@ -273,7 +273,7 @@ XMLPUBFUN void * XMLCALL
  * type.
  */
 #define CHECK_TYPE(typeval)						\
-    if ((ctxt->value == NULL) || (ctxt->value->type != typeval))	\
+    if ((ctxt->value == NULL) || (ctxt->value->type != (typeval)))	\
         XP_ERROR(XPATH_INVALID_TYPE)
 
 /**
@@ -284,7 +284,7 @@ XMLPUBFUN void * XMLCALL
  * type. Return(0) in case of failure
  */
 #define CHECK_TYPE0(typeval)						\
-    if ((ctxt->value == NULL) || (ctxt->value->type != typeval))	\
+    if ((ctxt->value == NULL) || (ctxt->value->type != (typeval)))	\
         XP_ERROR0(XPATH_INVALID_TYPE)
 
 /**
