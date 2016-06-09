@@ -225,9 +225,9 @@ static const xmlChar *xmlNamespaceNs = (const xmlChar *)
      ((i)->builtInType == XML_SCHEMAS_ANYTYPE))
 
 #define WXS_IS_SIMPLE(item) \
-    ((item->type == XML_SCHEMA_TYPE_SIMPLE) || \
-     ((item->type == XML_SCHEMA_TYPE_BASIC) && \
-      (item->builtInType != XML_SCHEMAS_ANYTYPE)))
+    (((item)->type == XML_SCHEMA_TYPE_SIMPLE) || \
+     (((item)->type == XML_SCHEMA_TYPE_BASIC) && \
+      ((item)->builtInType != XML_SCHEMAS_ANYTYPE)))
 
 #define WXS_IS_ANY_SIMPLE_TYPE(i) \
     (((i)->type == XML_SCHEMA_TYPE_BASIC) && \
@@ -254,16 +254,16 @@ static const xmlChar *xmlNamespaceNs = (const xmlChar *)
 * Macros for exclusively for complex types.
 */
 #define WXS_HAS_COMPLEX_CONTENT(item) \
-    ((item->contentType == XML_SCHEMA_CONTENT_MIXED) || \
-     (item->contentType == XML_SCHEMA_CONTENT_EMPTY) || \
-     (item->contentType == XML_SCHEMA_CONTENT_ELEMENTS))
+    (((item)->contentType == XML_SCHEMA_CONTENT_MIXED) || \
+     ((item)->contentType == XML_SCHEMA_CONTENT_EMPTY) || \
+     ((item)->contentType == XML_SCHEMA_CONTENT_ELEMENTS))
 
 #define WXS_HAS_SIMPLE_CONTENT(item) \
-    ((item->contentType == XML_SCHEMA_CONTENT_SIMPLE) || \
-     (item->contentType == XML_SCHEMA_CONTENT_BASIC))
+    (((item)->contentType == XML_SCHEMA_CONTENT_SIMPLE) || \
+     ((item)->contentType == XML_SCHEMA_CONTENT_BASIC))
 
 #define WXS_HAS_MIXED_CONTENT(item) \
-    (item->contentType == XML_SCHEMA_CONTENT_MIXED)
+    ((item)->contentType == XML_SCHEMA_CONTENT_MIXED)
 
 #define WXS_EMPTIABLE(t) \
     (xmlSchemaIsParticleEmptiable(WXS_PTC_CAST (t)->subtypes))
@@ -278,11 +278,11 @@ static const xmlChar *xmlNamespaceNs = (const xmlChar *)
 */
 #define WXS_LIST_ITEMTYPE(t) (t)->subtypes
 
-#define WXS_IS_ATOMIC(t) (t->flags & XML_SCHEMAS_TYPE_VARIETY_ATOMIC)
+#define WXS_IS_ATOMIC(t) ((t)->flags & XML_SCHEMAS_TYPE_VARIETY_ATOMIC)
 
-#define WXS_IS_LIST(t) (t->flags & XML_SCHEMAS_TYPE_VARIETY_LIST)
+#define WXS_IS_LIST(t) ((t)->flags & XML_SCHEMAS_TYPE_VARIETY_LIST)
 
-#define WXS_IS_UNION(t) (t->flags & XML_SCHEMAS_TYPE_VARIETY_UNION)
+#define WXS_IS_UNION(t) ((t)->flags & XML_SCHEMAS_TYPE_VARIETY_UNION)
 /*
 * Misc parser context macros.
 */
@@ -309,16 +309,16 @@ static const xmlChar *xmlNamespaceNs = (const xmlChar *)
 /*
 * xmlSchemaItemList macros.
 */
-#define WXS_ILIST_IS_EMPTY(l) ((l == NULL) || ((l)->nbItems == 0))
+#define WXS_ILIST_IS_EMPTY(l) (((l) == NULL) || ((l)->nbItems == 0))
 /*
 * Misc macros.
 */
 #define IS_SCHEMA(node, type) \
-   ((node != NULL) && (node->ns != NULL) && \
-    (xmlStrEqual(node->name, (const xmlChar *) type)) && \
-    (xmlStrEqual(node->ns->href, xmlSchemaNs)))
+   (((node) != NULL) && ((node)->ns != NULL) && \
+    (xmlStrEqual((node)->name, (const xmlChar *) (type))) && \
+    (xmlStrEqual((node)->ns->href, xmlSchemaNs)))
 
-#define FREE_AND_NULL(str) if ((str) != NULL) { xmlFree((xmlChar *) (str)); str = NULL; }
+#define FREE_AND_NULL(str) if ((str) != NULL) { xmlFree((xmlChar *) (str)); (str) = NULL; }
 
 /*
 * Since we put the default/fixed values into the dict, we can
@@ -327,7 +327,7 @@ static const xmlChar *xmlNamespaceNs = (const xmlChar *)
 */
 #define WXS_ARE_DEFAULT_STR_EQUAL(v1, v2) ((v1) == (v2))
 
-#define INODE_NILLED(item) (item->flags & XML_SCHEMA_ELEM_INFO_NILLED)
+#define INODE_NILLED(item) ((item)->flags & XML_SCHEMA_ELEM_INFO_NILLED)
 
 #define CAN_PARSE_SCHEMA(b) (((b)->doc != NULL) && ((b)->parsed == 0))
 
@@ -807,8 +807,8 @@ struct _xmlSchemaPSVIIDCBinding {
 #define XPATH_STATE_OBJ_TYPE_IDC_SELECTOR 1
 #define XPATH_STATE_OBJ_TYPE_IDC_FIELD 2
 
-#define XPATH_STATE_OBJ_MATCHES -2
-#define XPATH_STATE_OBJ_BLOCKED -3
+#define XPATH_STATE_OBJ_MATCHES (-2)
+#define XPATH_STATE_OBJ_BLOCKED (-3)
 
 typedef struct _xmlSchemaIDCMatcher xmlSchemaIDCMatcher;
 typedef xmlSchemaIDCMatcher *xmlSchemaIDCMatcherPtr;
@@ -17153,22 +17153,22 @@ xmlSchemaCheckRCaseRecurse(xmlSchemaParserCtxtPtr ctxt,
 #define FACET_RESTR_MUTUAL_ERR(fac1, fac2) \
     xmlSchemaPCustomErrExt(pctxt,      \
 	XML_SCHEMAP_INVALID_FACET_VALUE, \
-	WXS_BASIC_CAST fac1, fac1->node, \
+	WXS_BASIC_CAST fac1, (fac1)->node, \
 	"It is an error for both '%s' and '%s' to be specified on the "\
 	"same type definition", \
-	BAD_CAST xmlSchemaFacetTypeToString(fac1->type), \
-	BAD_CAST xmlSchemaFacetTypeToString(fac2->type), NULL);
+	BAD_CAST xmlSchemaFacetTypeToString((fac1)->type), \
+	BAD_CAST xmlSchemaFacetTypeToString((fac2)->type), NULL);
 
 #define FACET_RESTR_ERR(fac1, msg) \
     xmlSchemaPCustomErr(pctxt,      \
 	XML_SCHEMAP_INVALID_FACET_VALUE, \
-	WXS_BASIC_CAST fac1, fac1->node, \
+	WXS_BASIC_CAST fac1, (fac1)->node, \
 	msg, NULL);
 
 #define FACET_RESTR_FIXED_ERR(fac) \
     xmlSchemaPCustomErr(pctxt, \
 	XML_SCHEMAP_INVALID_FACET_VALUE, \
-	WXS_BASIC_CAST fac, fac->node, \
+	WXS_BASIC_CAST fac, (fac)->node, \
 	"The base type's facet is 'fixed', thus the value must not " \
 	"differ", NULL);
 
@@ -24144,7 +24144,7 @@ xmlSchemaGetFreshElemInfo(xmlSchemaValidCtxtPtr vctxt)
     return (info);
 }
 
-#define ACTIVATE_ATTRIBUTE(item) vctxt->inode = (xmlSchemaNodeInfoPtr) item;
+#define ACTIVATE_ATTRIBUTE(item) vctxt->inode = (xmlSchemaNodeInfoPtr) (item);
 #define ACTIVATE_ELEM vctxt->inode = vctxt->elemInfos[vctxt->depth];
 #define ACTIVATE_PARENT_ELEM vctxt->inode = vctxt->elemInfos[vctxt->depth -1];
 
