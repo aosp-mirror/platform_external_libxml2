@@ -2140,7 +2140,7 @@ xmlCatalogListXMLResolveURI(xmlCatalogEntryPtr catal, const xmlChar *URI) {
 
 #define RAW *cur
 #define NEXT cur++;
-#define SKIP(x) cur += x;
+#define SKIP(x) cur += (x);
 
 #define SKIP_BLANKS while (IS_BLANK_CH(*cur)) NEXT;
 

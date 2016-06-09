@@ -63,7 +63,7 @@ typedef unsigned __int32 uint32_t;
 
 #define MAX_HASH_LEN 3
 #define MIN_DICT_SIZE 128
-#define MAX_DICT_HASH 8 * 2048
+#define MAX_DICT_HASH (8 * 2048)
 #define WITH_BIG_KEY
 
 #ifdef WITH_BIG_KEY

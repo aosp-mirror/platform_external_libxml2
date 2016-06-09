@@ -54,8 +54,8 @@
 #define CUR (*(ctxt->cur))
 #define NXT(index) (ctxt->cur[index])
 
-#define CUR_SCHAR(s, l) xmlStringCurrentChar(NULL, s, &l)
-#define NEXTL(l) ctxt->cur += l;
+#define CUR_SCHAR(s, l) xmlStringCurrentChar(NULL, s, &(l))
+#define NEXTL(l) ctxt->cur += (l);
 #define XML_REG_STRING_SEPARATOR '|'
 /*
  * Need PREV to check on a '-' within a Character Group. May only be used
@@ -7861,7 +7861,7 @@ static xmlExpNodePtr xmlExpParseExpr(xmlExpCtxtPtr ctxt);
 #undef NEXT
 #define NEXT ctxt->cur++;
 #undef IS_BLANK
-#define IS_BLANK(c) ((c == ' ') || (c == '\n') || (c == '\r') || (c == '\t'))
+#define IS_BLANK(c) (((c) == ' ') || ((c) == '\n') || ((c) == '\r') || ((c) == '\t'))
 #define SKIP_BLANKS while (IS_BLANK(*ctxt->cur)) ctxt->cur++;
 
 static int

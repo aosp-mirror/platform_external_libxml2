@@ -2018,25 +2018,25 @@ static int spacePop(xmlParserCtxtPtr ctxt) {
 #define BASE_PTR ctxt->input->base
 
 #define CMP4( s, c1, c2, c3, c4 ) \
-  ( ((unsigned char *) s)[ 0 ] == c1 && ((unsigned char *) s)[ 1 ] == c2 && \
-    ((unsigned char *) s)[ 2 ] == c3 && ((unsigned char *) s)[ 3 ] == c4 )
+  ( ((unsigned char *) (s))[ 0 ] == (c1) && ((unsigned char *) (s))[ 1 ] == (c2) && \
+    ((unsigned char *) (s))[ 2 ] == (c3) && ((unsigned char *) (s))[ 3 ] == (c4) )
 #define CMP5( s, c1, c2, c3, c4, c5 ) \
-  ( CMP4( s, c1, c2, c3, c4 ) && ((unsigned char *) s)[ 4 ] == c5 )
+  ( CMP4( s, c1, c2, c3, c4 ) && ((unsigned char *) (s))[ 4 ] == (c5) )
 #define CMP6( s, c1, c2, c3, c4, c5, c6 ) \
-  ( CMP5( s, c1, c2, c3, c4, c5 ) && ((unsigned char *) s)[ 5 ] == c6 )
+  ( CMP5( s, c1, c2, c3, c4, c5 ) && ((unsigned char *) (s))[ 5 ] == (c6) )
 #define CMP7( s, c1, c2, c3, c4, c5, c6, c7 ) \
-  ( CMP6( s, c1, c2, c3, c4, c5, c6 ) && ((unsigned char *) s)[ 6 ] == c7 )
+  ( CMP6( s, c1, c2, c3, c4, c5, c6 ) && ((unsigned char *) (s))[ 6 ] == (c7) )
 #define CMP8( s, c1, c2, c3, c4, c5, c6, c7, c8 ) \
-  ( CMP7( s, c1, c2, c3, c4, c5, c6, c7 ) && ((unsigned char *) s)[ 7 ] == c8 )
+  ( CMP7( s, c1, c2, c3, c4, c5, c6, c7 ) && ((unsigned char *) (s))[ 7 ] == (c8) )
 #define CMP9( s, c1, c2, c3, c4, c5, c6, c7, c8, c9 ) \
   ( CMP8( s, c1, c2, c3, c4, c5, c6, c7, c8 ) && \
-    ((unsigned char *) s)[ 8 ] == c9 )
+    ((unsigned char *) (s))[ 8 ] == (c9) )
 #define CMP10( s, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10 ) \
   ( CMP9( s, c1, c2, c3, c4, c5, c6, c7, c8, c9 ) && \
-    ((unsigned char *) s)[ 9 ] == c10 )
+    ((unsigned char *) (s))[ 9 ] == (c10) )
 
 #define SKIP(val) do {							\
-    ctxt->nbChars += (val),ctxt->input->cur += (val),ctxt->input->col+=(val);			\
+    ctxt->nbChars += (val),ctxt->input->cur += (val),ctxt->input->col+=(val);	\
     if (*ctxt->input->cur == '%') xmlParserHandlePEReference(ctxt);	\
     if ((*ctxt->input->cur == 0) &&					\
         (xmlParserInputGrow(ctxt->input, INPUT_CHUNK) <= 0))		\
@@ -2045,7 +2045,7 @@ static int spacePop(xmlParserCtxtPtr ctxt) {
 
 #define SKIPL(val) do {							\
     int skipl;								\
-    for(skipl=0; skipl<val; skipl++) {					\
+    for(skipl=0; skipl<(val); skipl++) {				\
 	if (*(ctxt->input->cur) == '\n') {				\
 	ctxt->input->line++; ctxt->input->col = 1;			\
 	} else ctxt->input->col++;					\
@@ -2114,16 +2114,16 @@ static void xmlGROW (xmlParserCtxtPtr ctxt) {
     if (*(ctxt->input->cur) == '\n') {					\
 	ctxt->input->line++; ctxt->input->col = 1;			\
     } else ctxt->input->col++;						\
-    ctxt->input->cur += l;				\
+    ctxt->input->cur += (l);				\
     if (*ctxt->input->cur == '%') xmlParserHandlePEReference(ctxt);	\
   } while (0)
 
-#define CUR_CHAR(l) xmlCurrentChar(ctxt, &l)
-#define CUR_SCHAR(s, l) xmlStringCurrentChar(ctxt, s, &l)
+#define CUR_CHAR(l) xmlCurrentChar(ctxt, &(l))
+#define CUR_SCHAR(s, l) xmlStringCurrentChar(ctxt, s, &(l))
 
 #define COPY_BUF(l,b,i,v)						\
-    if (l == 1) b[i++] = (xmlChar) v;					\
-    else i += xmlCopyCharMultiByte(&b[i],v)
+    if ((l) == 1) (b)[(i)++] = (xmlChar) (v);				\
+    else (i) += xmlCopyCharMultiByte(&(b)[i],v)
 
 /**
  * xmlSkipBlankChars:
@@ -2718,11 +2718,11 @@ xmlParserHandlePEReference(xmlParserCtxtPtr ctxt) {
  */
 #define growBuffer(buffer, n) {						\
     xmlChar *tmp;							\
-    size_t new_size = buffer##_size * 2 + n;                            \
+    size_t new_size = buffer##_size * 2 + (n);                          \
     if (new_size < buffer##_size) goto mem_error;                       \
     tmp = (xmlChar *) xmlRealloc(buffer, new_size);                     \
     if (tmp == NULL) goto mem_error;					\
-    buffer = tmp;							\
+    (buffer) = tmp;							\
     buffer##_size = new_size;                                           \
 }
 

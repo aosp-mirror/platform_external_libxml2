@@ -285,8 +285,8 @@ XMLPUBVAR unsigned int xmlParserMaxDepth;
  * Skips the end of line chars.
  */
 #define SKIP_EOL(p)							\
-    if (*(p) == 0x13) { p++ ; if (*(p) == 0x10) p++; }			\
-    if (*(p) == 0x10) { p++ ; if (*(p) == 0x13) p++; }
+    if (*(p) == 0x13) { (p)++ ; if (*(p) == 0x10) (p)++; }		\
+    if (*(p) == 0x10) { (p)++ ; if (*(p) == 0x13) (p)++; }
 
 /**
  * MOVETO_ENDTAG:
@@ -295,7 +295,7 @@ XMLPUBVAR unsigned int xmlParserMaxDepth;
  * Skips to the next '>' char.
  */
 #define MOVETO_ENDTAG(p)						\
-    while ((*p) && (*(p) != '>')) (p)++
+    while ((*(p)) && (*(p) != '>')) (p)++
 
 /**
  * MOVETO_STARTTAG:
@@ -304,7 +304,7 @@ XMLPUBVAR unsigned int xmlParserMaxDepth;
  * Skips to the next '<' char.
  */
 #define MOVETO_STARTTAG(p)						\
-    while ((*p) && (*(p) != '<')) (p)++
+    while ((*(p)) && (*(p) != '<')) (p)++
 
 /**
  * Global variables used for predefined strings.

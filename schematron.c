@@ -45,19 +45,19 @@ static const xmlChar *xmlSchematronNs = XML_SCHEMATRON_NS;
 static const xmlChar *xmlOldSchematronNs = SCT_OLD_NS;
 
 #define IS_SCHEMATRON(node, elem)					\
-   ((node != NULL) && (node->type == XML_ELEMENT_NODE ) &&		\
-    (node->ns != NULL) &&						\
-    (xmlStrEqual(node->name, (const xmlChar *) elem)) &&		\
-    ((xmlStrEqual(node->ns->href, xmlSchematronNs)) ||			\
-     (xmlStrEqual(node->ns->href, xmlOldSchematronNs))))
+   (((node) != NULL) && ((node)->type == XML_ELEMENT_NODE ) &&		\
+    ((node)->ns != NULL) &&						\
+    (xmlStrEqual((node)->name, (const xmlChar *) (elem))) &&		\
+    ((xmlStrEqual((node)->ns->href, xmlSchematronNs)) ||		\
+     (xmlStrEqual((node)->ns->href, xmlOldSchematronNs))))
 
 #define NEXT_SCHEMATRON(node)						\
-   while (node != NULL) {						\
-       if ((node->type == XML_ELEMENT_NODE ) && (node->ns != NULL) &&	\
-           ((xmlStrEqual(node->ns->href, xmlSchematronNs)) ||		\
-	    (xmlStrEqual(node->ns->href, xmlOldSchematronNs))))		\
+   while ((node) != NULL) {						\
+       if (((node)->type == XML_ELEMENT_NODE ) && ((node)->ns != NULL) && \
+           ((xmlStrEqual((node)->ns->href, xmlSchematronNs)) ||		\
+	    (xmlStrEqual((node)->ns->href, xmlOldSchematronNs))))	\
 	   break;							\
-       node = node->next;						\
+       (node) = (node)->next;						\
    }
 
 /**

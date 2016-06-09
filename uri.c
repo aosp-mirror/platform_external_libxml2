@@ -30,7 +30,7 @@
  * really should never be hit by 'normal' operations
  * Set to 1 MByte in 2012, this is only enforced on output
  */
-#define MAX_URI_LENGTH 1024 * 1024
+#define MAX_URI_LENGTH (1024 * 1024)
 
 static void
 xmlURIErrMemory(const char *extra)
@@ -123,7 +123,7 @@ static void xmlCleanURI(xmlURIPtr uri);
  * Skip to next pointer char, handle escaped sequences
  */
 
-#define NEXT(p) ((*p == '%')? p += 3 : p++)
+#define NEXT(p) ((*(p) == '%')? (p) += 3 : (p)++)
 
 /*
  * Productions from the spec.
@@ -184,7 +184,7 @@ static void xmlCleanURI(xmlURIPtr uri);
  *    pct-encoded   = "%" HEXDIG HEXDIG
  */
 #define ISA_PCT_ENCODED(p)						\
-     ((*(p) == '%') && (ISA_HEXDIG(p + 1)) && (ISA_HEXDIG(p + 2)))
+     ((*(p) == '%') && (ISA_HEXDIG((p) + 1)) && (ISA_HEXDIG((p) + 2)))
 
 /*
  *    pchar         = unreserved / pct-encoded / sub-delims / ":" / "@"
@@ -1746,7 +1746,7 @@ xmlURIEscape(const xmlChar * str)
     xmlURIPtr uri;
     int ret2;
 
-#define NULLCHK(p) if(!p) { \
+#define NULLCHK(p) if(!(p)) { \
          xmlURIErrMemory("escaping URI value\n"); \
          xmlFreeURI(uri); \
          return NULL; } \
@@ -2376,11 +2376,11 @@ done:
  * by the returned string. If there is insufficient memory available, or the
  * argument is NULL, the function returns NULL.
  */
-#define IS_WINDOWS_PATH(p)					\
-	((p != NULL) &&						\
-	 (((p[0] >= 'a') && (p[0] <= 'z')) ||			\
-	  ((p[0] >= 'A') && (p[0] <= 'Z'))) &&			\
-	 (p[1] == ':') && ((p[2] == '/') || (p[2] == '\\')))
+#define IS_WINDOWS_PATH(p)					    \
+	(((p) != NULL) &&					    \
+	 ((((p)[0] >= 'a') && ((p)[0] <= 'z')) ||		    \
+	  (((p)[0] >= 'A') && ((p)[0] <= 'Z'))) &&		    \
+	 ((p)[1] == ':') && (((p)[2] == '/') || ((p)[2] == '\\')))
 xmlChar *
 xmlCanonicPath(const xmlChar *path)
 {
