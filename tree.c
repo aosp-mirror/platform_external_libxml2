@@ -134,8 +134,8 @@ static int xmlCheckDTD = 1;
 	(n)->last = ulccur;						\
 }}
 
-#define IS_STR_XML(str) ((str != NULL) && (str[0] == 'x') && \
-  (str[1] == 'm') && (str[2] == 'l') && (str[3] == 0))
+#define IS_STR_XML(str) (((str) != NULL) && ((str)[0] == 'x') && \
+  ((str)[1] == 'm') && ((str)[2] == 'l') && ((str)[3] == 0))
 
 /* #define DEBUG_BUFFER */
 /* #define DEBUG_TREE */
@@ -350,7 +350,7 @@ xmlSplitQName3(const xmlChar *name, int *len) {
  *									*
  ************************************************************************/
 
-#define CUR_SCHAR(s, l) xmlStringCurrentChar(NULL, s, &l)
+#define CUR_SCHAR(s, l) xmlStringCurrentChar(NULL, s, &(l))
 
 #if defined(LIBXML_TREE_ENABLED) || defined(LIBXML_XPATH_ENABLED) || defined(LIBXML_SCHEMAS_ENABLED) || defined(LIBXML_DEBUG_ENABLED) || defined (LIBXML_HTML_ENABLED) || defined(LIBXML_SAX1_ENABLED) || defined(LIBXML_HTML_ENABLED) || defined(LIBXML_WRITER_ENABLED) || defined(LIBXML_DOCB_ENABLED) || defined(LIBXML_LEGACY_ENABLED)
 /**
@@ -1064,11 +1064,11 @@ xmlCreateIntSubset(xmlDocPtr doc, const xmlChar *name,
     if (str) { \
 	if (dict) { \
 	    if (xmlDictOwns(dict, (const xmlChar *)(str))) \
-		cpy = (xmlChar *) (str); \
+		(cpy) = (xmlChar *) (str); \
 	    else \
-		cpy = (xmlChar *) xmlDictLookup((dict), (const xmlChar *)(str), -1); \
+		(cpy) = (xmlChar *) xmlDictLookup((dict), (const xmlChar *)(str), -1); \
 	} else \
-	    cpy = xmlStrdup((const xmlChar *)(str)); }
+	    (cpy) = xmlStrdup((const xmlChar *)(str)); }
 
 /**
  * DICT_CONST_COPY:
@@ -1081,11 +1081,11 @@ xmlCreateIntSubset(xmlDocPtr doc, const xmlChar *name,
     if (str) { \
 	if (dict) { \
 	    if (xmlDictOwns(dict, (const xmlChar *)(str))) \
-		cpy = (const xmlChar *) (str); \
+		(cpy) = (const xmlChar *) (str); \
 	    else \
-		cpy = xmlDictLookup((dict), (const xmlChar *)(str), -1); \
+		(cpy) = xmlDictLookup((dict), (const xmlChar *)(str), -1); \
 	} else \
-	    cpy = (const xmlChar *) xmlStrdup((const xmlChar *)(str)); }
+	    (cpy) = (const xmlChar *) xmlStrdup((const xmlChar *)(str)); }
 
 
 /**
@@ -7788,10 +7788,10 @@ xmlSetCompressMode(int mode) {
     else xmlCompressMode = mode;
 }
 
-#define XML_TREE_NSMAP_PARENT -1
-#define XML_TREE_NSMAP_XML -2
-#define XML_TREE_NSMAP_DOC -3
-#define XML_TREE_NSMAP_CUSTOM -4
+#define XML_TREE_NSMAP_PARENT (-1)
+#define XML_TREE_NSMAP_XML (-2)
+#define XML_TREE_NSMAP_DOC (-3)
+#define XML_TREE_NSMAP_CUSTOM (-4)
 
 typedef struct xmlNsMapItem *xmlNsMapItemPtr;
 struct xmlNsMapItem {
@@ -7819,7 +7819,7 @@ struct xmlNsMap {
 };
 
 #define XML_NSMAP_NOTEMPTY(m) (((m) != NULL) && ((m)->first != NULL))
-#define XML_NSMAP_FOREACH(m, i) for (i = (m)->first; i != NULL; i = (i)->next)
+#define XML_NSMAP_FOREACH(m, i) for ((i) = (m)->first; (i) != NULL; (i) = (i)->next)
 #define XML_NSMAP_POP(m, i) \
     i = (m)->last; \
     (m)->last = (i)->prev; \
@@ -8124,16 +8124,16 @@ xmlDOMWrapNSNormGatherInScopeNs(xmlNsMapPtr *map,
 * otherwise copy it, when it was in the source-dict.
 */
 #define XML_TREE_ADOPT_STR(str) \
-    if (adoptStr && (str != NULL)) { \
+    if (adoptStr && ((str) != NULL)) { \
 	if (destDoc->dict) { \
 	    const xmlChar *old = str;	\
-	    str = xmlDictLookup(destDoc->dict, str, -1); \
+	    (str) = xmlDictLookup(destDoc->dict, str, -1); \
 	    if ((sourceDoc == NULL) || (sourceDoc->dict == NULL) || \
 	        (!xmlDictOwns(sourceDoc->dict, old))) \
 		xmlFree((char *)old); \
 	} else if ((sourceDoc) && (sourceDoc->dict) && \
 	    xmlDictOwns(sourceDoc->dict, str)) { \
-	    str = BAD_CAST xmlStrdup(str); \
+	    (str) = BAD_CAST xmlStrdup(str); \
 	} \
     }
 
@@ -8142,7 +8142,7 @@ xmlDOMWrapNSNormGatherInScopeNs(xmlNsMapPtr *map,
 * put it in dest-dict or copy it.
 */
 #define XML_TREE_ADOPT_STR_2(str) \
-    if (adoptStr && (str != NULL) && (sourceDoc != NULL) && \
+    if (adoptStr && ((str) != NULL) && (sourceDoc != NULL) && \
 	(sourceDoc->dict != NULL) && \
 	xmlDictOwns(sourceDoc->dict, cur->content)) { \
 	if (destDoc->dict) \

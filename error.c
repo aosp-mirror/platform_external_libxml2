@@ -26,8 +26,8 @@ void XMLCDECL xmlGenericErrorDefaultFunc	(void *ctx ATTRIBUTE_UNUSED,
     char      *larger;						\
     va_list   ap;						\
 								\
-    str = (char *) xmlMalloc(150);				\
-    if (str != NULL) {						\
+    (str) = (char *) xmlMalloc(150);				\
+    if ((str) != NULL) {						\
 								\
     size = 150;							\
 								\
@@ -49,7 +49,7 @@ void XMLCDECL xmlGenericErrorDefaultFunc	(void *ctx ATTRIBUTE_UNUSED,
 	if ((larger = (char *) xmlRealloc(str, size)) == NULL) {\
 	    break;						\
 	}							\
-	str = larger;						\
+	(str) = larger;						\
     }}								\
 }
 
