@@ -1,0 +1,9 @@
+Autosubmit+1: Xin Li <delphij@google.com>
+Presubmit-Verified+1: Treehugger Robot <treehugger-gerrit@google.com>
+Code-Review+2: Bill Yi <byi@google.com>
+Verified+1: Xin Li <delphij@google.com>
+Submitted-by: Treehugger Robot <treehugger-gerrit@google.com>
+Submitted-at: Thu, 21 Jul 2016 21:52:37 +0000
+Reviewed-on: https://android-review.googlesource.com/249538
+Project: platform/external/libxml2
+Branch: refs/heads/master
