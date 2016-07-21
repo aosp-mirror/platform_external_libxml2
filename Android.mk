@@ -20,9 +20,7 @@ LOCAL_PATH := $(call my-dir)
 # To update:
 #
 
-#  git remote add libxml2 git://git.gnome.org/libxml2
-#  git fetch libxml2
-#  git merge libxml2/master
+#  git merge aosp/upstream-master
 #  mm -j32
 #  # (Make any necessary Android.mk changes and test the new libxml2.)
 #  git push aosp HEAD:master  # Push directly, avoiding gerrit.
