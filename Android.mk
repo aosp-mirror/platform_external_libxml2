@@ -60,6 +60,7 @@ common_CFLAGS += \
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 LOCAL_CFLAGS += $(common_CFLAGS) -fvisibility=hidden
 LOCAL_SHARED_LIBRARIES += libicuuc
 LOCAL_MODULE := libxml2
@@ -73,6 +74,7 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES := $(common_C_INCLUDES)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 LOCAL_CFLAGS += $(common_CFLAGS)
 LOCAL_SHARED_LIBRARIES := libicuuc
 LOCAL_MODULE:= libxml2
@@ -86,6 +88,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := $(common_SRC_FILES)
 LOCAL_C_INCLUDES += $(common_C_INCLUDES)
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/include
 LOCAL_CFLAGS += $(common_CFLAGS) -fvisibility=hidden
 LOCAL_SHARED_LIBRARIES += libicuuc
 LOCAL_MODULE := libxml2
