@@ -41,6 +41,7 @@ common_SRC_FILES := \
 	dict.c \
 	SAX2.c \
 	legacy.c \
+	buf.c \
 	chvalid.c \
 	pattern.c \
 	xmlsave.c \
