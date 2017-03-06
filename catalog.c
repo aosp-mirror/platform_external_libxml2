@@ -47,9 +47,9 @@
 #define MAX_CATAL_DEPTH	50
 
 #ifdef _WIN32
-# define PATH_SEAPARATOR ';'
+# define PATH_SEPARATOR ';'
 #else
-# define PATH_SEAPARATOR ':'
+# define PATH_SEPARATOR ':'
 #endif
 
 /**
@@ -238,7 +238,7 @@ xmlCatalogErrMemory(const char *extra)
  *
  * Handle a catalog error
  */
-static void
+static void LIBXML_ATTR_FORMAT(4,0)
 xmlCatalogErr(xmlCatalogEntryPtr catal, xmlNodePtr node, int error,
                const char *msg, const xmlChar *str1, const xmlChar *str2,
 	       const xmlChar *str3)
@@ -994,6 +994,11 @@ xmlLoadFileContent(const char *filename)
     content = (xmlChar*)xmlMallocAtomic(size + 10);
     if (content == NULL) {
         xmlCatalogErrMemory("allocating catalog data");
+#ifdef HAVE_STAT
+	close(fd);
+#else
+	fclose(fd);
+#endif
         return (NULL);
     }
 #ifdef HAVE_STAT
@@ -3242,7 +3247,7 @@ xmlLoadCatalogs(const char *pathss) {
 	while (xmlIsBlank_ch(*cur)) cur++;
 	if (*cur != 0) {
 	    paths = cur;
-	    while ((*cur != 0) && (*cur != PATH_SEAPARATOR) && (!xmlIsBlank_ch(*cur)))
+	    while ((*cur != 0) && (*cur != PATH_SEPARATOR) && (!xmlIsBlank_ch(*cur)))
 		cur++;
 	    path = xmlStrndup((const xmlChar *)paths, cur - paths);
 #ifdef _WIN32
@@ -3258,7 +3263,7 @@ xmlLoadCatalogs(const char *pathss) {
 		xmlFree(path);
 	    }
 	}
-	while (*cur == PATH_SEAPARATOR)
+	while (*cur == PATH_SEPARATOR)
 	    cur++;
     }
 }
@@ -3550,8 +3555,8 @@ xmlCatalogSetDefaultPrefer(xmlCatalogPrefer prefer) {
 		xmlGenericError(xmlGenericErrorContext,
 			"Setting catalog preference to SYSTEM\n");
 		break;
-	    case XML_CATA_PREFER_NONE:
-		break;
+	    default:
+		return(ret);
 	}
     }
     xmlCatalogDefaultPrefer = prefer;

@@ -800,6 +800,13 @@ xmlCheckFilename (const char *path)
     return 1;
 }
 
+/**
+ * xmlNop:
+ *
+ * No Operation function, does nothing, no input
+ *
+ * Returns zero
+ */
 int
 xmlNop(void) {
     return(0);
@@ -887,7 +894,7 @@ xmlFileMatch (const char *filename ATTRIBUTE_UNUSED) {
  */
 static void *
 xmlFileOpen_real (const char *filename) {
-    const char *path = NULL;
+    const char *path = filename;
     FILE *fd;
 
     if (filename == NULL)
@@ -917,11 +924,8 @@ xmlFileOpen_real (const char *filename) {
 #else
 	path = &filename[5];
 #endif
-    } else
-	path = filename;
+    }
 
-    if (path == NULL)
-	return(NULL);
     if (!xmlCheckFilename(path))
         return(NULL);
 
@@ -1159,7 +1163,12 @@ xmlGzfileOpen_real (const char *filename) {
     gzFile fd;
 
     if (!strcmp(filename, "-")) {
-        fd = gzdopen(dup(0), "rb");
+        int duped_fd = dup(fileno(stdin));
+        fd = gzdopen(duped_fd, "rb");
+        if (fd == Z_NULL && duped_fd >= 0) {
+            close(duped_fd);  /* gzdOpen() does not close on failure */
+        }
+
 	return((void *) fd);
     }
 
@@ -1233,7 +1242,12 @@ xmlGzfileOpenW (const char *filename, int compression) {
 
     snprintf(mode, sizeof(mode), "wb%d", compression);
     if (!strcmp(filename, "-")) {
-        fd = gzdopen(dup(1), mode);
+        int duped_fd = dup(fileno(stdout));
+        fd = gzdopen(duped_fd, "rb");
+        if (fd == Z_NULL && duped_fd >= 0) {
+            close(duped_fd);  /* gzdOpen() does not close on failure */
+        }
+
 	return((void *) fd);
     }
 
@@ -1320,7 +1334,7 @@ xmlGzfileClose (void * context) {
 }
 #endif /* HAVE_ZLIB_H */
 
-#ifdef HAVE_LZMA_H
+#ifdef LIBXML_LZMA_ENABLED
 /************************************************************************
  *									*
  *		I/O for compressed file accesses			*
@@ -1355,7 +1369,7 @@ xmlXzfileOpen_real (const char *filename) {
     xzFile fd;
 
     if (!strcmp(filename, "-")) {
-        fd = __libxml2_xzdopen(dup(0), "rb");
+        fd = __libxml2_xzdopen(dup(fileno(stdin)), "rb");
 	return((void *) fd);
     }
 
@@ -1437,7 +1451,7 @@ xmlXzfileClose (void * context) {
     if (ret < 0) xmlIOErr(0, "xzclose()");
     return(ret);
 }
-#endif /* HAVE_LZMA_H */
+#endif /* LIBXML_LZMA_ENABLED */
 
 #ifdef LIBXML_HTTP_ENABLED
 /************************************************************************
@@ -1590,7 +1604,7 @@ xmlCreateZMemBuff( int compression ) {
 	xmlFreeZMemBuff( buff );
 	buff = NULL;
 	xmlStrPrintf(msg, 500,
-		    (const xmlChar *) "xmlCreateZMemBuff:  %s %d\n",
+		    "xmlCreateZMemBuff:  %s %d\n",
 		    "Error initializing compression context.  ZLIB error:",
 		    z_err );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -1658,7 +1672,7 @@ xmlZMemBuffExtend( xmlZMemBuffPtr buff, size_t ext_amt ) {
     else {
 	xmlChar msg[500];
 	xmlStrPrintf(msg, 500,
-		    (const xmlChar *) "xmlZMemBuffExtend:  %s %lu bytes.\n",
+		    "xmlZMemBuffExtend:  %s %lu bytes.\n",
 		    "Allocation failure extending output buffer to",
 		    new_size );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -1704,7 +1718,7 @@ xmlZMemBuffAppend( xmlZMemBuffPtr buff, const char * src, int len ) {
 	if ( z_err != Z_OK ) {
 	    xmlChar msg[500];
 	    xmlStrPrintf(msg, 500,
-			(const xmlChar *) "xmlZMemBuffAppend:  %s %d %s - %d",
+			"xmlZMemBuffAppend:  %s %d %s - %d",
 			"Compression error while appending",
 			len, "bytes to buffer.  ZLIB error", z_err );
 	    xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -1777,7 +1791,7 @@ xmlZMemBuffGetContent( xmlZMemBuffPtr buff, char ** data_ref ) {
     else {
 	xmlChar msg[500];
 	xmlStrPrintf(msg, 500,
-		    (const xmlChar *) "xmlZMemBuffGetContent:  %s - %d\n",
+		    "xmlZMemBuffGetContent:  %s - %d\n",
 		    "Error flushing zlib buffers.  Error code", z_err );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
     }
@@ -1982,7 +1996,7 @@ xmlIOHTTPWrite( void * context, const char * buffer, int len ) {
 	if ( len < 0 ) {
 	    xmlChar msg[500];
 	    xmlStrPrintf(msg, 500,
-			(const xmlChar *) "xmlIOHTTPWrite:  %s\n%s '%s'.\n",
+			"xmlIOHTTPWrite:  %s\n%s '%s'.\n",
 			"Error appending to internal buffer.",
 			"Error sending document to URI",
 			ctxt->uri );
@@ -2054,7 +2068,7 @@ xmlIOHTTPCloseWrite( void * context, const char * http_mthd ) {
     if ( http_content == NULL ) {
 	xmlChar msg[500];
 	xmlStrPrintf(msg, 500,
-		     (const xmlChar *) "xmlIOHTTPCloseWrite:  %s '%s' %s '%s'.\n",
+		     "xmlIOHTTPCloseWrite:  %s '%s' %s '%s'.\n",
 		     "Error retrieving content.\nUnable to",
 		     http_mthd, "data to URI", ctxt->uri );
 	xmlIOErr(XML_IO_WRITE, (const char *) msg);
@@ -2126,7 +2140,7 @@ xmlIOHTTPCloseWrite( void * context, const char * http_mthd ) {
 	    else {
                 xmlChar msg[500];
                 xmlStrPrintf(msg, 500,
-    (const xmlChar *) "xmlIOHTTPCloseWrite: HTTP '%s' of %d %s\n'%s' %s %d\n",
+                      "xmlIOHTTPCloseWrite: HTTP '%s' of %d %s\n'%s' %s %d\n",
 			    http_mthd, content_lgth,
 			    "bytes to URI", ctxt->uri,
 			    "failed.  HTTP return code:", http_rtn );
@@ -2314,10 +2328,10 @@ xmlRegisterDefaultInputCallbacks(void) {
     xmlRegisterInputCallbacks(xmlGzfileMatch, xmlGzfileOpen,
 	                      xmlGzfileRead, xmlGzfileClose);
 #endif /* HAVE_ZLIB_H */
-#ifdef HAVE_LZMA_H
+#ifdef LIBXML_LZMA_ENABLED
     xmlRegisterInputCallbacks(xmlXzfileMatch, xmlXzfileOpen,
 	                      xmlXzfileRead, xmlXzfileClose);
-#endif /* HAVE_ZLIB_H */
+#endif /* LIBXML_LZMA_ENABLED */
 
 #ifdef LIBXML_HTTP_ENABLED
     xmlRegisterInputCallbacks(xmlIOHTTPMatch, xmlIOHTTPOpen,
@@ -2667,6 +2681,12 @@ __xmlParserInputBufferCreateFilename(const char *URI, xmlCharEncoding enc) {
 		}
 	    }
 #endif
+	}
+#endif
+#ifdef LIBXML_LZMA_ENABLED
+	if ((xmlInputCallbackTable[i].opencallback == xmlXzfileOpen) &&
+		(strcmp(URI, "-") != 0)) {
+            ret->compressed = __libxml2_xzcompressed(context);
 	}
 #endif
     }
@@ -3325,6 +3345,17 @@ xmlParserInputBufferGrow(xmlParserInputBufferPtr in, int len) {
     if (res < 0) {
 	return(-1);
     }
+
+    /*
+     * try to establish compressed status of input if not done already
+     */
+    if (in->compressed == -1) {
+#ifdef LIBXML_LZMA_ENABLED
+	if (in->readcallback == xmlXzfileRead)
+            in->compressed = __libxml2_xzcompressed(in->context);
+#endif
+    }
+
     len = res;
     if (in->encoder != NULL) {
         unsigned int use;
