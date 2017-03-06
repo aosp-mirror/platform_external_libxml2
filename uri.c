@@ -314,7 +314,7 @@ xmlParse3986Query(xmlURIPtr uri, const char **str)
  * @uri:  pointer to an URI structure
  * @str:  the string to analyze
  *
- * Parse a port  part and fills in the appropriate fields
+ * Parse a port part and fills in the appropriate fields
  * of the @uri structure
  *
  * port          = *DIGIT
@@ -325,15 +325,16 @@ static int
 xmlParse3986Port(xmlURIPtr uri, const char **str)
 {
     const char *cur = *str;
+    unsigned port = 0; /* unsigned for defined overflow behavior */
 
     if (ISA_DIGIT(cur)) {
-	if (uri != NULL)
-	    uri->port = 0;
 	while (ISA_DIGIT(cur)) {
-	    if (uri != NULL)
-		uri->port = uri->port * 10 + (*cur - '0');
+	    port = port * 10 + (*cur - '0');
+
 	    cur++;
 	}
+	if (uri != NULL)
+	    uri->port = port & INT_MAX; /* port value modulo INT_MAX+1 */
 	*str = cur;
 	return(0);
     }
@@ -1531,11 +1532,10 @@ xmlNormalizeURIPath(char *path) {
           break;
         }
         /* Valgrind complained, strcpy(cur, segp + 3); */
-        /* string will overlap, do not use strcpy */
-        tmp = cur;
-        segp += 3;
-        while ((*tmp++ = *segp++) != 0)
-          ;
+	/* string will overlap, do not use strcpy */
+	tmp = cur;
+	segp += 3;
+	while ((*tmp++ = *segp++) != 0);
 
         /* If there are no previous segments, then keep going from here.  */
         segp = cur;
