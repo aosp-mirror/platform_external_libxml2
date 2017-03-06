@@ -1,5 +1,8 @@
 /* config.h.  Generated from config.h.in by configure.  */
-/* config.h.in.  Generated from configure.in by autoheader.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Type cast for the gethostbyname() argument */
+#define GETHOSTBYNAME_ARG_CAST /**/
 
 /* Define to 1 if you have the <ansidecl.h> header file. */
 /* #undef HAVE_ANSIDECL_H */
@@ -154,7 +157,7 @@
 #define HAVE_RAND 1
 
 /* Define to 1 if you have the `rand_r' function. */
-// #define HAVE_RAND_R 1
+/* #undef HAVE_RAND_R */
 
 /* Define to 1 if you have the <resolv.h> header file. */
 #define HAVE_RESOLV_H 1
@@ -261,7 +264,7 @@
 #define HAVE_VSPRINTF 1
 
 /* Define to 1 if you have the <zlib.h> header file. */
-/* #undef HAVE_ZLIB_H */
+/* #undef HAVE_ZLIB_H */ /* Because otherwise LIBXML_ZLIB_ENABLED is ignored! */
 
 /* Define to 1 if you have the `_stat' function. */
 /* #undef HAVE__STAT */
@@ -297,14 +300,20 @@
 /* Define to the version of this package. */
 #define PACKAGE_VERSION ""
 
+/* Type cast for the send() function 2nd arg */
+#define SEND_ARG2_CAST /**/
+
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Support for IPv6 */
 #define SUPPORT_IP6 /**/
 
+/* Define if va_list is an array type */
+#define VA_LIST_IS_ARRAY 1
+
 /* Version number of package */
-#define VERSION "2.9.1"
+#define VERSION "2.9.2"
 
 /* Determine what socket length (socklen_t) data type is */
 #define XML_SOCKLEN_T socklen_t
