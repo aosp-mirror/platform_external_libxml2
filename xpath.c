@@ -4368,7 +4368,7 @@ xmlXPathNewValueTree(xmlNodePtr val) {
     }
     memset(ret, 0 , (size_t) sizeof(xmlXPathObject));
     ret->type = XPATH_XSLT_TREE;
-    ret->boolval = 1;
+    ret->boolval = 0;
     ret->user = (void *) val;
     ret->nodesetval = xmlXPathNodeSetCreate(val);
 #ifdef XP_DEBUG_OBJ_USAGE
@@ -10691,13 +10691,18 @@ xmlXPathCompPathExpr(xmlXPathParserContextPtr ctxt) {
 		    lc = 1;
 		    break;
 		} else if ((NXT(len) == '(')) {
-		    /* Note Type or Function */
+		    /* Node Type or Function */
 		    if (xmlXPathIsNodeType(name)) {
 #ifdef DEBUG_STEP
 		        xmlGenericError(xmlGenericErrorContext,
 				"PathExpr: Type search\n");
 #endif
 			lc = 1;
+#ifdef LIBXML_XPTR_ENABLED
+                    } else if (ctxt->xptr &&
+                               xmlStrEqual(name, BAD_CAST "range-to")) {
+                        lc = 1;
+#endif
 		    } else {
 #ifdef DEBUG_STEP
 		        xmlGenericError(xmlGenericErrorContext,
