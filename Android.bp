@@ -76,7 +76,7 @@ cc_library {
         "xmlmodule.c",
         "schematron.c",
     ],
-    export_include_dirs: ["include", "include/libxml"],
+    export_include_dirs: ["include"],
     cflags: [
         "-DLIBXML_THREAD_ENABLED=1",
 
@@ -95,9 +95,4 @@ cc_library {
         },
     },
     shared_libs: ["libicuuc"],
-}
-
-cc_library_headers {
-    name: "libxml2_headers",
-    export_include_dirs: ["include", "include/libxml"],
 }
