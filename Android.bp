@@ -95,4 +95,5 @@ cc_library {
         },
     },
     shared_libs: ["libicuuc"],
+    export_shared_lib_headers: ["libicuuc"],
 }
