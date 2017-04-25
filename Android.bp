@@ -95,6 +95,7 @@ cc_library {
         },
     },
     shared_libs: ["libicuuc"],
+    export_shared_lib_headers: ["libicuuc"],
 }
 
 cc_library_headers {
