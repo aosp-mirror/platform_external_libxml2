@@ -33,6 +33,7 @@
 // We deliberately exclude nanoftp.c and nanohttp.c, the trio library, and zlib.
 cc_library {
     name: "libxml2",
+    vendor_available: true,
     host_supported: true,
     srcs: [
         "SAX.c",
