@@ -286,9 +286,14 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  * LIBXML_ICU_ENABLED:
  *
  * Whether icu support is available
+ *
+ * This is disabled when libxml2 is built for the VNDK.
+ * libicuuc.so isn't available in the VNDK.
  */
-#if 1
+#ifndef __ANDROID_VNDK__
 #define LIBXML_ICU_ENABLED
+#else
+#undef LIBXML_ICU_ENABLED
 #endif
 
 /**
