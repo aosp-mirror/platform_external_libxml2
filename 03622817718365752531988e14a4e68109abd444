@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "508c3619_b014895a",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 1014443
+      },
+      "writtenOn": "2017-08-10T11:33:19Z",
+      "side": 1,
+      "message": "please adding a (cherry-picked from..) line to the commit message - you can get that from git cherry-pick -x or by using repo cherry-pick. \n\nPS. I know the \"Merged-In\" tag gives *some* indication that this is a cherry-pick, but it\u0027s not unambiguous, especially because the  two change-ids are the same.",
+      "revId": "03622817718365752531988e14a4e68109abd444",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": false
+    }
+  ]
+}
