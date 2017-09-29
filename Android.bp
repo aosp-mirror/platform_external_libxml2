@@ -94,9 +94,6 @@ cc_library {
         cflags: ["-fvisibility=hidden"],
     },
     target: {
-        host: {
-            host_ldlibs: ["-ldl"],
-        },
         vendor: {
             exclude_shared_libs: ["libicuuc"],
         },
