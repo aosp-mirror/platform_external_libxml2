@@ -84,10 +84,14 @@ cc_library {
     cflags: [
         "-DLIBXML_THREAD_ENABLED=1",
 
+        "-Wall",
+        "-Werror",
+        "-Wno-error=ignored-attributes",
         "-Wno-missing-field-initializers",
         "-Wno-self-assign",
         "-Wno-sign-compare",
         "-Wno-tautological-pointer-compare",
+        "-Wno-unused-function",
         "-Wno-unused-parameter",
     ],
     static: {
