@@ -79,16 +79,3 @@ LOCAL_MODULE:= libxml2
 LOCAL_CLANG := true
 LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
 include $(BUILD_SHARED_LIBRARY)
-
-# For the host
-# ========================================================
-
-include $(CLEAR_VARS)
-LOCAL_SRC_FILES := $(common_SRC_FILES)
-LOCAL_C_INCLUDES += $(common_C_INCLUDES)
-LOCAL_CFLAGS += $(common_CFLAGS) -fvisibility=hidden
-LOCAL_SHARED_LIBRARIES += libicuuc
-LOCAL_MODULE := libxml2
-LOCAL_CLANG := true
-LOCAL_ADDITIONAL_DEPENDENCIES += $(LOCAL_PATH)/Android.mk
-include $(BUILD_HOST_STATIC_LIBRARY)
