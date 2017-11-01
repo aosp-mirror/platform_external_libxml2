@@ -3420,8 +3420,15 @@ xmlParseNameComplex(xmlParserCtxtPtr ctxt) {
         xmlFatalErr(ctxt, XML_ERR_NAME_TOO_LONG, "Name");
         return(NULL);
     }
-    if ((*ctxt->input->cur == '\n') && (ctxt->input->cur[-1] == '\r'))
+    if (ctxt->input->cur > ctxt->input->base && (*ctxt->input->cur == '\n') && (ctxt->input->cur[-1] == '\r')) {
+        if (ctxt->input->base > ctxt->input->cur - (len + 1)) {
+            return(NULL);
+        }
         return(xmlDictLookup(ctxt->dict, ctxt->input->cur - (len + 1), len));
+    }
+    if (ctxt->input->base > ctxt->input->cur - len) {
+        return(NULL);
+    }
     return(xmlDictLookup(ctxt->dict, ctxt->input->cur - len, len));
 }
 
@@ -8123,6 +8130,14 @@ xmlParsePEReference(xmlParserCtxtPtr ctxt)
 	    if (xmlPushInput(ctxt, input) < 0)
 		return;
 	} else {
+	    if ((entity->etype == XML_EXTERNAL_PARAMETER_ENTITY) &&
+	        ((ctxt->options & XML_PARSE_NOENT) == 0) &&
+	        ((ctxt->options & XML_PARSE_DTDVALID) == 0) &&
+	        ((ctxt->options & XML_PARSE_DTDLOAD) == 0) &&
+	        ((ctxt->options & XML_PARSE_DTDATTR) == 0) &&
+	        (ctxt->replaceEntities == 0) &&
+	        (ctxt->validate == 0))
+	        return;
 	    /*
 	     * TODO !!!
 	     * handle the extra spaces added before and after
