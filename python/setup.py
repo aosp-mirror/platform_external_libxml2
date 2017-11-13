@@ -1,3 +1,4 @@
+<<<<<<< HEAD   (908b56 Merge "Use -Werror in external/libxml2" am: df42fca172)
 #!/usr/bin/python -u
 #
 # Setup script for libxml2 and libxslt if found
@@ -240,3 +241,5 @@ setup (name = "libxml2-python",
 
 sys.exit(0)
 
+=======
+>>>>>>> BRANCH (772c06 Fix unused parameter warning without ICU)
