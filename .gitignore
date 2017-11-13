@@ -1,3 +1,4 @@
+*.exe
 *.o
 *.lo
 *.log
@@ -76,6 +77,7 @@ python/libxml2.py
 python/libxml2class.py
 python/libxml2class.txt
 python/libxml2mod.la
+python/setup.py
 python/tests/Makefile
 python/tests/Makefile.in
 python/tests/tmp.xml
