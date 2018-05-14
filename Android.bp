@@ -105,3 +105,15 @@ cc_library {
     shared_libs: ["libicuuc"],
     export_shared_lib_headers: ["libicuuc"],
 }
+
+cc_binary_host {
+    name: "xmllint",
+    srcs: ["xmllint.c"],
+    cflags: [
+        "-DLIBXML_THREAD_ENABLED=1",
+
+        "-Wall",
+        "-Werror",
+    ],
+    shared_libs: ["libxml2"],
+}
