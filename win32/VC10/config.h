@@ -9,11 +9,9 @@
 
 #if defined(_WIN32_WCE)
 #undef HAVE_ERRNO_H
-#include <windows.h>
 #include "wincecompat.h"
 #else
 #define HAVE_SYS_STAT_H
-#define HAVE__STAT
 #define HAVE_STAT
 #define HAVE_STDLIB_H
 #define HAVE_TIME_H
@@ -26,10 +24,6 @@
 
 #ifndef ICONV_CONST
 #define ICONV_CONST const
-#endif
-
-#ifdef NEED_SOCKETS
-#include <wsockcompat.h>
 #endif
 
 /*
@@ -96,7 +90,9 @@ static int isnan (double d) {
 
 #if defined(_MSC_VER)
 #define mkdir(p,m) _mkdir(p)
+#if _MSC_VER < 1900 // Cannot define this in VS 2015 and above!
 #define snprintf _snprintf
+#endif
 #if _MSC_VER < 1500
 #define vsnprintf(b,c,f,a) _vsnprintf(b,c,f,a)
 #endif

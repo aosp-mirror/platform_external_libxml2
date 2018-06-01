@@ -20,9 +20,7 @@ LOCAL_PATH := $(call my-dir)
 # To update:
 #
 
-#  git remote add libxml2 git://git.gnome.org/libxml2
-#  git fetch libxml2
-#  git merge libxml2/master
+#  git merge aosp/upstream-master
 #  mm -j32
 #  # (Make any necessary Android.mk changes and test the new libxml2.)
 #  git push aosp HEAD:master  # Push directly, avoiding gerrit.
@@ -37,7 +35,7 @@ LOCAL_PATH := $(call my-dir)
 # We deliberately exclude nanoftp.c and nanohttp.c, the trio library, and zlib.
 common_SRC_FILES := SAX.c entities.c encoding.c error.c \
         parserInternals.c parser.c tree.c hash.c list.c xmlIO.c \
-        xmlmemory.c uri.c valid.c xlink.c HTMLparser.c HTMLtree.c \
+        xmlmemory.c uri.c valid.c xlink.c \
         debugXML.c xpath.c xpointer.c xinclude.c \
         DOCBparser.c catalog.c globals.c threads.c c14n.c xmlstring.c \
         buf.c xmlregexp.c xmlschemas.c xmlschemastypes.c xmlunicode.c \
@@ -54,6 +52,7 @@ common_CFLAGS += \
     -Wno-self-assign \
     -Wno-sign-compare \
     -Wno-tautological-pointer-compare \
+    -Wno-unused-parameter \
 
 # Static library
 #=======================================================
