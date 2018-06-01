@@ -110,9 +110,7 @@
 /* #undef HAVE_LZMA_H */
 
 /* Define to 1 if you have the <malloc.h> header file. */
-#ifndef HAVE_MALLOC_H /* Already in AndroidConfig.h :-( */
 #define HAVE_MALLOC_H 1
-#endif
 
 /* Define to 1 if you have the <math.h> header file. */
 #define HAVE_MATH_H 1

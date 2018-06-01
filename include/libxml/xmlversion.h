@@ -201,7 +201,12 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the HTML support is configured in
  */
-#if 1
+// BEGIN android-changed
+// Was: #if 1
+// HTML support has security vulnerabilities (b/27338391)
+// and is not needed in Android.
+#if 0
+// END android-changed
 #define LIBXML_HTML_ENABLED
 #endif
 
@@ -281,9 +286,14 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  * LIBXML_ICU_ENABLED:
  *
  * Whether icu support is available
+ *
+ * This is disabled when libxml2 is built for the VNDK.
+ * libicuuc.so isn't available in the VNDK.
  */
-#if 1
+#ifndef __ANDROID_VNDK__
 #define LIBXML_ICU_ENABLED
+#else
+#undef LIBXML_ICU_ENABLED
 #endif
 
 /**
@@ -435,7 +445,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  */
 
 #ifndef LIBXML_ATTR_ALLOC_SIZE
-# if (!defined(__clang__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3))))
+# if ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
 #  define LIBXML_ATTR_ALLOC_SIZE(x) __attribute__((alloc_size(x)))
 # else
 #  define LIBXML_ATTR_ALLOC_SIZE(x)
