@@ -50,7 +50,7 @@ setenv TGTCCSID         '500'           # Target CCSID of objects.
 setenv DEBUG            '*ALL'          # Debug level.
 setenv OPTIMIZE         '10'            # Optimisation level.
 setenv OUTPUT           '*NONE'         # Compilation output option.
-setenv TGTRLS           'V5R3M0'        # Target OS release.
+setenv TGTRLS           'V6R1M0'        # Target OS release.
 setenv IFSDIR           '/libxml2'      # Installation IFS directory.
 
 
@@ -165,15 +165,38 @@ action_needed()
 }
 
 
-#       make_module module_name source_name [additional_definitions]
+#       make_module [option] module_name source_name
 #
 #       Compile source name into ASCII module if needed.
 #       As side effect, append the module name to variable MODULES.
 #       Set LINK to "YES" if the module has been compiled.
+#       Options are:
+#         --define <additional definitions>
+#         --ebcdic
+#         --sysiconv
 
 make_module()
 
 {
+        DEFN=
+        EBCDIC=
+        SYSICONV=
+        while true
+        do      case "${1}" in
+                --define)
+                        DEFN="${2}"
+                        shift
+                        ;;
+                --ebcdic)
+                        EBCDIC=yes
+                        ;;
+                --sysiconv)
+                        SYSICONV=yes
+                        ;;
+                *)      break
+                esac
+                shift
+        done
         MODULES="${MODULES} ${1}"
         MODIFSNAME="${LIBIFSNAME}/${1}.MODULE"
         action_needed "${MODIFSNAME}" "${2}" || return 0;
@@ -185,7 +208,7 @@ make_module()
         #               the source file and we compile that temporary file.
 
         rm -f __tmpsrcf.c
-        if [ "${4}" != 'ebcdic' ]
+        if [ -z "${EBCDIC}" ]
         then    echo "#line 1 \"${2}\"" >> __tmpsrcf.c
                 echo "#pragma convert(819)" >> __tmpsrcf.c
                 echo '#include "wrappers.h"' >> __tmpsrcf.c
@@ -194,11 +217,13 @@ make_module()
         cat "${2}" >> __tmpsrcf.c
         CMD="CRTCMOD MODULE(${TARGETLIB}/${1}) SRCSTMF('__tmpsrcf.c')"
 #       CMD="${CMD} OPTION(*INCDIRFIRST *SHOWINC *SHOWSYS)"
-        CMD="${CMD} OPTION(*INCDIRFIRST)"
+        CMD="${CMD} OPTION(*INCDIRFIRST) FLAG(10)"
         CMD="${CMD} SYSIFCOPT(*IFS64IO) LANGLVL(*EXTENDED) LOCALETYPE(*LOCALE)"
         CMD="${CMD} INCDIR("
-        CMD="${CMD} '${TOPDIR}/os400/iconv'"
-        if [ "${4}" != 'ebcdic' ]
+        if [  -z "${SYSICONV}" ]
+        then    CMD="${CMD} '${TOPDIR}/os400/iconv'"
+        fi
+        if [ -z "${EBCDIC}" ]
         then    CMD="${CMD} '/qibm/proddata/qadrt/include'"
         fi
         CMD="${CMD} '${TOPDIR}/os400' '${TOPDIR}/os400/dlfcn'"
@@ -211,7 +236,7 @@ make_module()
         CMD="${CMD} OUTPUT(${OUTPUT})"
         CMD="${CMD} OPTIMIZE(${OPTIMIZE})"
         CMD="${CMD} DBGVIEW(${DEBUG})"
-        CMD="${CMD} DEFINE('_REENTRANT' 'TRIO_HAVE_CONFIG_H' 'NDEBUG' ${3})"
+        CMD="${CMD} DEFINE('_REENTRANT' 'TRIO_HAVE_CONFIG_H' 'NDEBUG' ${DEFN})"
 
         system "${CMD}"
         rm -f __tmpsrcf.c
