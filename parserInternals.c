@@ -32,7 +32,7 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
 #include <zlib.h>
 #endif
 
@@ -1214,7 +1214,7 @@ xmlSwitchInputEncodingInt(xmlParserCtxtPtr ctxt, xmlParserInputPtr input,
                 /*
                  * convert as much as possible of the buffer
                  */
-                nbchars = xmlCharEncInput(input->buf, 1);
+                nbchars = xmlCharEncInput(input->buf, 0);
             } else {
                 /*
                  * convert just enough to get
