@@ -99,11 +99,11 @@ cc_library {
     },
     target: {
         vendor: {
-            exclude_shared_libs: ["libicuuc"],
+            exclude_shared_libs: ["libandroidicu"],
         },
     },
-    shared_libs: ["libicuuc"],
-    export_shared_lib_headers: ["libicuuc"],
+    shared_libs: ["libandroidicu"],
+    export_shared_lib_headers: ["libandroidicu"],
 }
 
 cc_binary_host {
