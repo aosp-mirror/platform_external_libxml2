@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9b668552_3d22d0a2",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 106,
+      "author": {
+        "id": 1038039
+      },
+      "writtenOn": "2018-12-19T09:11:56Z",
+      "side": 1,
+      "message": "I\u0027ll +2 but do you know what the effects of exclude_shared_libs and export_shared_lib_headers are?",
+      "range": {
+        "startLine": 106,
+        "startChar": 4,
+        "endLine": 106,
+        "endChar": 29
+      },
+      "revId": "3b421d48dc12a684bcf5618d989cb4ea308bf1b5",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
+    }
+  ]
+}
