@@ -22,6 +22,30 @@
       "revId": "3b421d48dc12a684bcf5618d989cb4ea308bf1b5",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "1491a20f_233423ee",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 106,
+      "author": {
+        "id": 1047684
+      },
+      "writtenOn": "2018-12-19T10:48:24Z",
+      "side": 1,
+      "message": "For export_shared_lib_headers, I think any libs depending libxml2 should also see the headers without including libandroidicu in their build rule. For example, it\u0027s useful when the library passes C struct or C++ object as argument in the API.\n\nI actually can\u0027t see the doc of exclude_shared_libs in go/android.bp. But I think vendor lib can\u0027t see  libandroidicu at all. I think it\u0027s related to the face that LIBXML_ICU_ENABLED is off in VNDK, and thus the dependency can be excluded for vendor.\n\nI don\u0027t know the effect when they are used in mix, but I just change from libicuuc to libandroidicu in this CL, not the rest of the build rule..",
+      "parentUuid": "9b668552_3d22d0a2",
+      "range": {
+        "startLine": 106,
+        "startChar": 4,
+        "endLine": 106,
+        "endChar": 29
+      },
+      "revId": "3b421d48dc12a684bcf5618d989cb4ea308bf1b5",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
     }
   ]
 }
