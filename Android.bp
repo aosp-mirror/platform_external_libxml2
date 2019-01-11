@@ -95,15 +95,28 @@ cc_library {
         "-Wno-unused-parameter",
     ],
     static: {
-        cflags: ["-fvisibility=hidden"],
+        cflags: [
+            "-fvisibility=hidden",
+            "-DSTATIC_LIBXML=1",
+        ],
+    },
+    shared: {
+        shared_libs: ["libandroidicu"],
     },
     target: {
         vendor: {
             exclude_shared_libs: ["libandroidicu"],
         },
+        host: {
+            shared_libs: ["libandroidicu"],
+        },
     },
-    shared_libs: ["libandroidicu"],
-    export_shared_lib_headers: ["libandroidicu"],
+    // static variant has no such lib. Can't define export_shared_lib_headers here.
+    // Can't define it in the shared block either
+    // export_shared_lib_headers: ["libandroidicu"],
+    // Workaround to always export the headers
+    header_libs: ["libandroidicu_headers"],
+    export_header_lib_headers: ["libandroidicu_headers"],
 }
 
 cc_binary_host {
