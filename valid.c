@@ -4660,13 +4660,13 @@ xmlNodePtr elem, const xmlChar *prefix, xmlNsPtr ns, const xmlChar *value) {
 #if 0
     /* Validity Constraint: ID uniqueness */
     if (attrDecl->atype == XML_ATTRIBUTE_ID) {
-        if (xmlAddID(ctxt, doc, value, (xmlAttrPtr) attrDecl) == NULL)
+        if (xmlAddID(ctxt, doc, value, (xmlAttrPtr) ns) == NULL)
 	    ret = 0;
     }
 
     if ((attrDecl->atype == XML_ATTRIBUTE_IDREF) ||
 	(attrDecl->atype == XML_ATTRIBUTE_IDREFS)) {
-        if (xmlAddRef(ctxt, doc, value, (xmlAttrPtr) attrDecl) == NULL)
+        if (xmlAddRef(ctxt, doc, value, (xmlAttrPtr) ns) == NULL)
 	    ret = 0;
     }
 #endif
