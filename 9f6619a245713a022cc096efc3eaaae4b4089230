@@ -22,6 +22,30 @@
       "revId": "9f6619a245713a022cc096efc3eaaae4b4089230",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "6a0585e3_75fcbda1",
+        "filename": "Android.bp",
+        "patchSetId": 2
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1132673
+      },
+      "writtenOn": "2019-01-11T16:43:48Z",
+      "side": 1,
+      "message": "We might be able to amend the build system to support something like\n\nshared: {\n    shared_libs: [\"libandroidicu\"],\n    export_shared_lib_headers: [\"libandroidicu\"],\n},",
+      "parentUuid": "4c7110aa_9574663f",
+      "range": {
+        "startLine": 118,
+        "startChar": 0,
+        "endLine": 119,
+        "endChar": 57
+      },
+      "revId": "9f6619a245713a022cc096efc3eaaae4b4089230",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
     }
   ]
 }
