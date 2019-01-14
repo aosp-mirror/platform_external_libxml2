@@ -46,6 +46,30 @@
       "revId": "9f6619a245713a022cc096efc3eaaae4b4089230",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "89dd57a7_214c7505",
+        "filename": "Android.bp",
+        "patchSetId": 2
+      },
+      "lineNbr": 119,
+      "author": {
+        "id": 1047684
+      },
+      "writtenOn": "2019-01-14T12:20:28Z",
+      "side": 1,
+      "message": "Thanks! I will check with soong team if this should be added.",
+      "parentUuid": "6a0585e3_75fcbda1",
+      "range": {
+        "startLine": 118,
+        "startChar": 0,
+        "endLine": 119,
+        "endChar": 57
+      },
+      "revId": "9f6619a245713a022cc096efc3eaaae4b4089230",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
     }
   ]
 }
