@@ -29,28 +29,28 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * the version string like "1.2.3"
  */
-#define LIBXML_DOTTED_VERSION "2.9.2"
+#define LIBXML_DOTTED_VERSION "2.9.9"
 
 /**
  * LIBXML_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXML_VERSION 20902
+#define LIBXML_VERSION 20909
 
 /**
  * LIBXML_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXML_VERSION_STRING "20902"
+#define LIBXML_VERSION_STRING "20909"
 
 /**
  * LIBXML_VERSION_EXTRA:
  *
  * extra version information, used to show a CVS compilation
  */
-#define LIBXML_VERSION_EXTRA "-GITv2.9.2-48-g4b31d61"
+#define LIBXML_VERSION_EXTRA "-GITv2.9.9-rc2-2-g7c4949afa"
 
 /**
  * LIBXML_TEST_VERSION:
@@ -58,7 +58,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  * Macro to check that the libxml version in use is compatible with
  * the version the software has been compiled against
  */
-#define LIBXML_TEST_VERSION xmlCheckVersion(20902);
+#define LIBXML_TEST_VERSION xmlCheckVersion(20909);
 
 #ifndef VMS
 #if 0
@@ -174,8 +174,8 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the FTP support is configured in
  */
-#if 0
-#define LIBXML_FTP_ENABLED
+#if 1
+#undef LIBXML_FTP_ENABLED
 #endif
 
 /**
@@ -183,8 +183,8 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the HTTP support is configured in
  */
-#if 0
-#define LIBXML_HTTP_ENABLED
+#if 1
+#undef LIBXML_HTTP_ENABLED
 #endif
 
 /**
@@ -201,13 +201,8 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the HTML support is configured in
  */
-// BEGIN android-changed
-// Was: #if 1
-// HTML support has security vulnerabilities (b/27338391)
-// and is not needed in Android.
-#if 0
-// END android-changed
-#define LIBXML_HTML_ENABLED
+#if 1
+#undef LIBXML_HTML_ENABLED
 #endif
 
 /**
@@ -215,8 +210,8 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the deprecated APIs are compiled in for compatibility
  */
-#if 0
-#define LIBXML_LEGACY_ENABLED
+#if 1
+#undef LIBXML_LEGACY_ENABLED
 #endif
 
 /**
@@ -278,22 +273,18 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether iconv support is available
  */
-#if 0
-#define LIBXML_ICONV_ENABLED
+#if 1
+#undef LIBXML_ICONV_ENABLED
 #endif
 
 /**
  * LIBXML_ICU_ENABLED:
  *
  * Whether icu support is available
- *
- * This is disabled when libxml2 is built for the VNDK.
- * libicuuc.so isn't available in the VNDK.
  */
+#undef LIBXML_ICU_ENABLED
 #ifndef __ANDROID_VNDK__
 #define LIBXML_ICU_ENABLED
-#else
-#undef LIBXML_ICU_ENABLED
 #endif
 
 /**
@@ -406,8 +397,8 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the Zlib support is compiled in
  */
-#if 0
-#define LIBXML_ZLIB_ENABLED
+#if 1
+#undef LIBXML_ZLIB_ENABLED
 #endif
 
 /**
@@ -415,14 +406,11 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the Lzma support is compiled in
  */
-#if 0
-#define LIBXML_LZMA_ENABLED
+#if 1
+#undef LIBXML_LZMA_ENABLED
 #endif
 
 #ifdef __GNUC__
-#ifdef HAVE_ANSIDECL_H
-#include <ansidecl.h>
-#endif
 
 /**
  * ATTRIBUTE_UNUSED:
@@ -445,7 +433,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  */
 
 #ifndef LIBXML_ATTR_ALLOC_SIZE
-# if ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
+# if (!defined(__clang__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3))))
 #  define LIBXML_ATTR_ALLOC_SIZE(x) __attribute__((alloc_size(x)))
 # else
 #  define LIBXML_ATTR_ALLOC_SIZE(x)
