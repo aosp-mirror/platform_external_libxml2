@@ -106,15 +106,23 @@ cc_library {
         "-Wno-unused-parameter",
     ],
     static: {
-        cflags: ["-fvisibility=hidden"],
+        cflags: [
+            "-fvisibility=hidden",
+            "-DSTATIC_LIBXML=1",
+        ],
+    },
+    shared: {
+        shared_libs: ["libandroidicu"],
+        export_shared_lib_headers: ["libandroidicu"],
     },
     target: {
         vendor: {
             exclude_shared_libs: ["libandroidicu"],
         },
+        host: {
+            shared_libs: ["libandroidicu"],
+        },
     },
-    shared_libs: ["libandroidicu"],
-    export_shared_lib_headers: ["libandroidicu"],
 }
 
 cc_binary_host {
