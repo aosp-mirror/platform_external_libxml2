@@ -31,13 +31,8 @@
 
 // This comes from the automake-generated Makefile.
 // We deliberately exclude nanoftp.c and nanohttp.c, the trio library, and zlib.
-cc_library {
-    name: "libxml2",
-    vendor_available: true,
-    vndk: {
-        enabled: true,
-    },
-    host_supported: true,
+cc_defaults {
+    name: "libxml2-defaults",
     srcs: [
         "SAX.c",
         "entities.c",
@@ -115,6 +110,16 @@ cc_library {
         shared_libs: ["libandroidicu"],
         export_shared_lib_headers: ["libandroidicu"],
     },
+}
+
+cc_library {
+    name: "libxml2",
+    defaults: ["libxml2-defaults"],
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+    host_supported: true,
     target: {
         vendor: {
             exclude_shared_libs: ["libandroidicu"],
@@ -123,6 +128,12 @@ cc_library {
             shared_libs: ["libandroidicu"],
         },
     },
+}
+
+cc_library_static {
+    name: "libxml2_ndk",
+    defaults: ["libxml2-defaults"],
+    sdk_version: "current",
 }
 
 cc_binary_host {
