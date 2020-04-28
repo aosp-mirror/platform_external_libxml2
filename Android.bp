@@ -106,6 +106,10 @@ cc_defaults {
             "-DSTATIC_LIBXML=1",
         ],
     },
+    shared: {
+        shared_libs: ["libandroidicu"],
+        export_shared_lib_headers: ["libandroidicu"],
+    },
 }
 
 cc_library {
@@ -117,23 +121,12 @@ cc_library {
     },
     host_supported: true,
     target: {
-       android: {
-           shared_libs: ["libandroidicu"],
-           export_shared_lib_headers: ["libandroidicu"],
-       },
-       host: {
-           shared_libs: [
-               "libicui18n",
-               "libicuuc",
-           ],
-           export_shared_lib_headers: [
-               "libicui18n",
-               "libicuuc",
-           ],
-       },
-       vendor: {
-           exclude_shared_libs: ["libandroidicu"],
-       },
+        vendor: {
+            exclude_shared_libs: ["libandroidicu"],
+        },
+        host: {
+            shared_libs: ["libandroidicu"],
+        },
     },
 }
 
