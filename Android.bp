@@ -75,6 +75,7 @@ cc_defaults {
         "xmlmodule.c",
         "schematron.c",
     ],
+    stl: "none",
     export_include_dirs: ["include"],
     cflags: [
         "-DLIBXML_THREAD_ENABLED=1",
