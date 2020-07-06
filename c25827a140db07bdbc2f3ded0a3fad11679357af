@@ -1,0 +1,8 @@
+Code-Review+2: Colin Cross <ccross@android.com>
+Presubmit-Verified+1: Treehugger Robot <treehugger-gerrit@google.com>
+Lint+1: Lint 🤖 <android-build-prod-ayeaye@system.gserviceaccount.com>
+Submitted-by: Jooyung Han <jooyung@google.com>
+Submitted-at: Mon, 06 Jul 2020 03:44:30 +0000
+Reviewed-on: https://android-review.googlesource.com/c/platform/external/libxml2/+/1355502
+Project: platform/external/libxml2
+Branch: refs/heads/master
