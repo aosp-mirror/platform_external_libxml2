@@ -34,6 +34,24 @@
       "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "76615224_eb7564d9",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-07-31T18:33:02Z",
+      "side": 1,
+      "message": "how do tarballs work if you have a SHA in METADATA?",
+      "parentUuid": "f77425fe_e26a045b",
+      "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
     }
   ]
 }
