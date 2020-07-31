@@ -16,6 +16,24 @@
       "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f77425fe_e26a045b",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1307957
+      },
+      "writtenOn": "2020-07-31T18:14:45Z",
+      "side": 1,
+      "message": "No this is upgraded as tarball. Because historically we did this way. We can convert to git merge if necessary...",
+      "parentUuid": "dc284142_7bb3f63a",
+      "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
     }
   ]
 }
