@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d78dbaee_da195610",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1347428
+      },
+      "writtenOn": "2020-07-31T06:18:53Z",
+      "side": 1,
+      "message": "Thanks! Will you cherry pick the CMakeLists.txt CL?\n",
+      "revId": "9d4c94ff0d4d0bb1e7e8beb607c5fea17c5d4448",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": false
+    }
+  ]
+}
