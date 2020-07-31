@@ -52,6 +52,24 @@
       "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f6e32712_c72e52b9",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1307957
+      },
+      "writtenOn": "2020-07-31T19:36:38Z",
+      "side": 1,
+      "message": "If the version is a SHA, the tool will:\n1. Get master SHA from https://api.github.com/repos/{owner}/{repo}/commits/master\n2. Download from https://github.com/{owner}/{repo}/archive/{sha}.zip",
+      "parentUuid": "76615224_eb7564d9",
+      "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
     }
   ]
 }
