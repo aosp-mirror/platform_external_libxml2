@@ -70,6 +70,24 @@
       "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "ba8572a1_03d49317",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-07-31T19:57:37Z",
+      "side": 1,
+      "message": "oh, cool. i didn\u0027t realize (or remember, if you\u0027d told me this already) that there was a zip for every sha too.",
+      "parentUuid": "f6e32712_c72e52b9",
+      "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": false
     }
   ]
 }
