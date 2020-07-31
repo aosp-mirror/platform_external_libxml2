@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "dc284142_7bb3f63a",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-07-31T13:45:55Z",
+      "side": 1,
+      "message": "did you get upstream-master changed too? i didn\u0027t see the bug for that...",
+      "revId": "cfd91dcb1d8895a6e567a9ff975c3ff6e08202d4",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889",
+      "unresolved": true
+    }
+  ]
+}
