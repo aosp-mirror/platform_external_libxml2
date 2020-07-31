@@ -1,9 +1,5 @@
 name: "libxml2"
-description:
-    "Libxml2 is the XML C parser and toolkit developed for the Gnome project "
-    "(but usable outside of the Gnome platform), it is free software "
-    "available under the MIT License."
-
+description: "Libxml2 is the XML C parser and toolkit developed for the Gnome project (but usable outside of the Gnome platform), it is free software available under the MIT License."
 third_party {
   url {
     type: HOMEPAGE
@@ -11,9 +7,13 @@ third_party {
   }
   url {
     type: ARCHIVE
-    value: "ftp://xmlsoft.org/libxml2/libxml2-2.9.9.tar.gz"
+    value: "https://github.com/GNOME/libxml2/archive/1a360c1c2ec950f478d55b31722ecf78f5698e97.zip"
   }
-  version: "2.9.9"
-  last_upgrade_date { year: 2019 month: 1 day: 3 }
+  version: "1a360c1c2ec950f478d55b31722ecf78f5698e97"
   license_type: NOTICE
+  last_upgrade_date {
+    year: 2020
+    month: 7
+    day: 31
+  }
 }
