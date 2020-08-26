@@ -1,0 +1,13 @@
+corpus/
+html
+htmlSeed
+regexp
+schema
+schemaSeed
+seed/html*
+seed/xml*
+seed/schema*
+testFuzzer
+uri
+xml
+xmlSeed
