@@ -4,8 +4,11 @@
  * See Copyright for the status of this software.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+
 #include <libxml/hash.h>
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
@@ -69,11 +72,6 @@ xmlFuzzDataInit(const char *data, size_t size) {
     fuzzData.mainEntity = NULL;
 }
 
-static void
-xmlFreeEntityEntry(void *value, const xmlChar *name) {
-    xmlFree(value);
-}
-
 /**
  * xmlFuzzDataFree:
  *
@@ -82,7 +80,7 @@ xmlFreeEntityEntry(void *value, const xmlChar *name) {
 void
 xmlFuzzDataCleanup(void) {
     xmlFree(fuzzData.outBuf);
-    xmlHashFree(fuzzData.entities, xmlFreeEntityEntry);
+    xmlHashFree(fuzzData.entities, xmlHashDefaultDeallocator);
 }
 
 /**
@@ -122,20 +120,24 @@ xmlFuzzReadRemaining(size_t *size) {
 }
 
 /*
- * Write a random-length string to stdout in a format similar to
+ * xmlFuzzWriteString:
+ * @out:  output file
+ * @str:  string to write
+ *
+ * Write a random-length string to file in a format similar to
  * FuzzedDataProvider. Backslash followed by newline marks the end of the
  * string. Two backslashes are used to escape a backslash.
  */
-static void
-xmlFuzzWriteString(const char *str) {
+void
+xmlFuzzWriteString(FILE *out, const char *str) {
     for (; *str; str++) {
         int c = (unsigned char) *str;
-        putchar(c);
+        putc(c, out);
         if (c == '\\')
-            putchar(c);
+            putc(c, out);
     }
-    putchar('\\');
-    putchar('\n');
+    putc('\\', out);
+    putc('\n', out);
 }
 
 /**
@@ -150,7 +152,7 @@ xmlFuzzWriteString(const char *str) {
  *
  * Returns a zero-terminated string or NULL if the fuzz data is exhausted.
  */
-static const char *
+const char *
 xmlFuzzReadString(size_t *size) {
     const char *out = fuzzData.outPtr;
 
@@ -184,47 +186,6 @@ xmlFuzzReadString(size_t *size) {
     }
 
     return(NULL);
-}
-
-/*
- * A custom entity loader that writes all external DTDs or entities to a
- * single file in the format expected by xmlFuzzEntityLoader.
- */
-xmlParserInputPtr
-xmlFuzzEntityRecorder(const char *URL, const char *ID,
-                      xmlParserCtxtPtr ctxt) {
-    xmlParserInputPtr in;
-    static const int chunkSize = 16384;
-    int len;
-
-    in = xmlNoNetExternalEntityLoader(URL, ID, ctxt);
-    if (in == NULL)
-        return(NULL);
-
-    if (fuzzData.entities == NULL) {
-        fuzzData.entities = xmlHashCreate(4);
-    } else if (xmlHashLookup(fuzzData.entities,
-                             (const xmlChar *) URL) != NULL) {
-        return(in);
-    }
-
-    do {
-        len = xmlParserInputBufferGrow(in->buf, chunkSize);
-        if (len < 0) {
-            fprintf(stderr, "Error reading %s\n", URL);
-            xmlFreeInputStream(in);
-            return(NULL);
-        }
-    } while (len > 0);
-
-    xmlFuzzWriteString(URL);
-    xmlFuzzWriteString((char *) xmlBufContent(in->buf->buffer));
-
-    xmlFreeInputStream(in);
-
-    xmlHashAddEntry(fuzzData.entities, (const xmlChar *) URL, NULL);
-
-    return(xmlNoNetExternalEntityLoader(URL, ID, ctxt));
 }
 
 /**
@@ -355,5 +316,34 @@ xmlFuzzExtractStrings(const char *data, size_t size, char **strings,
     }
 
     return(ret);
+}
+
+char *
+xmlSlurpFile(const char *path, size_t *sizeRet) {
+    FILE *file;
+    struct stat statbuf;
+    char *data;
+    size_t size;
+
+    if ((stat(path, &statbuf) != 0) || (!S_ISREG(statbuf.st_mode)))
+        return(NULL);
+    size = statbuf.st_size;
+    file = fopen(path, "rb");
+    if (file == NULL)
+        return(NULL);
+    data = xmlMalloc(size + 1);
+    if (data != NULL) {
+        if (fread(data, 1, size, file) != size) {
+            xmlFree(data);
+            data = NULL;
+        } else {
+            data[size] = 0;
+            if (sizeRet != NULL)
+                *sizeRet = size;
+        }
+    }
+    fclose(file);
+
+    return(data);
 }
 
