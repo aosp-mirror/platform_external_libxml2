@@ -59,7 +59,7 @@ struct _xmlXIncludeRef {
     xmlNodePtr            inc; /* the included copy */
     int                   xml; /* xml or txt */
     int                 count; /* how many refs use that specific doc */
-    xmlXPathObjectPtr    xptr; /* the xpointer if needed */
+    int	             fallback; /* fallback was loaded */
     int		      emptyFb; /* flag to show fallback empty */
 };
 
@@ -86,10 +86,13 @@ struct _xmlXIncludeCtxt {
     xmlChar *		 base; /* the current xml:base */
 
     void            *_private; /* application data */
+
+    unsigned long    incTotal; /* total number of processed inclusions */
 };
 
 static int
-xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc, xmlNodePtr tree);
+xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc, xmlNodePtr tree,
+                     int skipRoot);
 
 
 /************************************************************************
@@ -207,8 +210,6 @@ xmlXIncludeFreeRef(xmlXIncludeRefPtr ref) {
 	xmlFree(ref->URI);
     if (ref->fragment != NULL)
 	xmlFree(ref->fragment);
-    if (ref->xptr != NULL)
-	xmlXPathFreeObject(ref->xptr);
     xmlFree(ref);
 }
 
@@ -626,8 +627,8 @@ xmlXIncludeAddNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr cur) {
 	xmlXIncludeErr(ctxt, cur, XML_XINCLUDE_RECURSION,
 	               "detected a local recursion with no xpointer in %s\n",
 		       URL);
-	if (fragment != NULL)
-	    xmlFree(fragment);
+        xmlFree(URL);
+        xmlFree(fragment);
 	return(-1);
     }
 
@@ -639,12 +640,15 @@ xmlXIncludeAddNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr cur) {
 	    if (xmlStrEqual(URL, ctxt->urlTab[i])) {
 		xmlXIncludeErr(ctxt, cur, XML_XINCLUDE_RECURSION,
 		               "detected a recursion in %s\n", URL);
+                xmlFree(URL);
+                xmlFree(fragment);
 		return(-1);
 	    }
 	}
     }
 
     ref = xmlXIncludeNewRef(ctxt, URL, cur);
+    xmlFree(URL);
     if (ref == NULL) {
 	return(-1);
     }
@@ -652,7 +656,6 @@ xmlXIncludeAddNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr cur) {
     ref->doc = NULL;
     ref->xml = xml;
     ref->count = 1;
-    xmlFree(URL);
     return(0);
 }
 
@@ -729,7 +732,9 @@ xmlXIncludeRecurseDoc(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc,
 	 * (bug 132597)
 	 */
 	newctxt->parseFlags = ctxt->parseFlags;
-	xmlXIncludeDoProcess(newctxt, doc, xmlDocGetRootElement(doc));
+        newctxt->incTotal = ctxt->incTotal;
+	xmlXIncludeDoProcess(newctxt, doc, xmlDocGetRootElement(doc), 0);
+        ctxt->incTotal = newctxt->incTotal;
 	for (i = 0;i < ctxt->incNr;i++) {
 	    newctxt->incTab[i]->count--;
 	    newctxt->incTab[i] = NULL;
@@ -1459,7 +1464,7 @@ xmlXIncludeLoadDoc(xmlXIncludeCtxtPtr ctxt, const xmlChar *url, int nr) {
      */
     if ((URL[0] == 0) || (URL[0] == '#') ||
 	((ctxt->doc != NULL) && (xmlStrEqual(URL, ctxt->doc->URL)))) {
-	doc = NULL;
+	doc = ctxt->doc;
         goto loaded;
     }
 
@@ -1551,15 +1556,8 @@ loaded:
 	/*
 	 * Add the top children list as the replacement copy.
 	 */
-	if (doc == NULL)
-	{
-	    /* Hopefully a DTD declaration won't be copied from
-	     * the same document */
-	    ctxt->incTab[nr]->inc = xmlCopyNodeList(ctxt->doc->children);
-	} else {
-	    ctxt->incTab[nr]->inc = xmlXIncludeCopyNodeList(ctxt, ctxt->doc,
-		                                       doc, doc->children);
-	}
+	ctxt->incTab[nr]->inc = xmlXIncludeCopyNodeList(ctxt, ctxt->doc,
+		                                        doc, doc->children);
     }
 #ifdef LIBXML_XPTR_ENABLED
     else {
@@ -1571,12 +1569,7 @@ loaded:
 	xmlXPathContextPtr xptrctxt;
 	xmlNodeSetPtr set;
 
-	if (doc == NULL) {
-	    xptrctxt = xmlXPtrNewContext(ctxt->doc, ctxt->incTab[nr]->ref,
-		                         NULL);
-	} else {
-	    xptrctxt = xmlXPtrNewContext(doc, NULL, NULL);
-	}
+	xptrctxt = xmlXPtrNewContext(doc, NULL, NULL);
 	if (xptrctxt == NULL) {
 	    xmlXIncludeErr(ctxt, ctxt->incTab[nr]->ref,
 	                   XML_XINCLUDE_XPTR_FAILED,
@@ -1680,14 +1673,9 @@ loaded:
 		}
 	    }
 	}
-	if (doc == NULL) {
-	    ctxt->incTab[nr]->xptr = xptr;
-	    ctxt->incTab[nr]->inc = NULL;
-	} else {
-	    ctxt->incTab[nr]->inc =
-		xmlXIncludeCopyXPointer(ctxt, ctxt->doc, doc, xptr);
-	    xmlXPathFreeObject(xptr);
-	}
+        ctxt->incTab[nr]->inc =
+            xmlXIncludeCopyXPointer(ctxt, ctxt->doc, doc, xptr);
+        xmlXPathFreeObject(xptr);
 	xmlXPathFreeContext(xptrctxt);
 	xmlFree(fragment);
     }
@@ -1990,19 +1978,23 @@ xmlXIncludeLoadFallback(xmlXIncludeCtxtPtr ctxt, xmlNodePtr fallback, int nr) {
 	newctxt->_private = ctxt->_private;
 	newctxt->base = xmlStrdup(ctxt->base);	/* Inherit the base from the existing context */
 	xmlXIncludeSetFlags(newctxt, ctxt->parseFlags);
-	ret = xmlXIncludeDoProcess(newctxt, ctxt->doc, fallback->children);
+        newctxt->incTotal = ctxt->incTotal;
+        if (xmlXIncludeDoProcess(newctxt, ctxt->doc, fallback, 1) < 0)
+            ret = -1;
+        ctxt->incTotal = newctxt->incTotal;
 	if (ctxt->nbErrors > oldNbErrors)
 	    ret = -1;
-	else if (ret > 0)
-	    ret = 0;	/* xmlXIncludeDoProcess can return +ve number */
 	xmlXIncludeFreeContext(newctxt);
 
 	ctxt->incTab[nr]->inc = xmlDocCopyNodeList(ctxt->doc,
 	                                           fallback->children);
+        if (ctxt->incTab[nr]->inc == NULL)
+            ctxt->incTab[nr]->emptyFb = 1;
     } else {
         ctxt->incTab[nr]->inc = NULL;
 	ctxt->incTab[nr]->emptyFb = 1;	/* flag empty callback */
     }
+    ctxt->incTab[nr]->fallback = 1;
     return(ret);
 }
 
@@ -2158,8 +2150,7 @@ xmlXIncludeLoadNode(xmlXIncludeCtxtPtr ctxt, int nr) {
 		((xmlStrEqual(children->ns->href, XINCLUDE_NS)) ||
 		 (xmlStrEqual(children->ns->href, XINCLUDE_OLD_NS)))) {
 		ret = xmlXIncludeLoadFallback(ctxt, children, nr);
-		if (ret == 0)
-		    break;
+		break;
 	    }
 	    children = children->next;
 	}
@@ -2206,19 +2197,9 @@ xmlXIncludeIncludeNode(xmlXIncludeCtxtPtr ctxt, int nr) {
     if ((cur == NULL) || (cur->type == XML_NAMESPACE_DECL))
 	return(-1);
 
-    /*
-     * If we stored an XPointer a late computation may be needed
-     */
-    if ((ctxt->incTab[nr]->inc == NULL) &&
-	(ctxt->incTab[nr]->xptr != NULL)) {
-	ctxt->incTab[nr]->inc =
-	    xmlXIncludeCopyXPointer(ctxt, ctxt->doc, ctxt->doc,
-		                    ctxt->incTab[nr]->xptr);
-	xmlXPathFreeObject(ctxt->incTab[nr]->xptr);
-	ctxt->incTab[nr]->xptr = NULL;
-    }
     list = ctxt->incTab[nr]->inc;
     ctxt->incTab[nr]->inc = NULL;
+    ctxt->incTab[nr]->emptyFb = 0;
 
     /*
      * Check against the risk of generating a multi-rooted document
@@ -2238,6 +2219,7 @@ xmlXIncludeIncludeNode(xmlXIncludeCtxtPtr ctxt, int nr) {
 	                   XML_XINCLUDE_MULTIPLE_ROOT,
 		       "XInclude error: would result in multiple root nodes\n",
 			   NULL);
+            xmlFreeNodeList(list);
 	    return(-1);
 	}
     }
@@ -2255,16 +2237,27 @@ xmlXIncludeIncludeNode(xmlXIncludeCtxtPtr ctxt, int nr) {
 	xmlUnlinkNode(cur);
 	xmlFreeNode(cur);
     } else {
+        xmlNodePtr child, next;
+
 	/*
 	 * Change the current node as an XInclude start one, and add an
 	 * XInclude end one
 	 */
+        if (ctxt->incTab[nr]->fallback)
+            xmlUnsetProp(cur, BAD_CAST "href");
 	cur->type = XML_XINCLUDE_START;
+        /* Remove fallback children */
+        for (child = cur->children; child != NULL; child = next) {
+            next = child->next;
+            xmlUnlinkNode(child);
+            xmlFreeNode(child);
+        }
 	end = xmlNewDocNode(cur->doc, cur->ns, cur->name, NULL);
 	if (end == NULL) {
 	    xmlXIncludeErr(ctxt, ctxt->incTab[nr]->ref,
 	                   XML_XINCLUDE_BUILD_FAILED,
 			   "failed to build node\n", NULL);
+            xmlFreeNodeList(list);
 	    return(-1);
 	}
 	end->type = XML_XINCLUDE_END;
@@ -2366,6 +2359,7 @@ xmlXIncludeTestNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
  * @ctxt: the XInclude processing context
  * @doc: an XML document
  * @tree: the top of the tree to process
+ * @skipRoot: don't process the root node of the tree
  *
  * Implement the XInclude substitution on the XML document @doc
  *
@@ -2373,13 +2367,16 @@ xmlXIncludeTestNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
  *    or the number of substitutions done.
  */
 static int
-xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc, xmlNodePtr tree) {
+xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc, xmlNodePtr tree,
+                     int skipRoot) {
     xmlNodePtr cur;
     int ret = 0;
     int i, start;
 
     if ((doc == NULL) || (tree == NULL) || (tree->type == XML_NAMESPACE_DECL))
 	return(-1);
+    if ((skipRoot) && (tree->children == NULL))
+        return(-1);
     if (ctxt == NULL)
 	return(-1);
 
@@ -2391,40 +2388,59 @@ xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc, xmlNodePtr tree) {
     start = ctxt->incNr;
 
     /*
+     * TODO: The phases must run separately for recursive inclusions.
+     *
+     * - Phase 1 should start with top-level XInclude nodes, load documents,
+     *   execute XPointer expressions, then process only the result nodes
+     *   (not whole document, see bug #324081) and only for phase 1
+     *   recursively. We will need a backreference from xmlNodes to
+     *   xmlIncludeRefs to detect references that were already visited.
+     *   This can also be used for proper cycle detection, see bug #344240.
+     *
+     * - Phase 2 should visit all top-level XInclude nodes and expand
+     *   possible subreferences in the replacement recursively.
+     *
+     * - Phase 3 should finally replace the top-level XInclude nodes.
+     *   It could also be run together with phase 2.
+     */
+
+    /*
      * First phase: lookup the elements in the document
      */
-    cur = tree;
-    if (xmlXIncludeTestNode(ctxt, cur) == 1)
-	xmlXIncludePreProcessNode(ctxt, cur);
-    while ((cur != NULL) && (cur != tree->parent)) {
+    if (skipRoot)
+        cur = tree->children;
+    else
+        cur = tree;
+    do {
 	/* TODO: need to work on entities -> stack */
-	if ((cur->children != NULL) &&
-	    (cur->children->type != XML_ENTITY_DECL) &&
-	    (cur->children->type != XML_XINCLUDE_START) &&
-	    (cur->children->type != XML_XINCLUDE_END)) {
-	    cur = cur->children;
-	    if (xmlXIncludeTestNode(ctxt, cur))
-		xmlXIncludePreProcessNode(ctxt, cur);
-	} else if (cur->next != NULL) {
-	    cur = cur->next;
-	    if (xmlXIncludeTestNode(ctxt, cur))
-		xmlXIncludePreProcessNode(ctxt, cur);
-	} else {
-	    if (cur == tree)
-	        break;
-	    do {
-		cur = cur->parent;
-		if ((cur == NULL) || (cur == tree->parent))
-		    break; /* do */
-		if (cur->next != NULL) {
-		    cur = cur->next;
-		    if (xmlXIncludeTestNode(ctxt, cur))
-			xmlXIncludePreProcessNode(ctxt, cur);
-		    break; /* do */
-		}
-	    } while (cur != NULL);
-	}
-    }
+        if (xmlXIncludeTestNode(ctxt, cur) == 1) {
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+            /*
+             * Avoid superlinear expansion by limiting the total number
+             * of replacements.
+             */
+            if (ctxt->incTotal >= 20)
+                return(-1);
+#endif
+            ctxt->incTotal++;
+            xmlXIncludePreProcessNode(ctxt, cur);
+        } else if ((cur->children != NULL) &&
+                   (cur->children->type != XML_ENTITY_DECL) &&
+                   (cur->children->type != XML_XINCLUDE_START) &&
+                   (cur->children->type != XML_XINCLUDE_END)) {
+            cur = cur->children;
+            continue;
+        }
+        do {
+            if (cur == tree)
+                break;
+            if (cur->next != NULL) {
+                cur = cur->next;
+                break;
+            }
+            cur = cur->parent;
+        } while (cur != NULL);
+    } while ((cur != NULL) && (cur != tree));
 
     /*
      * Second Phase : collect the infosets fragments
@@ -2447,8 +2463,7 @@ xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlDocPtr doc, xmlNodePtr tree) {
      */
     for (i = ctxt->incBase;i < ctxt->incNr; i++) {
 	if ((ctxt->incTab[i]->inc != NULL) ||
-		(ctxt->incTab[i]->xptr != NULL) ||
-		(ctxt->incTab[i]->emptyFb != 0))	/* (empty fallback) */
+	    (ctxt->incTab[i]->emptyFb != 0))	/* (empty fallback) */
 	    xmlXIncludeIncludeNode(ctxt, i);
     }
 
@@ -2502,7 +2517,7 @@ xmlXIncludeProcessTreeFlagsData(xmlNodePtr tree, int flags, void *data) {
     ctxt->_private = data;
     ctxt->base = xmlStrdup((xmlChar *)tree->doc->URL);
     xmlXIncludeSetFlags(ctxt, flags);
-    ret = xmlXIncludeDoProcess(ctxt, tree->doc, tree);
+    ret = xmlXIncludeDoProcess(ctxt, tree->doc, tree, 0);
     if ((ret >= 0) && (ctxt->nbErrors > 0))
         ret = -1;
 
@@ -2586,7 +2601,7 @@ xmlXIncludeProcessTreeFlags(xmlNodePtr tree, int flags) {
 	return(-1);
     ctxt->base = xmlNodeGetBase(tree->doc, tree);
     xmlXIncludeSetFlags(ctxt, flags);
-    ret = xmlXIncludeDoProcess(ctxt, tree->doc, tree);
+    ret = xmlXIncludeDoProcess(ctxt, tree->doc, tree, 0);
     if ((ret >= 0) && (ctxt->nbErrors > 0))
 	ret = -1;
 
@@ -2626,7 +2641,7 @@ xmlXIncludeProcessNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
     if ((node == NULL) || (node->type == XML_NAMESPACE_DECL) ||
         (node->doc == NULL) || (ctxt == NULL))
 	return(-1);
-    ret = xmlXIncludeDoProcess(ctxt, node->doc, node);
+    ret = xmlXIncludeDoProcess(ctxt, node->doc, node, 0);
     if ((ret >= 0) && (ctxt->nbErrors > 0))
 	ret = -1;
     return(ret);

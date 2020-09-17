@@ -296,7 +296,7 @@ htmlNodeInfoPop(htmlParserCtxtPtr ctxt)
 
 #define UPPER (toupper(*ctxt->input->cur))
 
-#define SKIP(val) ctxt->nbChars += (val),ctxt->input->cur += (val),ctxt->input->col+=(val)
+#define SKIP(val) ctxt->input->cur += (val),ctxt->input->col+=(val)
 
 #define NXT(val) ctxt->input->cur[(val)]
 
@@ -330,7 +330,7 @@ htmlNodeInfoPop(htmlParserCtxtPtr ctxt)
     if (*(ctxt->input->cur) == '\n') {					\
 	ctxt->input->line++; ctxt->input->col = 1;			\
     } else ctxt->input->col++;						\
-    ctxt->token = 0; ctxt->input->cur += l; ctxt->nbChars++;		\
+    ctxt->token = 0; ctxt->input->cur += l;				\
   } while (0)
 
 /************
@@ -597,7 +597,6 @@ htmlSkipBlankChars(xmlParserCtxtPtr ctxt) {
 		ctxt->input->line++; ctxt->input->col = 1;
 	    } else ctxt->input->col++;
 	    ctxt->input->cur++;
-	    ctxt->nbChars++;
 	    if (*ctxt->input->cur == 0)
 		xmlParserInputGrow(ctxt->input, INPUT_CHUNK);
 	}
@@ -2495,7 +2494,6 @@ htmlParseName(htmlParserCtxtPtr ctxt) {
 	    count = in - ctxt->input->cur;
 	    ret = xmlDictLookup(ctxt->dict, ctxt->input->cur, count);
 	    ctxt->input->cur = in;
-	    ctxt->nbChars += count;
 	    ctxt->input->col += count;
 	    return(ret);
 	}
@@ -3852,8 +3850,6 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
     while ((CUR != 0) &&
            (CUR != '>') &&
 	   ((CUR != '/') || (NXT(1) != '>'))) {
-	long cons = ctxt->nbChars;
-
 	GROW;
 	attname = htmlParseAttribute(ctxt, &attvalue);
         if (attname != NULL) {
@@ -3920,12 +3916,6 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
 
 failed:
 	SKIP_BLANKS;
-        if (cons == ctxt->nbChars) {
-	    htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
-	                 "htmlParseStartTag: problem parsing attributes\n",
-			 NULL, NULL);
-	    break;
-	}
     }
 
     /*
@@ -4161,8 +4151,6 @@ htmlParseContent(htmlParserCtxtPtr ctxt) {
     currentNode = xmlStrdup(ctxt->name);
     depth = ctxt->nameNr;
     while (1) {
-	long cons = ctxt->nbChars;
-
         GROW;
 
         if (ctxt->instate == XML_PARSER_EOF)
@@ -4281,15 +4269,6 @@ htmlParseContent(htmlParserCtxtPtr ctxt) {
 	     */
 	    else {
 		htmlParseCharData(ctxt);
-	    }
-
-	    if (cons == ctxt->nbChars) {
-		if (ctxt->node != NULL) {
-		    htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
-		                 "detected an error in element content\n",
-				 NULL, NULL);
-		}
-		break;
 	    }
 	}
         GROW;
@@ -4561,8 +4540,6 @@ htmlParseContentInternal(htmlParserCtxtPtr ctxt) {
     currentNode = xmlStrdup(ctxt->name);
     depth = ctxt->nameNr;
     while (1) {
-	long cons = ctxt->nbChars;
-
         GROW;
 
         if (ctxt->instate == XML_PARSER_EOF)
@@ -4695,15 +4672,6 @@ htmlParseContentInternal(htmlParserCtxtPtr ctxt) {
 	     */
 	    else {
 		htmlParseCharData(ctxt);
-	    }
-
-	    if (cons == ctxt->nbChars) {
-		if (ctxt->node != NULL) {
-		    htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
-		                 "detected an error in element content\n",
-				 NULL, NULL);
-		}
-		break;
 	    }
 	}
         GROW;
@@ -4968,7 +4936,6 @@ htmlInitParserCtxt(htmlParserCtxtPtr ctxt)
     ctxt->vctxt.warning = xmlParserValidityWarning;
     ctxt->record_info = 0;
     ctxt->validate = 0;
-    ctxt->nbChars = 0;
     ctxt->checkIndex = 0;
     ctxt->catalogs = NULL;
     xmlInitNodeInfoSeq(&ctxt->node_seq);
@@ -5702,7 +5669,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 	    }
             case XML_PARSER_CONTENT: {
 		xmlChar chr[2] = { 0, 0 };
-		long cons;
 
                 /*
 		 * Handle preparsed entities and charRef
@@ -5747,7 +5713,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    goto done;
 		cur = in->cur[0];
 		next = in->cur[1];
-		cons = ctxt->nbChars;
 		if ((xmlStrEqual(ctxt->name, BAD_CAST"script")) ||
 		    (xmlStrEqual(ctxt->name, BAD_CAST"style"))) {
 		    /*
@@ -5876,15 +5841,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                             cur = in->cur[0];
                         }
 		    }
-		}
-		if (cons == ctxt->nbChars) {
-		    if (ctxt->node != NULL) {
-			htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
-			             "detected an error in element content\n",
-				     NULL, NULL);
-		    }
-		    NEXT;
-		    break;
 		}
 
 		break;
@@ -6622,7 +6578,6 @@ htmlCtxtReset(htmlParserCtxtPtr ctxt)
     ctxt->vctxt.error = xmlParserValidityError;
     ctxt->vctxt.warning = xmlParserValidityWarning;
     ctxt->record_info = 0;
-    ctxt->nbChars = 0;
     ctxt->checkIndex = 0;
     ctxt->inSubset = 0;
     ctxt->errNo = XML_ERR_OK;

@@ -48,6 +48,13 @@
 
 #define MAX_ERR_MSG_SIZE 64000
 
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+/* Keeping free objects can hide memory errors. */
+#define MAX_FREE_NODES 1
+#else
+#define MAX_FREE_NODES 100
+#endif
+
 /*
  * The following VA_COPY was coded following an example in
  * the Samba project.  It may not be sufficient for some
@@ -365,7 +372,7 @@ xmlTextReaderFreeProp(xmlTextReaderPtr reader, xmlAttrPtr cur) {
 
     DICT_FREE(cur->name);
     if ((reader != NULL) && (reader->ctxt != NULL) &&
-        (reader->ctxt->freeAttrsNr < 100)) {
+        (reader->ctxt->freeAttrsNr < MAX_FREE_NODES)) {
         cur->next = reader->ctxt->freeAttrs;
 	reader->ctxt->freeAttrs = cur;
 	reader->ctxt->freeAttrsNr++;
@@ -466,7 +473,7 @@ xmlTextReaderFreeNodeList(xmlTextReaderPtr reader, xmlNodePtr cur) {
 	    if (((cur->type == XML_ELEMENT_NODE) ||
 		 (cur->type == XML_TEXT_NODE)) &&
 	        (reader != NULL) && (reader->ctxt != NULL) &&
-		(reader->ctxt->freeElemsNr < 100)) {
+		(reader->ctxt->freeElemsNr < MAX_FREE_NODES)) {
 	        cur->next = reader->ctxt->freeElems;
 		reader->ctxt->freeElems = cur;
 		reader->ctxt->freeElemsNr++;
@@ -554,7 +561,7 @@ xmlTextReaderFreeNode(xmlTextReaderPtr reader, xmlNodePtr cur) {
     if (((cur->type == XML_ELEMENT_NODE) ||
 	 (cur->type == XML_TEXT_NODE)) &&
 	(reader != NULL) && (reader->ctxt != NULL) &&
-	(reader->ctxt->freeElemsNr < 100)) {
+	(reader->ctxt->freeElemsNr < MAX_FREE_NODES)) {
 	cur->next = reader->ctxt->freeElems;
 	reader->ctxt->freeElems = cur;
 	reader->ctxt->freeElemsNr++;
@@ -1491,6 +1498,8 @@ get_next_node:
             (reader->node->prev->type != XML_DTD_NODE)) {
 	    xmlNodePtr tmp = reader->node->prev;
 	    if ((tmp->extra & NODE_IS_PRESERVED) == 0) {
+                if (oldnode == tmp)
+                    oldnode = NULL;
 		xmlUnlinkNode(tmp);
 		xmlTextReaderFreeNode(reader, tmp);
 	    }
