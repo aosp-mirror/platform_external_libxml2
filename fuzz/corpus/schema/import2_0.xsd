@@ -1,0 +1,52 @@
+import2_0.xsd\
+<?xml version="1.0"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	xmlns:foo="http://FOO"
+	targetNamespace="http://BAR"
+	elementFormDefault="qualified">
+
+	<xsd:import namespace="http://FOO" schemaLocation="import2_0.imp"/>
+
+	<xsd:simpleType name="fooType">
+		<xsd:restriction base="xsd:string">
+			<xsd:maxLength value="10"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:element name="bar">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element ref="foo:foo" minOccurs="0"/>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+
+
+</xsd:schema>
+\
+import2_0.imp\
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://FOO"
+	xmlns:foo="http://FOO"
+	xmlns:bar="http://BAR"
+	elementFormDefault="qualified">
+
+	<!-- We need to import the namespace for the schema to be valid. -->
+	<xsd:import namespace="http://BAR"/>
+
+	<xsd:element name="foo">
+		<xsd:complexType>							
+			<xsd:sequence>				
+				<xsd:element name="foo.B" type="bar:fooType"/>
+				<xsd:element ref="bar:bar"/>				
+			</xsd:sequence>
+			<xsd:attribute name="foo.attr"/>			
+			
+		</xsd:complexType>		
+	</xsd:element>
+
+	
+
+</xsd:schema>
+\

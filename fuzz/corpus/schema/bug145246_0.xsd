@@ -1,0 +1,415 @@
+bug145246_0.xsd\
+<?xml version="1.0" ?>
+<!--  
+ * $Id: giml.xsd,v 1.3 2004/06/25 09:03:53 ensonic Exp $
+ * @file   giml.xsd
+ * @author Stefan Kost <ensonic@users.sf.net>
+ * @date   Thu Jun 24 17:28:26 MEST 2004
+ * 
+ * @brief  giml document schema definition
+ * @ingroup gitkcore
+ *
+-->
+<xs:schema targetNamespace="http://gitk.sourceforge.net/"
+		xmlns="http://gitk.sourceforge.net/"
+		xmlns:xs="http://www.w3.org/2001/XMLSchema"
+		xmlns:dc="http://purl.org/dc/elements/1.1/"
+		xmlns:i18n="http://apache.org/cocoon/i18n/2.0/">
+	<xs:annotation>
+		<xs:documentation>
+			This schema describes giml dialog sources
+		</xs:documentation>
+  </xs:annotation>
+
+  <xs:import namespace="http://purl.org/dc/elements/1.1/"
+		schemaLocation="bug145246.xsd.imp"
+	/>
+  <!--xs:import namespace="http://apache.org/cocoon/i18n/2.0/"
+		schemaLocation="file://./i18n.xsd"
+	/-->
+ 
+ <!-- foreign namespace
+	 <xs:element name="title">
+			<xs:complexType mixed="true">
+				<xs:choice minOccurs="0" maxOccurs="unbounded">
+				</xs:choice>
+			</xs:complexType>
+		</xs:element>
+	
+		<xs:element name="text">
+			<xs:complexType mixed="true"></xs:complexType>
+		</xs:element>
+ -->
+	
+	<xs:element name="option">
+		<xs:complexType mixed="true">
+			<xs:choice minOccurs="0" maxOccurs="unbounded"></xs:choice>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="options">
+		<xs:complexType>
+			<xs:sequence minOccurs="0" maxOccurs="unbounded">
+				<xs:element ref="option"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="disabled">
+		<xs:complexType mixed="true"></xs:complexType>
+	</xs:element>
+	
+	<xs:element name="required">
+		<xs:complexType mixed="true"></xs:complexType>
+	</xs:element>
+	
+	<xs:element name="value">
+		<xs:complexType mixed="true"></xs:complexType>
+	</xs:element>
+	
+	<xs:element name="label">
+		<xs:complexType mixed="true">
+			<xs:choice minOccurs="0" maxOccurs="1"></xs:choice>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="widget">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="meta" minOccurs="0"/>
+				<xs:element ref="label" minOccurs="0"/>
+				<xs:element ref="disabled" minOccurs="0"/>
+				<xs:element ref="value" minOccurs="0"/>
+				<xs:element ref="options" minOccurs="0"/>
+			</xs:sequence>
+			<xs:attribute name="id" type="xs:ID"/>
+			<xs:attribute name="type" default="action">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="action"/>
+						<xs:enumeration value="characterinput"/>
+						<xs:enumeration value="characterinput_numeric"/>
+						<xs:enumeration value="characterinput_alphabetic"/>
+						<xs:enumeration value="optionchoice"/>
+						<xs:enumeration value="optionchoice_boolean"/>
+						<xs:enumeration value="optionchoice_single"/>
+						<xs:enumeration value="optionchoice_single_compact"/>
+						<xs:enumeration value="label"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="hasFocus" default="false">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="true"/>
+						<xs:enumeration value="false"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="widgetgroup">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="meta" minOccurs="0"/>
+				<xs:element ref="label" minOccurs="0"/>
+				<xs:element ref="widget" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element ref="widgetgroup" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="dialogwidget">
+		<xs:complexType mixed="true">
+			<xs:attribute name="id" type="xs:ID"/>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="dialogwidgets">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="dialogwidget" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="meta">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="dc:title"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="dialog">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="meta" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="dialogwidgets" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="widgetgroup" minOccurs="1" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="id" type="xs:ID"/>
+			<xs:attribute name="focus" default="main">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:enumeration value="main"/>
+						<xs:enumeration value="ctrl"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="giml">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="dialog" minOccurs="1" maxOccurs="1"/>
+			</xs:sequence>
+			<!--xs:attribute name="xmlns" type="xs:string" fixed="http://gitk.sourceforge.net/"/-->
+		</xs:complexType>
+	</xs:element>
+
+</xs:schema>
+
+\
+bug145246.xsd.imp\
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://purl.org/dc/elements/1.1/"
+           targetNamespace="http://purl.org/dc/elements/1.1/"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <xs:annotation>
+    <xs:documentation xml:lang="en">
+      DCMES 1.1 XML Schema
+      XML Schema for http://purl.org/dc/elements/1.1/ namespace
+
+      Created 2003-04-02
+
+      Created by 
+
+      Tim Cole (t-cole3@uiuc.edu)
+      Tom Habing (thabing@uiuc.edu)
+      Jane Hunter (jane@dstc.edu.au)
+      Pete Johnston (p.johnston@ukoln.ac.uk),
+      Carl Lagoze (lagoze@cs.cornell.edu)
+
+      This schema declares XML elements for the 15 DC elements from the
+      http://purl.org/dc/elements/1.1/ namespace.
+
+      It defines a complexType SimpleLiteral which permits mixed content 
+      and makes the xml:lang attribute available. It disallows child elements by
+      use of minOcccurs/maxOccurs.
+
+      However, this complexType does permit the derivation of other complexTypes
+      which would permit child elements.
+
+      All elements are declared as substitutable for the abstract element any, 
+      which means that the default type for all elements is dc:SimpleLiteral.
+
+    </xs:documentation>
+
+  </xs:annotation>
+
+
+  <xs:import namespace="http://www.w3.org/XML/1998/namespace"
+             schemaLocation="xml.xsd"> 
+  </xs:import>
+	<!--http://www.w3.org/2001/03/xml.xsd-->
+  <xs:complexType name="SimpleLiteral">
+        <xs:annotation>
+        <xs:documentation xml:lang="en">
+            This is the default type for all of the DC elements.
+            It permits text content only with optional
+            xml:lang attribute.
+            Text is allowed because mixed="true", but sub-elements
+            are disallowed because minOccurs="0" and maxOccurs="0" 
+            are on the xs:any tag.
+
+    	    This complexType allows for restriction or extension permitting
+            child elements.
+    	</xs:documentation>
+  	</xs:annotation>
+
+   <xs:complexContent mixed="true">
+    <xs:restriction base="xs:anyType">
+     <xs:sequence>
+      <xs:any processContents="lax" minOccurs="1" maxOccurs="2"/>
+     </xs:sequence>
+     <xs:attribute ref="xml:lang" use="optional"/>
+    </xs:restriction>
+   </xs:complexContent>
+  </xs:complexType>
+
+  <xs:element name="any" type="SimpleLiteral" abstract="true"/>
+
+  <xs:element name="title" substitutionGroup="any"/>
+  <xs:element name="creator" substitutionGroup="any"/>
+  <xs:element name="subject" substitutionGroup="any"/>
+  <xs:element name="description" substitutionGroup="any"/>
+  <xs:element name="publisher" substitutionGroup="any"/>
+  <xs:element name="contributor" substitutionGroup="any"/>
+  <xs:element name="date" substitutionGroup="any"/>
+  <xs:element name="type" substitutionGroup="any"/>
+  <xs:element name="format" substitutionGroup="any"/>
+  <xs:element name="identifier" substitutionGroup="any"/>
+  <xs:element name="source" substitutionGroup="any"/>
+  <xs:element name="language" substitutionGroup="any"/>
+  <xs:element name="relation" substitutionGroup="any"/>
+  <xs:element name="coverage" substitutionGroup="any"/>
+  <xs:element name="rights" substitutionGroup="any"/>
+
+  <xs:group name="elementsGroup">
+  	<xs:annotation>
+    	<xs:documentation xml:lang="en">
+    	    This group is included as a convenience for schema authors
+            who need to refer to all the elements in the 
+            http://purl.org/dc/elements/1.1/ namespace.
+    	</xs:documentation>
+  	</xs:annotation>
+
+  <xs:sequence>
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element ref="any"/>
+    </xs:choice>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:complexType name="elementContainer">
+  	<xs:annotation>
+    	<xs:documentation xml:lang="en">
+    		This complexType is included as a convenience for schema authors who need to define a root
+    		or container element for all of the DC elements.
+    	</xs:documentation>
+  	</xs:annotation>
+
+    <xs:choice>
+      <xs:group ref="elementsGroup"/>
+    </xs:choice>
+  </xs:complexType>
+
+
+</xs:schema>
+
+\
+xml.xsd\
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<!--!DOCTYPE xs:schema PUBLIC "-//W3C//DTD XMLSCHEMA 200102//EN" "XMLSchema.dtd" -->
+<xs:schema targetNamespace="http://www.w3.org/XML/1998/namespace" xmlns:xs="http://www.w3.org/2001/XMLSchema" xml:lang="en">
+
+ <xs:annotation>
+  <xs:documentation>
+   See http://www.w3.org/XML/1998/namespace.html and
+   http://www.w3.org/TR/REC-xml for information about this namespace.
+
+    This schema document describes the XML namespace, in a form
+    suitable for import by other schema documents.  
+
+    Note that local names in this namespace are intended to be defined
+    only by the World Wide Web Consortium or its subgroups.  The
+    following names are currently defined in this namespace and should
+    not be used with conflicting semantics by any Working Group,
+    specification, or document instance:
+
+    base (as an attribute name): denotes an attribute whose value
+         provides a URI to be used as the base for interpreting any
+         relative URIs in the scope of the element on which it
+         appears; its value is inherited.  This name is reserved
+         by virtue of its definition in the XML Base specification.
+
+    lang (as an attribute name): denotes an attribute whose value
+         is a language code for the natural language of the content of
+         any element; its value is inherited.  This name is reserved
+         by virtue of its definition in the XML specification.
+  
+    space (as an attribute name): denotes an attribute whose
+         value is a keyword indicating what whitespace processing
+         discipline is intended for the content of the element; its
+         value is inherited.  This name is reserved by virtue of its
+         definition in the XML specification.
+
+    Father (in any context at all): denotes Jon Bosak, the chair of 
+         the original XML Working Group.  This name is reserved by 
+         the following decision of the W3C XML Plenary and 
+         XML Coordination groups:
+
+             In appreciation for his vision, leadership and dedication
+             the W3C XML Plenary on this 10th day of February, 2000
+             reserves for Jon Bosak in perpetuity the XML name
+             xml:Father
+  </xs:documentation>
+ </xs:annotation>
+
+ <xs:annotation>
+  <xs:documentation>This schema defines attributes and an attribute group
+        suitable for use by
+        schemas wishing to allow xml:base, xml:lang or xml:space attributes
+        on elements they define.
+
+        To enable this, such a schema must import this schema
+        for the XML namespace, e.g. as follows:
+        &lt;schema . . .>
+         . . .
+         &lt;import namespace="http://www.w3.org/XML/1998/namespace"
+                    schemaLocation="http://www.w3.org/2001/03/xml.xsd"/>
+
+        Subsequently, qualified reference to any of the attributes
+        or the group defined below will have the desired effect, e.g.
+
+        &lt;type . . .>
+         . . .
+         &lt;attributeGroup ref="xml:specialAttrs"/>
+ 
+         will define a type which will schema-validate an instance
+         element with any of those attributes</xs:documentation>
+ </xs:annotation>
+
+ <xs:annotation>
+  <xs:documentation>In keeping with the XML Schema WG's standard versioning
+   policy, this schema document will persist at
+   http://www.w3.org/2001/03/xml.xsd.
+   At the date of issue it can also be found at
+   http://www.w3.org/2001/xml.xsd.
+   The schema document at that URI may however change in the future,
+   in order to remain compatible with the latest version of XML Schema
+   itself.  In other words, if the XML Schema namespace changes, the version
+   of this document at
+   http://www.w3.org/2001/xml.xsd will change
+   accordingly; the version at
+   http://www.w3.org/2001/03/xml.xsd will not change.
+  </xs:documentation>
+ </xs:annotation>
+
+ <xs:attribute name="lang" type="xs:language">
+  <xs:annotation>
+   <xs:documentation>In due course, we should install the relevant ISO 2- and 3-letter
+         codes as the enumerated possible values . . .</xs:documentation>
+  </xs:annotation>
+ </xs:attribute>
+
+ <xs:attribute name="space" default="preserve">
+  <xs:simpleType>
+   <xs:restriction base="xs:NCName">
+    <xs:enumeration value="default"/>
+    <xs:enumeration value="preserve"/>
+   </xs:restriction>
+  </xs:simpleType>
+ </xs:attribute>
+
+ <xs:attribute name="base" type="xs:anyURI">
+  <xs:annotation>
+   <xs:documentation>See http://www.w3.org/TR/xmlbase/ for
+                     information about this attribute.</xs:documentation>
+  </xs:annotation>
+ </xs:attribute>
+
+ <xs:attributeGroup name="specialAttrs">
+  <xs:attribute ref="xml:base"/>
+  <xs:attribute ref="xml:lang"/>
+  <xs:attribute ref="xml:space"/>
+ </xs:attributeGroup>
+
+</xs:schema>
+\

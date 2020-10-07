@@ -155,3 +155,68 @@ cc_binary_host {
     ],
     shared_libs: ["libxml2"],
 }
+
+cc_defaults {
+    name: "libxml2-fuzz-defaults",
+    host_supported: true,
+    shared_libs: [
+        "libxml2",
+    ],
+    srcs: [
+      "fuzz/fuzz.c",
+    ],
+    // TODO: FILL IN
+    fuzz_config: {
+        cc: [
+            "noreply@google.com",
+        ],
+        componentid: 0,
+    },
+}
+
+cc_fuzz {
+    name: "libxml2_regexp_fuzzer",
+    defaults: ["libxml2-fuzz-defaults"],
+    srcs: [
+        "fuzz/regexp.c",
+    ],
+    dictionary: "fuzz/regexp.dict",
+}
+
+cc_fuzz {
+    name: "libxml2_schema_fuzzer",
+    defaults: ["libxml2-fuzz-defaults"],
+    srcs: [
+        "fuzz/schema.c",
+    ],
+    dictionary: "fuzz/schema.dict",
+    corpus: ["fuzz/corpus/schema/*"],
+}
+
+cc_fuzz {
+    name: "libxml2_uri_fuzzer",
+    defaults: ["libxml2-fuzz-defaults"],
+    srcs: [
+        "fuzz/uri.c",
+    ],
+}
+
+cc_fuzz {
+    name: "libxml2_xml_fuzzer",
+    defaults: ["libxml2-fuzz-defaults"],
+    srcs: [
+        "fuzz/xml.c",
+    ],
+    dictionary: "fuzz/xml.dict",
+    corpus: ["fuzz/corpus/xml/*"],
+}
+
+cc_fuzz {
+    name: "libxml2_xpath_fuzzer",
+    defaults: ["libxml2-fuzz-defaults"],
+    srcs: [
+        "fuzz/xpath.c",
+    ],
+    dictionary: "fuzz/xpath.dict",
+    corpus: ["fuzz/corpus/xpath/*"],
+}

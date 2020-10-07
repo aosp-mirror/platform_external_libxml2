@@ -1,0 +1,77 @@
+582906-1_0.xsd\
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+<xs:schema xmlns="http://example.com/xml/Aggregator"
+           xmlns:prog1="http://example.com/xml/Prog1"
+           xmlns:prog2="http://example.com/xml/Prog2"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           targetNamespace="http://example.com/xml/Aggregator">
+
+    <xs:import schemaLocation="582906-1-prog1.xsd"
+               namespace="http://example.com/xml/Prog1" />
+
+    <xs:import schemaLocation="582906-1-prog2.xsd"
+               namespace="http://example.com/xml/Prog2"
+               />
+
+    <xs:element name="CollectedOutput" type="xs:float"/>
+
+</xs:schema>
+\
+582906-1-prog1.xsd\
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+<xs:schema xmlns="http://example.com/xml/Prog1"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           targetNamespace="http://example.com/xml/Prog1">
+
+    <xs:include schemaLocation="582906-1-common.xsd"/>
+
+</xs:schema>
+\
+582906-1-common.xsd\
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+</xs:schema>
+\
+582906-1-prog2.xsd\
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+<xs:schema xmlns="http://example.com/xml/Prog2"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           targetNamespace="http://example.com/xml/Prog2">
+
+    <xs:include schemaLocation="582906-1-common.xsd"/>
+
+    <xs:include schemaLocation="582906-1-prog2-include.xsd"/>
+
+</xs:schema>
+\
+582906-1-common.xsd\
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+</xs:schema>
+\
+582906-1-prog2-include.xsd\
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified" attributeFormDefault="unqualified"
+           xml:lang="en">
+
+    <xs:include schemaLocation="582906-1-common.xsd"/>
+
+</xs:schema>
+\

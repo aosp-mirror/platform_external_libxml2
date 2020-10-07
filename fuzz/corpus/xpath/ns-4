@@ -1,0 +1,7 @@
+xpointer(/doc/elem/namespace::ns2/following::*)\
+<doc xmlns:ns1="nsuri1">
+  <preceding/>
+  <elem xmlns:ns2="nsuri2"/>
+  <following/>
+</doc>
+\
