@@ -1,0 +1,57 @@
+bug455953_0.xsd\
+<?xml version="1.0" encoding="UTF-8" ?> 
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.tempuri.org/MainSchema"
+           xmlns:tns="http://www.tempuri.org/MainSchema"
+           xmlns:ns="http://www.tempuri.org/ImportedSchema"
+           elementFormDefault="qualified" >
+           
+  <xs:import namespace="http://www.tempuri.org/ImportedSchema" schemaLocation="./import-455953.xsd" />
+  
+  <xs:complexType name="MyMainType">
+    <xs:sequence>
+      <xs:element name="MainA">
+        <xs:complexType>
+          <xs:attribute name="MainID" type="xs:int"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element ref="ns:AnotherElement" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="MainElement" type="tns:MyMainType">
+    <xs:key name="MainKey" >
+      <xs:selector xpath="tns:MainA" />
+      <xs:field xpath="@MainID" />
+    </xs:key>
+  </xs:element>
+
+
+</xs:schema>
+\
+import-455953.xsd\
+<?xml version='1.0' encoding='UTF-8'?>
+<xs:schema targetNamespace="http://www.tempuri.org/ImportedSchema" elementFormDefault="qualified" xmlns:tns="http://www.tempuri.org/ImportedSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  
+  <xs:complexType name="AnotherType">
+    <xs:sequence>
+      <xs:element name="B">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="MyB" type="xs:string" />
+          </xs:sequence>
+          <xs:attribute name="BID" type="xs:int"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="AnotherElement" type="tns:AnotherType">
+    <xs:key name="AnotherKey">
+     <xs:selector xpath="tns:B"/>
+     <xs:field xpath="@BID"/>
+    </xs:key>
+  </xs:element>
+
+</xs:schema>
+\

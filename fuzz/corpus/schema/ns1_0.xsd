@@ -1,0 +1,5 @@
+ns1_0.xsd\
+<schema xmlns='http://www.w3.org/2001/XMLSchema' targetNamespace='http://my.ns/'>
+ <element name='my' type='string'/>
+</schema>
+\
