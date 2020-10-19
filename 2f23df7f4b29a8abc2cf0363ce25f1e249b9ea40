@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e16bfc5a_4a40cab7",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-10-19T16:59:33Z",
+      "side": 1,
+      "message": "can we use a genrule instead of checking in all these generated files, which i can guarantee won\u0027t get updated when we take libxml2 updates...",
+      "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
