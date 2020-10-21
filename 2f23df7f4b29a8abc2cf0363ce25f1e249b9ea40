@@ -142,6 +142,24 @@
       "parentUuid": "46de5b19_5a31965b",
       "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "64116deb_7507c480",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1398097
+      },
+      "writtenOn": "2020-10-21T22:43:43Z",
+      "side": 1,
+      "message": "A feature request has been added for a corpus_zip option: bug 171429704\n\nThanks for reviewing this change!",
+      "parentUuid": "42306ec9_415a6846",
+      "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
