@@ -106,6 +106,24 @@
       "parentUuid": "16ffc53d_ea896f0b",
       "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "46de5b19_5a31965b",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1398097
+      },
+      "writtenOn": "2020-10-21T21:19:54Z",
+      "side": 1,
+      "message": "Having a corpus_zip argument to cc_fuzz sounds fine.\n\nI\u0027m not sure a timeline for that being added. Should this proposed change be gated on the addition of a corpus_zip property in cc_fuzz?",
+      "parentUuid": "4776eb54_df15be64",
+      "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
