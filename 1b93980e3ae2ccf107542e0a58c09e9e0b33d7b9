@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "15c6dce4_9527cc0f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-10-21T20:03:49Z",
+      "side": 1,
+      "message": "+ccross/dwillemsen for whether there\u0027s a better way to do this.\n\n(this still seems strictly less bad than checking in generated files though. there\u0027s no way they\u0027ll ever be updated. at least this way we\u0027ll get a build break if something\u0027s changed.)",
+      "revId": "1b93980e3ae2ccf107542e0a58c09e9e0b33d7b9",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
