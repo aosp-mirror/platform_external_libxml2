@@ -70,6 +70,24 @@
       "parentUuid": "a0f8ce7d_5ce7ee21",
       "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "16ffc53d_ea896f0b",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1398097
+      },
+      "writtenOn": "2020-10-21T21:12:55Z",
+      "side": 1,
+      "message": "If not, the zip file would be used at the input to the fuzzers, so the fuzzers would end up fuzzing the zip file itself.",
+      "parentUuid": "39231a9e_ac939907",
+      "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
