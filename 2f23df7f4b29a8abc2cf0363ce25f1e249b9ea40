@@ -34,6 +34,24 @@
       "parentUuid": "e16bfc5a_4a40cab7",
       "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a0f8ce7d_5ce7ee21",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1002751
+      },
+      "writtenOn": "2020-10-21T21:02:40Z",
+      "side": 1,
+      "message": "The build needs to know the output files of the rule.  If you want an arbitrary set of files, can you zip the generated directory of files using soong_zip, and pass that as the corpus?",
+      "parentUuid": "664419bc_05493ee2",
+      "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
