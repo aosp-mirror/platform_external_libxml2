@@ -88,6 +88,24 @@
       "parentUuid": "39231a9e_ac939907",
       "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4776eb54_df15be64",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1002751
+      },
+      "writtenOn": "2020-10-21T21:13:54Z",
+      "side": 1,
+      "message": "No, it would not be transparent.\n\nThis came up previously, discussion at https://groups.google.com/a/google.com/g/android-fuzzing/c/woGhLsh5xEo/m/I9--4u-zAgAJ.  We can add a corpus_zip property that accepts a zip file of corpus data and unzips it.",
+      "parentUuid": "16ffc53d_ea896f0b",
+      "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
