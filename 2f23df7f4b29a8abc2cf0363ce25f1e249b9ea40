@@ -52,6 +52,24 @@
       "parentUuid": "664419bc_05493ee2",
       "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "39231a9e_ac939907",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1398097
+      },
+      "writtenOn": "2020-10-21T21:08:01Z",
+      "side": 1,
+      "message": "Does using the output of soong_zip as a target later on result in it being unzipped \"automatically\", so the downstream user of the dependency does not know it was ever zipped?",
+      "parentUuid": "a0f8ce7d_5ce7ee21",
+      "revId": "2f23df7f4b29a8abc2cf0363ce25f1e249b9ea40",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
