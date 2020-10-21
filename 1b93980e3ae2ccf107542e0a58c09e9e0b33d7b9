@@ -1,0 +1,8 @@
+Presubmit-Verified+1: Treehugger Robot <treehugger-gerrit@google.com>
+Lint+1: Lint 🤖 <ayeaye-gerrit@google.com>
+Code-Review+2: Elliott Hughes <enh@google.com>
+Submitted-by: Branden Archer <brarcher@google.com>
+Submitted-at: Wed, 21 Oct 2020 22:44:04 +0000
+Reviewed-on: https://android-review.googlesource.com/c/platform/external/libxml2/+/1464527
+Project: platform/external/libxml2
+Branch: refs/heads/master
