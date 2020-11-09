@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d906f50c_9c9848c4",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-11-09T22:26:47Z",
+      "side": 1,
+      "message": "(manual update to get my upstream fix for http://b/171610679...)",
+      "revId": "c6e12f8eed6e5030c05f29935d591dda95859c96",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
