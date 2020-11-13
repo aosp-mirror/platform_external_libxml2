@@ -113,6 +113,7 @@ cc_library {
     name: "libxml2",
     defaults: ["libxml2-defaults"],
     vendor_available: true,
+    product_available: true,
     vndk: {
         enabled: true,
     },
@@ -133,6 +134,9 @@ cc_library {
            ],
        },
        vendor: {
+           exclude_shared_libs: ["libandroidicu"],
+       },
+       product: {
            exclude_shared_libs: ["libandroidicu"],
        },
     },
