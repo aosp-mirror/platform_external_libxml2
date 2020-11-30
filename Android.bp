@@ -140,6 +140,10 @@ cc_library {
            exclude_shared_libs: ["libandroidicu"],
        },
     },
+    apex_available: [
+        "//apex_available:platform",
+        "//apex_available:anyapex",
+    ],
 }
 
 cc_library_static {
