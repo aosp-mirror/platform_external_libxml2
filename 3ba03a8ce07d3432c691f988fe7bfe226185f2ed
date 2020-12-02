@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "798bab60_e4c04791",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-12-02T16:50:29Z",
+      "side": 1,
+      "message": "there\u0027s no way to be more specific than this?\n\nand presumably the comment is wrong, since linkerconfig is in the com.android.runtime apex?",
+      "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
