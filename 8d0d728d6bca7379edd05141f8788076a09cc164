@@ -16,6 +16,24 @@
       "message": "can\u0027t we list where it\u0027s _actually_ used?",
       "revId": "8d0d728d6bca7379edd05141f8788076a09cc164",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "389a64d3_60807b27",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1413436
+      },
+      "writtenOn": "2020-12-02T02:21:10Z",
+      "side": 1,
+      "message": "narrowed down items in \u0027apex_available\u0027 and commented which item uses it.",
+      "parentUuid": "84237c85_a13141b3",
+      "revId": "8d0d728d6bca7379edd05141f8788076a09cc164",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
