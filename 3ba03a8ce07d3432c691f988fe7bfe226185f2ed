@@ -70,6 +70,24 @@
       "parentUuid": "37116fc2_388bb5bc",
       "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "811819b7_a1372980",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 1132673
+      },
+      "writtenOn": "2020-12-03T05:05:23Z",
+      "side": 1,
+      "message": "I agree with Elliott that the comment should be amended. The reason for the platform availability is not just for linkerconfig. Pretty many in the platform has been using libxml2. linkerconfig is just one of the users. Note that apex_available defaults to \"//apex_available:platform\" when not specified.\n\nAvailability to com.android.runtime is what this change actually introduces and this is due to linkerconfig being moved into the APEX.\n\nLimiting places (in terms of repository path) where libxml2 can be referenced should be done via the \u0027visibility\u0027 property, not this one. However, I wonder how useful it would be given that we already have 89 places where this is used. https://source.corp.google.com/search?q\u003df:%5C.bp%20%5C%22libxml2%5C%22\u0026m\u003d100\u0026det\u003dmat\u0026sort\u003d1\u0026sq\u003dpackage:%5Eandroid$\u0026type\u003dcs",
+      "parentUuid": "124df4a9_5ee1794a",
+      "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
