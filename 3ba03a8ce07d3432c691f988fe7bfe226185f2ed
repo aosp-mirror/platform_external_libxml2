@@ -16,6 +16,24 @@
       "message": "there\u0027s no way to be more specific than this?\n\nand presumably the comment is wrong, since linkerconfig is in the com.android.runtime apex?",
       "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "8b17f3c7_4711a530",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 1413436
+      },
+      "writtenOn": "2020-12-03T01:08:08Z",
+      "side": 1,
+      "message": "Sorry but is what you mean to make more concrete comments?\n\nlinkerconfig will be also installed into system for bootstrap, before any APEX is mounted. So it is also required to be used from platform.",
+      "parentUuid": "798bab60_e4c04791",
+      "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
