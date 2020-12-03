@@ -88,6 +88,24 @@
       "parentUuid": "124df4a9_5ee1794a",
       "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "ff346718_e676199f",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 1413436
+      },
+      "writtenOn": "2020-12-03T06:14:32Z",
+      "side": 1,
+      "message": "I removed comment for platform, as it is quite generic.",
+      "parentUuid": "811819b7_a1372980",
+      "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
