@@ -52,6 +52,24 @@
       "parentUuid": "8b17f3c7_4711a530",
       "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "124df4a9_5ee1794a",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 1413436
+      },
+      "writtenOn": "2020-12-03T01:23:53Z",
+      "side": 1,
+      "message": "+jiyong\n\nAFAIK I\u0027m not sure if there is any way to limit this.\nAnyway, I guess libxml2 is already available in system, so I guess the only limitation is with linkerconfig in com.android.runtime.",
+      "parentUuid": "37116fc2_388bb5bc",
+      "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
