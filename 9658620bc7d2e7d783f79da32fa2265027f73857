@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "945a501e_215cf4ab",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-12-03T19:03:16Z",
+      "side": 1,
+      "message": "that makes sense --- https://source.corp.google.com/search?q\u003dfile:%5C.(bp%7Cmk)%20libxml2%20case:yes%20-file:prebuilts%2F\u0026sq\u003dpackage:%5Eandroid$ shows libxml2 is pretty ubiquitous already.",
+      "revId": "9658620bc7d2e7d783f79da32fa2265027f73857",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
