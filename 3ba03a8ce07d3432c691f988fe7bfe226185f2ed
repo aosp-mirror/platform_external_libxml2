@@ -34,6 +34,24 @@
       "parentUuid": "798bab60_e4c04791",
       "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "37116fc2_388bb5bc",
+        "filename": "Android.bp",
+        "patchSetId": 3
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2020-12-03T01:18:45Z",
+      "side": 1,
+      "message": "ah, \"linkerconfig will be also installed into system for bootstrap, before any APEX is mounted\" was what i was missing. that\u0027s probably what the comment should be.\n\nis there no way that we can restrict it to only the bootstrap linkerconfig though? it seems weird that are only choices are \"nothing on the platform\" or \"everything on the platform\"...",
+      "parentUuid": "8b17f3c7_4711a530",
+      "revId": "3ba03a8ce07d3432c691f988fe7bfe226185f2ed",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
