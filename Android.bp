@@ -140,6 +140,10 @@ cc_library {
            exclude_shared_libs: ["libandroidicu"],
        },
     },
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.runtime", // to be used by linkerconfig
+    ],
 }
 
 cc_library_static {
