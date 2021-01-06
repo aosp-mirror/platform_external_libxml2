@@ -7,13 +7,13 @@ third_party {
   }
   url {
     type: ARCHIVE
-    value: "https://github.com/GNOME/libxml2/archive/1c4f9a6db5c962b8a6978b0046d15b98ff2ebf0f.zip"
+    value: "https://github.com/GNOME/libxml2/archive/79301d3d5e553d46fc3201f48dcec3a93068c5a2.zip"
   }
-  version: "1c4f9a6db5c962b8a6978b0046d15b98ff2ebf0f"
+  version: "79301d3d5e553d46fc3201f48dcec3a93068c5a2"
   license_type: NOTICE
   last_upgrade_date {
-    year: 2020
-    month: 11
-    day: 30
+    year: 2021
+    month: 1
+    day: 5
   }
 }
