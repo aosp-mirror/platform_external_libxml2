@@ -16,6 +16,24 @@
       "message": "don\u0027t you already use expat in libcore? are you sure you want two different XML library dependencies for ART?\n\n(don\u0027t worry --- i\u0027ll +2 when you say \"yes\". i just want to check that you\u0027ve thought about this, and i\u0027m mildly curious to hear the reasoning behind taking two XML library dependencies, since -- although i effectively own 4 different ones -- i don\u0027t have much in the way of advice to give for people choosing between them [beyond \"dear god, please not another tinyxml dependency in $current_year!\", a prayer which to date has never actually been answered].)",
       "revId": "214b58dbc6bda3c4614807d75f38212eeb292680",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "071bae22_cda39c81",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1071150
+      },
+      "writtenOn": "2021-01-07T17:56:49Z",
+      "side": 1,
+      "message": "Good point, the reason for this CL is that we\u0027re using system/tools/xsdc to generate C++ helpers from system/apex/apexd/ApexInfoList.xsd so we can figure out assorted APEX properties after taking an update to the ART apex.\n\nxsdc uses libxml2. I have mixed feelings about it to be honest, it has tripled the size of binary as compared to using tinyxml2 without using the xsd directly (xml lib being statically linked in both cases).\n\nChanging the schema is likely fraught in practice anyway, but clearly using the xsd is identifiable better practice. I\u0027ve asked sundongah@ (xsdc owner) about the attachment to libxml2 and whether we could optimize here. I\u0027ve not looked at libexpat here, but should do as it\u0027d be another option and it\u0027s already in the ART apex.",
+      "parentUuid": "d377f4e1_1a99fd1d",
+      "revId": "214b58dbc6bda3c4614807d75f38212eeb292680",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
