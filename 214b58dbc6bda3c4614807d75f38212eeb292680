@@ -52,6 +52,24 @@
       "parentUuid": "071bae22_cda39c81",
       "revId": "214b58dbc6bda3c4614807d75f38212eeb292680",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "7cbd8635_dcba2a17",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2021-01-07T18:07:29Z",
+      "side": 1,
+      "message": "ah, i didn\u0027t realize this was itself a dependency rather than your code. yeah, \"transitive dependency\" is the usual reason for me to just shrug.\n\n(though in this case i was surprised when i went looking for the code to find that there isn\u0027t any --- just a code *generator*. that at least is a new one!)",
+      "parentUuid": "c402cb21_fb48ee9b",
+      "revId": "214b58dbc6bda3c4614807d75f38212eeb292680",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
