@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d377f4e1_1a99fd1d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2021-01-07T17:40:58Z",
+      "side": 1,
+      "message": "don\u0027t you already use expat in libcore? are you sure you want two different XML library dependencies for ART?\n\n(don\u0027t worry --- i\u0027ll +2 when you say \"yes\". i just want to check that you\u0027ve thought about this, and i\u0027m mildly curious to hear the reasoning behind taking two XML library dependencies, since -- although i effectively own 4 different ones -- i don\u0027t have much in the way of advice to give for people choosing between them [beyond \"dear god, please not another tinyxml dependency in $current_year!\", a prayer which to date has never actually been answered].)",
+      "revId": "214b58dbc6bda3c4614807d75f38212eeb292680",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
