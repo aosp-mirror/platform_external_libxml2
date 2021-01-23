@@ -1,0 +1,9 @@
+Open-Source-Licensing+2: Bob Badour <bbadour@google.com>
+Presubmit-Verified+1: Treehugger Robot <treehugger-gerrit@google.com>
+Lint+1: Lint 🤖 <ayeaye-gerrit@google.com>
+Code-Review+2: Colin Cross <ccross@android.com>
+Submitted-by: Bob Badour <bbadour@google.com>
+Submitted-at: Sat, 23 Jan 2021 18:45:29 +0000
+Reviewed-on: https://android-review.googlesource.com/c/platform/external/libxml2/+/1556490
+Project: platform/external/libxml2
+Branch: refs/heads/master
