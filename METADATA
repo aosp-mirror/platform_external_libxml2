@@ -10,7 +10,11 @@ third_party {
     value: "https://github.com/GNOME/libxml2/archive/79301d3d5e553d46fc3201f48dcec3a93068c5a2.zip"
   }
   version: "79301d3d5e553d46fc3201f48dcec3a93068c5a2"
-  license_type: NOTICE
+  # would be NOTICE save for:
+  #   doc/libxml-doc.el
+  #   test/schemas/changelog093_1.xsd
+  #   test/relaxng/docbook_0.xml
+  license_type: RESTRICTED
   last_upgrade_date {
     year: 2021
     month: 1
