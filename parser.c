@@ -4506,7 +4506,7 @@ get_more:
             if (ctxt->instate == XML_PARSER_EOF)
 		return;
 	    in = ctxt->input->cur;
-	} while (((*in >= 0x20) && (*in <= 0x7F)) || (*in == 0x09));
+	} while (((*in >= 0x20) && (*in <= 0x7F)) || (*in == 0x09) || (*in == 0x0a));
 	nbchar = 0;
     }
     ctxt->input->line = line;
@@ -4987,7 +4987,7 @@ get_more:
 	    ctxt->input->col++;
 	    goto get_more;
 	}
-    } while (((*in >= 0x20) && (*in <= 0x7F)) || (*in == 0x09));
+    } while (((*in >= 0x20) && (*in <= 0x7F)) || (*in == 0x09) || (*in == 0x0a));
     xmlParseCommentComplex(ctxt, buf, len, size);
     ctxt->instate = state;
     return;
@@ -6082,14 +6082,20 @@ xmlParseElementMixedContentDecl(xmlParserCtxtPtr ctxt, int inputchk) {
 	    NEXT;
 	    if (elem == NULL) {
 	        ret = xmlNewDocElementContent(ctxt->myDoc, NULL, XML_ELEMENT_CONTENT_OR);
-		if (ret == NULL) return(NULL);
+		if (ret == NULL) {
+		    xmlFreeDocElementContent(ctxt->myDoc, cur);
+                    return(NULL);
+                }
 		ret->c1 = cur;
 		if (cur != NULL)
 		    cur->parent = ret;
 		cur = ret;
 	    } else {
 	        n = xmlNewDocElementContent(ctxt->myDoc, NULL, XML_ELEMENT_CONTENT_OR);
-		if (n == NULL) return(NULL);
+		if (n == NULL) {
+		    xmlFreeDocElementContent(ctxt->myDoc, ret);
+                    return(NULL);
+                }
 		n->c1 = xmlNewDocElementContent(ctxt->myDoc, elem, XML_ELEMENT_CONTENT_ELEMENT);
 		if (n->c1 != NULL)
 		    n->c1->parent = n;
@@ -7152,6 +7158,7 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
 	    ent->checked |= 1;
 	if (ret == XML_ERR_ENTITY_LOOP) {
 	    xmlFatalErr(ctxt, XML_ERR_ENTITY_LOOP, NULL);
+            xmlHaltParser(ctxt);
 	    xmlFreeNodeList(list);
 	    return;
 	}
@@ -14077,7 +14084,7 @@ xmlSAXParseFileWithData(xmlSAXHandlerPtr sax, const char *filename,
 
     if ((ctxt->wellFormed) || recovery) {
         ret = ctxt->myDoc;
-	if (ret != NULL) {
+	if ((ret != NULL) && (ctxt->input->buf != NULL)) {
 	    if (ctxt->input->buf->compressed > 0)
 		ret->compression = 9;
 	    else
