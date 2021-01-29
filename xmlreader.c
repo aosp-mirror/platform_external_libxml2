@@ -359,12 +359,12 @@ xmlTextReaderFreeProp(xmlTextReaderPtr reader, xmlAttrPtr cur) {
 	xmlDeregisterNodeDefaultValue((xmlNodePtr) cur);
 
     /* Check for ID removal -> leading to invalid references ! */
-    if ((cur->parent != NULL) && (cur->parent->doc != NULL) &&
-	((cur->parent->doc->intSubset != NULL) ||
-	 (cur->parent->doc->extSubset != NULL))) {
+    if ((cur->parent != NULL) && (cur->parent->doc != NULL)) {
         if (xmlIsID(cur->parent->doc, cur->parent, cur))
 	    xmlTextReaderRemoveID(cur->parent->doc, cur);
-        if (xmlIsRef(cur->parent->doc, cur->parent, cur))
+	if (((cur->parent->doc->intSubset != NULL) ||
+	     (cur->parent->doc->extSubset != NULL)) &&
+            (xmlIsRef(cur->parent->doc, cur->parent, cur)))
             xmlTextReaderRemoveRef(cur->parent->doc, cur);
     }
     if (cur->children != NULL)
@@ -1585,7 +1585,8 @@ node_found:
     /*
      * Handle XInclude if asked for
      */
-    if ((reader->xinclude) && (reader->node != NULL) &&
+    if ((reader->xinclude) && (reader->in_xinclude == 0) &&
+        (reader->node != NULL) &&
 	(reader->node->type == XML_ELEMENT_NODE) &&
 	(reader->node->ns != NULL) &&
 	((xmlStrEqual(reader->node->ns->href, XINCLUDE_NS)) ||
