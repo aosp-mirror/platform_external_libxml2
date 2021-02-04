@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6837ab44_ce3879e4",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1359095
+      },
+      "writtenOn": "2021-02-04T01:32:58Z",
+      "side": 1,
+      "message": "Dash blanket approved all OFL -\u003e BY_EXCEPTION_ONLY",
+      "revId": "5c423f96afbaea9738f925eca352e9c1c55d2db9",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
