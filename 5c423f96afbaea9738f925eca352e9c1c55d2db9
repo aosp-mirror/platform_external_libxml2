@@ -16,6 +16,23 @@
       "message": "Dash blanket approved all OFL -\u003e BY_EXCEPTION_ONLY",
       "revId": "5c423f96afbaea9738f925eca352e9c1c55d2db9",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "23929c08_85e4ce80",
+        "filename": "METADATA",
+        "patchSetId": 1
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2021-02-04T18:44:08Z",
+      "side": 1,
+      "message": "can we fix this with the filegroup stuff?\n\nthis is a pretty widely used library, that\u0027s even available to *vendor* code, not just our code. and it might be useful to have an example to link to of how to fix a situation like this...",
+      "revId": "5c423f96afbaea9738f925eca352e9c1c55d2db9",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
