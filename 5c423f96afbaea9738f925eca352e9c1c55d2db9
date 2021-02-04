@@ -33,6 +33,24 @@
       "message": "can we fix this with the filegroup stuff?\n\nthis is a pretty widely used library, that\u0027s even available to *vendor* code, not just our code. and it might be useful to have an example to link to of how to fix a situation like this...",
       "revId": "5c423f96afbaea9738f925eca352e9c1c55d2db9",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e1f00a7a_b212bafa",
+        "filename": "METADATA",
+        "patchSetId": 1
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 1359095
+      },
+      "writtenOn": "2021-02-04T19:04:25Z",
+      "side": 1,
+      "message": "I discussed OFL with Dash. In most cases, the fileGroup won\u0027t even be necessary. The BY_EXCEPTION_ONLY is there because of an unlikely scenario.\n\nWe will probably create an \"Approved-OFL\" or something with a less restrictive condition and use visibility to limit it to projects that have been verified by OSPO to pose no risk. (I assume OSPO because they set policy.) I suppose if there is a project where they cannot verify a lack of risk, the BY_EXCEPTION_ONLY will remain and it will be up to pcounsel.\n\nFirst, we have to get publicly visible licenses in everything. Then we can start grepping for the special cases we want to handle.",
+      "parentUuid": "23929c08_85e4ce80",
+      "revId": "5c423f96afbaea9738f925eca352e9c1c55d2db9",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
