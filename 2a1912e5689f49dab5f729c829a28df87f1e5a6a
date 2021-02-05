@@ -33,6 +33,23 @@
       "message": "sorry, there was meant to be +2 with my previous reply!",
       "revId": "2a1912e5689f49dab5f729c829a28df87f1e5a6a",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b493000e_22789505",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1071150
+      },
+      "writtenOn": "2021-02-05T17:07:59Z",
+      "side": 1,
+      "message": "No worries, thanks!",
+      "revId": "2a1912e5689f49dab5f729c829a28df87f1e5a6a",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
