@@ -70,6 +70,24 @@
       "parentUuid": "c402cb21_fb48ee9b",
       "revId": "214b58dbc6bda3c4614807d75f38212eeb292680",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d62a749f_e4af95c4",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1071150
+      },
+      "writtenOn": "2021-02-05T12:12:49Z",
+      "side": 1,
+      "message": "Yes. I don\u0027t really want this to be the long term solution, but we\u0027re trying to get to test missions and I won\u0027t get to updating xsdc before then.\n\nexpat is sax-like whereas libxml2 and tinyxml2 are DOM based. xsdc currently works with libxml2 which makes adding a tinyxml2 generator less work that adding an expat one.",
+      "parentUuid": "7cbd8635_dcba2a17",
+      "revId": "214b58dbc6bda3c4614807d75f38212eeb292680",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
