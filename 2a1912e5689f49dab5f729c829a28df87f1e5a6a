@@ -16,6 +16,23 @@
       "message": "We could do with a +2 here or a definite rejection.",
       "revId": "2a1912e5689f49dab5f729c829a28df87f1e5a6a",
       "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "05bae82c_bb104a1e",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2021-02-05T16:30:31Z",
+      "side": 1,
+      "message": "sorry, there was meant to be +2 with my previous reply!",
+      "revId": "2a1912e5689f49dab5f729c829a28df87f1e5a6a",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
     }
   ]
 }
