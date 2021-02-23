@@ -7,17 +7,13 @@ third_party {
   }
   url {
     type: ARCHIVE
-    value: "https://github.com/GNOME/libxml2/archive/79301d3d5e553d46fc3201f48dcec3a93068c5a2.zip"
+    value: "https://github.com/GNOME/libxml2/archive/cbe1212db6e22fa92c33242c3ce089476585f872.zip"
   }
-  version: "79301d3d5e553d46fc3201f48dcec3a93068c5a2"
-  # would be NOTICE save for:
-  #   doc/libxml-doc.el
-  #   test/schemas/changelog093_1.xsd
-  #   test/relaxng/docbook_0.xml
-  license_type: RESTRICTED
+  version: "cbe1212db6e22fa92c33242c3ce089476585f872"
+  license_type: BY_EXCEPTION_ONLY
   last_upgrade_date {
     year: 2021
-    month: 1
-    day: 5
+    month: 2
+    day: 9
   }
 }
