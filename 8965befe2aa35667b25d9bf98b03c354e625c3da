@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "3e5c81d3_c7ac7ab8",
+        "filename": "Android.bp",
+        "patchSetId": 1
+      },
+      "lineNbr": 186,
+      "author": {
+        "id": 1003224
+      },
+      "writtenOn": "2021-03-04T15:38:12Z",
+      "side": 1,
+      "message": "apex_inherit",
+      "range": {
+        "startLine": 186,
+        "startChar": 22,
+        "endLine": 186,
+        "endChar": 23
+      },
+      "revId": "8965befe2aa35667b25d9bf98b03c354e625c3da",
+      "serverId": "85c56323-6fa9-3386-8a01-6480fb634889"
+    }
+  ]
+}
