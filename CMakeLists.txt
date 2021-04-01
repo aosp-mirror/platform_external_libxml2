@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
 
-project(libxml2 C)
+project(libxml2 VERSION 2.9.10 LANGUAGES C)
 
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
@@ -10,23 +10,6 @@ include(CheckStructHasMember)
 include(CheckSymbolExists)
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
-
-set(LIBXML_MAJOR_VERSION 2)
-set(LIBXML_MINOR_VERSION 9)
-set(LIBXML_MICRO_VERSION 10)
-
-set(VERSION "${LIBXML_MAJOR_VERSION}.${LIBXML_MINOR_VERSION}.${LIBXML_MICRO_VERSION}")
-set(LIBXML_VERSION ${LIBXML_MAJOR_VERSION}0${LIBXML_MINOR_VERSION}0${LIBXML_MICRO_VERSION})
-set(LIBXML_VERSION_STRING "${LIBXML_VERSION}")
-set(LIBXML_VERSION_EXTRA "")
-set(LIBXML_VERSION_NUMBER ${LIBXML_VERSION})
-
-find_package(Iconv)
-find_package(ICU)
-find_package(LibLZMA)
-find_package(Python COMPONENTS Interpreter Development)
-find_package(Threads)
-find_package(ZLIB)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 set(LIBXML2_WITH_AUTOMATA ON)
@@ -38,42 +21,18 @@ set(LIBXML2_WITH_EXPR ON)
 option(LIBXML2_WITH_FTP "Add the FTP support" ON)
 option(LIBXML2_WITH_HTML "Add the HTML support" ON)
 option(LIBXML2_WITH_HTTP "Add the HTTP support" ON)
-
-if(Iconv_FOUND)
-	option(LIBXML2_WITH_ICONV "Add ICONV support" ON)
-else()
-	set(LIBXML2_WITH_ICONV OFF)
-endif()
-
-if(ICU_FOUND)
-	option(LIBXML2_WITH_ICU "Add ICU support" OFF)
-else()
-	set(LIBXML2_WITH_ICU OFF)
-endif()
-
+option(LIBXML2_WITH_ICONV "Add ICONV support" ON)
+option(LIBXML2_WITH_ICU "Add ICU support" OFF)
 option(LIBXML2_WITH_ISO8859X "Add ISO8859X support if no iconv" ON)
 option(LIBXML2_WITH_LEGACY "Add deprecated APIs for compatibility" ON)
-
-if(LIBLZMA_FOUND)
-	option(LIBXML2_WITH_LZMA "Use liblzma" ON)
-else()
-	set(LIBXML2_WITH_LZMA OFF)
-endif()
-
+option(LIBXML2_WITH_LZMA "Use liblzma" ON)
 option(LIBXML2_WITH_MEM_DEBUG "Add the memory debugging module" OFF)
 option(LIBXML2_WITH_MODULES "Add the dynamic modules support" ON)
 option(LIBXML2_WITH_OUTPUT "Add the serialization support" ON)
 option(LIBXML2_WITH_PATTERN "Add the xmlPattern selection interface" ON)
 option(LIBXML2_WITH_PROGRAMS "Build programs" ON)
 option(LIBXML2_WITH_PUSH "Add the PUSH parser interfaces" ON)
-
-if(Python_FOUND AND (Python_VERSION_MAJOR LESS 3 OR NOT WIN32))
-	option(LIBXML2_WITH_PYTHON "Build Python bindings" ON)
-	set(LIBXML2_PYTHON_INSTALL_DIR ${Python_SITEARCH} CACHE PATH "Python bindings install directory")
-else()
-	set(LIBXML2_WITH_PYTHON OFF)
-endif()
-
+option(LIBXML2_WITH_PYTHON "Build Python bindings" ON)
 option(LIBXML2_WITH_READER "Add the xmlReader parsing interface" ON)
 option(LIBXML2_WITH_REGEXPS "Add Regular Expressions support" ON)
 option(LIBXML2_WITH_RUN_DEBUG "Add the runtime debugging module" OFF)
@@ -81,13 +40,7 @@ option(LIBXML2_WITH_SAX1 "Add the older SAX1 interface" ON)
 option(LIBXML2_WITH_SCHEMAS "Add Relax-NG and Schemas support" ON)
 option(LIBXML2_WITH_SCHEMATRON "Add Schematron support" ON)
 option(LIBXML2_WITH_TESTS "Build tests" ON)
-
-if(Threads_FOUND)
-	option(LIBXML2_WITH_THREADS "Add multithread support" ON)
-else()
-	set(LIBXML2_WITH_THREADS OFF)
-endif()
-
+option(LIBXML2_WITH_THREADS "Add multithread support" ON)
 option(LIBXML2_WITH_THREAD_ALLOC "Add per-thread memory" OFF)
 option(LIBXML2_WITH_TREE "Add the DOM like tree manipulation APIs" ON)
 set(LIBXML2_WITH_TRIO OFF)
@@ -97,14 +50,42 @@ option(LIBXML2_WITH_WRITER "Add the xmlWriter saving interface" ON)
 option(LIBXML2_WITH_XINCLUDE "Add the XInclude support" ON)
 option(LIBXML2_WITH_XPATH "Add the XPATH support" ON)
 option(LIBXML2_WITH_XPTR "Add the XPointer support" ON)
+option(LIBXML2_WITH_ZLIB "Use libz" ON)
+set(LIBXML2_XMLCONF_WORKING_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH "Working directory for XML Conformance Test Suite")
 
-if(ZLIB_FOUND)
-	option(LIBXML2_WITH_ZLIB "Use libz" ON)
-else()
-	set(LIBXML2_WITH_ZLIB OFF)
+if(LIBXML2_WITH_ICONV)
+	find_package(Iconv REQUIRED)
 endif()
 
-set(LIBXML2_XMLCONF_WORKING_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH "Working directory for XML Conformance Test Suite")
+if(LIBXML2_WITH_ICU)
+	find_package(ICU REQUIRED COMPONENTS data i18n uc)
+endif()
+
+if(LIBXML2_WITH_LZMA)
+	find_package(LibLZMA REQUIRED)
+endif()
+
+if(LIBXML2_WITH_PYTHON)
+	check_include_files(unistd.h HAVE_UNISTD_H)
+	check_symbol_exists(F_GETFL fcntl.h HAVE_F_GETFL)
+	if(HAVE_UNISTD_H AND HAVE_F_GETFL)
+		find_package(Python COMPONENTS Interpreter Development REQUIRED)
+	else()
+		find_package(Python2 COMPONENTS Interpreter Development REQUIRED)
+		add_library(Python::Python ALIAS Python2::Python)
+		set(Python_EXECUTABLE ${Python2_EXECUTABLE})
+		set(Python_SITEARCH ${Python2_SITEARCH})
+	endif()
+	set(LIBXML2_PYTHON_INSTALL_DIR ${Python_SITEARCH} CACHE PATH "Python bindings install directory")
+endif()
+
+if(LIBXML2_WITH_THREADS)
+	find_package(Threads REQUIRED)
+endif()
+
+if(LIBXML2_WITH_ZLIB)
+	find_package(ZLIB REQUIRED)
+endif()
 
 foreach(VARIABLE IN ITEMS WITH_AUTOMATA WITH_C14N WITH_CATALOG WITH_DEBUG WITH_DOCB WITH_EXPR WITH_FTP WITH_HTML WITH_HTTP WITH_ICONV WITH_ICU WITH_ISO8859X WITH_LEGACY WITH_LZMA WITH_MEM_DEBUG WITH_MODULES WITH_OUTPUT WITH_PATTERN WITH_PUSH WITH_READER WITH_REGEXPS WITH_RUN_DEBUG WITH_SAX1 WITH_SCHEMAS WITH_SCHEMATRON WITH_THREADS WITH_THREAD_ALLOC WITH_TREE WITH_TRIO WITH_UNICODE WITH_VALID WITH_WRITER WITH_XINCLUDE WITH_XPATH WITH_XPTR WITH_ZLIB)
 	if(LIBXML2_${VARIABLE})
@@ -113,6 +94,16 @@ foreach(VARIABLE IN ITEMS WITH_AUTOMATA WITH_C14N WITH_CATALOG WITH_DEBUG WITH_D
 		set(${VARIABLE} 0)
 	endif()
 endforeach()
+
+set(LIBXML_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
+set(LIBXML_MINOR_VERSION ${PROJECT_VERSION_MINOR})
+set(LIBXML_MICRO_VERSION ${PROJECT_VERSION_PATCH})
+
+set(VERSION "${LIBXML_MAJOR_VERSION}.${LIBXML_MINOR_VERSION}.${LIBXML_MICRO_VERSION}")
+set(LIBXML_VERSION ${LIBXML_MAJOR_VERSION}0${LIBXML_MINOR_VERSION}0${LIBXML_MICRO_VERSION})
+set(LIBXML_VERSION_STRING "${LIBXML_VERSION}")
+set(LIBXML_VERSION_EXTRA "")
+set(LIBXML_VERSION_NUMBER ${LIBXML_VERSION})
 
 set(MODULE_EXTENSION "${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
@@ -424,6 +415,11 @@ endif()
 
 add_library(LibXml2 ${LIBXML2_HDRS} ${LIBXML2_SRCS})
 
+if(NOT BUILD_SHARED_LIBS)
+	target_compile_definitions(LibXml2 INTERFACE LIBXML_STATIC)
+	set(XML_CFLAGS "-DLIBXML_STATIC")
+endif()
+
 if(LIBXML2_WITH_THREADS)
 	target_compile_definitions(LibXml2 PRIVATE _REENTRANT)
 	if(WIN32)
@@ -441,38 +437,53 @@ target_include_directories(
 
 if(HAVE_DLOPEN)
 	target_link_libraries(LibXml2 PRIVATE dl)
+	set(MODULE_PLATFORM_LIBS "-ldl")
 endif()
 
 if(HAVE_SHLLOAD)
 	target_link_libraries(LibXml2 PRIVATE dld)
+	set(MODULE_PLATFORM_LIBS "-ldld")
 endif()
 
 if(UNIX)
 	target_link_libraries(LibXml2 PRIVATE m)
+	set(M_LIBS "-lm")
 endif()
 
 if(WIN32)
 	target_link_libraries(LibXml2 PRIVATE ws2_32)
+	set(WIN32_EXTRA_LIBADD "-lws2_32")
 endif()
 
 if(LIBXML2_WITH_ICONV)
 	target_link_libraries(LibXml2 PUBLIC Iconv::Iconv)
+	if(NOT Iconv_IS_BUILT_IN)
+		set(ICONV_LIBS "-liconv")
+	endif()
 endif()
 
 if(LIBXML2_WITH_ICU)
-	target_link_libraries(LibXml2 PRIVATE ICU::i18n)
+	target_link_libraries(LibXml2 PRIVATE ICU::data ICU::i18n ICU::uc)
+	if(WIN32)
+		set(ICU_LIBS "-licudt -licuin -licuuc")
+	else()
+		set(ICU_LIBS "-licudata -licui18n -licuuc")
+	endif()
 endif()
 
 if(LIBXML2_WITH_LZMA)
 	target_link_libraries(LibXml2 PRIVATE LibLZMA::LibLZMA)
+	set(LZMA_LIBS "-llzma")
 endif()
 
 if(LIBXML2_WITH_THREADS)
 	target_link_libraries(LibXml2 PRIVATE Threads::Threads)
+	set(THREAD_LIBS ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
 if(LIBXML2_WITH_ZLIB)
 	target_link_libraries(LibXml2 PRIVATE ZLIB::ZLIB)
+	set(Z_LIBS "-lz")
 endif()
 
 set_target_properties(
@@ -482,10 +493,10 @@ set_target_properties(
 	OUTPUT_NAME xml2
 	POSITION_INDEPENDENT_CODE ON
 	PREFIX lib
-	VERSION ${VERSION}
+	VERSION ${PROJECT_VERSION}
 )
 
-if(WIN32)
+if(MSVC)
 	if(BUILD_SHARED_LIBS)
 		set_target_properties(
 			LibXml2
@@ -510,17 +521,9 @@ install(
 	TARGETS	LibXml2
 	EXPORT LibXml2
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development
-	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_SKIP
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT runtime NAMELINK_COMPONENT development
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
 )
-
-if(BUILD_SHARED_LIBS)
-	install(
-		TARGETS	LibXml2
-		EXPORT LibXml2
-		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development NAMELINK_ONLY
-	)
-endif()
 
 if(MSVC AND BUILD_SHARED_LIBS)
 	install(FILES $<TARGET_PDB_FILE:LibXml2> DESTINATION ${CMAKE_INSTALL_BINDIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
@@ -541,7 +544,7 @@ if(LIBXML2_WITH_PROGRAMS)
 		if(HAVE_LIBREADLINE)
 			target_link_libraries(${PROGRAM} readline)
 		endif()
-		install(TARGETS	${PROGRAM} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT programs)
+		install(TARGETS	${PROGRAM} EXPORT LibXml2 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT programs)
 	endforeach()
 endif()
 
@@ -634,20 +637,14 @@ if(LIBXML2_WITH_PYTHON)
 		IMPORT_PREFIX lib
 		OUTPUT_NAME xml2mod
 		PREFIX lib
-		VERSION ${VERSION}
+		VERSION ${PROJECT_VERSION}
 	)
 	install(
 		TARGETS	LibXml2Mod
 		ARCHIVE DESTINATION ${LIBXML2_PYTHON_INSTALL_DIR} COMPONENT development
-		LIBRARY DESTINATION ${LIBXML2_PYTHON_INSTALL_DIR} COMPONENT runtime NAMELINK_SKIP
+		LIBRARY DESTINATION ${LIBXML2_PYTHON_INSTALL_DIR} COMPONENT runtime NAMELINK_COMPONENT development
 		RUNTIME DESTINATION ${LIBXML2_PYTHON_INSTALL_DIR} COMPONENT runtime
 	)
-	if(BUILD_SHARED_LIBS)
-		install(
-			TARGETS	LibXml2Mod
-			LIBRARY DESTINATION ${LIBXML2_PYTHON_INSTALL_DIR} COMPONENT development NAMELINK_ONLY
-		)
-	endif()
 	if(MSVC AND BUILD_SHARED_LIBS)
 		install(FILES $<TARGET_PDB_FILE:LibXml2Mod> DESTINATION ${LIBXML2_PYTHON_INSTALL_DIR} CONFIGURATIONS Debug RelWithDebInfo COMPONENT debug)
 	endif()
@@ -662,30 +659,30 @@ install(DIRECTORY doc/ DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/libxml2 COMPONEN
 
 configure_package_config_file(
 	libxml2-config.cmake.cmake.in libxml2-config.cmake
-	INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${VERSION}
+	INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${PROJECT_VERSION}
 )
 
 install(
 	FILES ${CMAKE_CURRENT_BINARY_DIR}/libxml2-config.cmake
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${VERSION}
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${PROJECT_VERSION}
 	COMPONENT development
 )
 
 write_basic_package_version_file(
 	${CMAKE_CURRENT_BINARY_DIR}/libxml2-config-version.cmake
-	VERSION ${VERSION}
+	VERSION ${PROJECT_VERSION}
 	COMPATIBILITY ExactVersion
 )
 
 install(
 	FILES ${CMAKE_CURRENT_BINARY_DIR}/libxml2-config-version.cmake
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${VERSION}
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${PROJECT_VERSION}
 	COMPONENT development
 )
 
 install(
 	EXPORT LibXml2
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${VERSION}
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libxml2-${PROJECT_VERSION}
 	NAMESPACE LibXml2::
 	FILE libxml2-export.cmake
 	COMPONENT development
@@ -703,6 +700,30 @@ if(LIBXML2_WITH_PYTHON)
 	set(prefix "${CMAKE_INSTALL_PREFIX}")
 	configure_file(python/setup.py.in setup.py @ONLY)
 endif()
+
+set(XML_INCLUDEDIR "-I\${includedir}/libxml2")
+set(XML_LIBDIR "-L\${libdir}")
+set(XML_LIBS "-lxml2")
+set(XML_PRIVATE_LIBS "${Z_LIBS} ${LZMA_LIBS} ${THREAD_LIBS} ${ICONV_LIBS} ${ICU_LIBS} ${M_LIBS}")
+
+file(RELATIVE_PATH PACKAGE_RELATIVE_PATH "${CMAKE_INSTALL_FULL_LIBDIR}/pkgconfig" "${CMAKE_INSTALL_PREFIX}")
+string(REGEX REPLACE "/$" "" PACKAGE_RELATIVE_PATH "${PACKAGE_RELATIVE_PATH}")
+
+set(prefix "\${pcfiledir}/${PACKAGE_RELATIVE_PATH}")
+set(exec_prefix "\${prefix}")
+set(libdir "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
+set(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
+configure_file(libxml-2.0.pc.in libxml-2.0.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libxml-2.0.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig COMPONENT development)
+
+set(prefix "\$(cd \"\$(dirname \"\$0\")\"; pwd -P)/..")
+configure_file(xml2-config.in xml2-config @ONLY)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/xml2-config DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT development)
+
+set(XML_INCLUDEDIR "-I${CMAKE_INSTALL_FULL_INCLUDEDIR}/libxml2")
+set(XML_LIBDIR "-L${CMAKE_INSTALL_FULL_LIBDIR}")
+configure_file(xml2Conf.sh.in xml2Conf.sh @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/xml2Conf.sh DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT development)
 
 set(CPACK_COMPONENT_DEVELOPMENT_DEPENDS runtime)
 set(CPACK_COMPONENT_PROGRAMS_DEPENDS runtime)

@@ -2684,8 +2684,10 @@ xmlStringLenDecodeEntities(xmlParserCtxtPtr ctxt, const xmlChar *str, int len,
 		rep = xmlStringDecodeEntities(ctxt, ent->content, what,
 			                      0, 0, 0);
 		ctxt->depth--;
-		if (rep == NULL)
+		if (rep == NULL) {
+                    ent->content[0] = 0;
                     goto int_error;
+                }
 
                 current = rep;
                 while (*current != 0) { /* non input consuming loop */
@@ -2740,8 +2742,11 @@ xmlStringLenDecodeEntities(xmlParserCtxtPtr ctxt, const xmlChar *str, int len,
 		rep = xmlStringDecodeEntities(ctxt, ent->content, what,
 			                      0, 0, 0);
 		ctxt->depth--;
-		if (rep == NULL)
+		if (rep == NULL) {
+                    if (ent->content != NULL)
+                        ent->content[0] = 0;
                     goto int_error;
+                }
                 current = rep;
                 while (*current != 0) { /* non input consuming loop */
                     buffer[nbchars++] = *current++;
@@ -4204,6 +4209,7 @@ xmlParseSystemLiteral(xmlParserCtxtPtr ctxt) {
 	}
 	count++;
 	if (count > 50) {
+	    SHRINK;
 	    GROW;
 	    count = 0;
             if (ctxt->instate == XML_PARSER_EOF) {
@@ -4291,6 +4297,7 @@ xmlParsePubidLiteral(xmlParserCtxtPtr ctxt) {
 	buf[len++] = cur;
 	count++;
 	if (count > 50) {
+	    SHRINK;
 	    GROW;
 	    count = 0;
             if (ctxt->instate == XML_PARSER_EOF) {
@@ -4571,6 +4578,7 @@ xmlParseCharDataComplex(xmlParserCtxtPtr ctxt, int cdata) {
 	}
 	count++;
 	if (count > 50) {
+	    SHRINK;
 	    GROW;
 	    count = 0;
             if (ctxt->instate == XML_PARSER_EOF)
@@ -4776,6 +4784,7 @@ xmlParseCommentComplex(xmlParserCtxtPtr ctxt, xmlChar *buf,
 
 	count++;
 	if (count > 50) {
+	    SHRINK;
 	    GROW;
 	    count = 0;
             if (ctxt->instate == XML_PARSER_EOF) {
@@ -5186,6 +5195,7 @@ xmlParsePI(xmlParserCtxtPtr ctxt) {
 		}
 		count++;
 		if (count > 50) {
+		    SHRINK;
 		    GROW;
                     if (ctxt->instate == XML_PARSER_EOF) {
                         xmlFree(buf);
@@ -6082,14 +6092,20 @@ xmlParseElementMixedContentDecl(xmlParserCtxtPtr ctxt, int inputchk) {
 	    NEXT;
 	    if (elem == NULL) {
 	        ret = xmlNewDocElementContent(ctxt->myDoc, NULL, XML_ELEMENT_CONTENT_OR);
-		if (ret == NULL) return(NULL);
+		if (ret == NULL) {
+		    xmlFreeDocElementContent(ctxt->myDoc, cur);
+                    return(NULL);
+                }
 		ret->c1 = cur;
 		if (cur != NULL)
 		    cur->parent = ret;
 		cur = ret;
 	    } else {
 	        n = xmlNewDocElementContent(ctxt->myDoc, NULL, XML_ELEMENT_CONTENT_OR);
-		if (n == NULL) return(NULL);
+		if (n == NULL) {
+		    xmlFreeDocElementContent(ctxt->myDoc, ret);
+                    return(NULL);
+                }
 		n->c1 = xmlNewDocElementContent(ctxt->myDoc, elem, XML_ELEMENT_CONTENT_ELEMENT);
 		if (n->c1 != NULL)
 		    n->c1->parent = n;
@@ -7152,6 +7168,7 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
 	    ent->checked |= 1;
 	if (ret == XML_ERR_ENTITY_LOOP) {
 	    xmlFatalErr(ctxt, XML_ERR_ENTITY_LOOP, NULL);
+            xmlHaltParser(ctxt);
 	    xmlFreeNodeList(list);
 	    return;
 	}
@@ -9776,6 +9793,7 @@ xmlParseCDSect(xmlParserCtxtPtr ctxt) {
 	sl = l;
 	count++;
 	if (count > 50) {
+	    SHRINK;
 	    GROW;
             if (ctxt->instate == XML_PARSER_EOF) {
 		xmlFree(buf);
