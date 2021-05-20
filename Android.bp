@@ -182,6 +182,7 @@ cc_library {
         "com.android.art", // used by odrefresh
         "com.android.art.debug", // used by odrefreshd
         "com.android.runtime", // used by linkerconfig
+        "com.android.virt",
     ],
     min_sdk_version: "apex_inherit",
 }

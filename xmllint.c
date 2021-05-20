@@ -2213,7 +2213,7 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
             if (res > 0) {
                 ctxt = htmlCreatePushParserCtxt(NULL, NULL,
                             chars, res, filename, XML_CHAR_ENCODING_NONE);
-                xmlCtxtUseOptions(ctxt, options);
+                htmlCtxtUseOptions(ctxt, options);
                 while ((res = fread(chars, 1, pushsize, f)) > 0) {
                     htmlParseChunk(ctxt, chars, res, 0);
                 }
@@ -2426,6 +2426,7 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	dtd = xmlGetIntSubset(doc);
 	if (dtd != NULL) {
 	    xmlUnlinkNode((xmlNodePtr)dtd);
+            doc->intSubset = NULL;
 	    xmlFreeDtd(dtd);
 	}
     }
