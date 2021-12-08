@@ -19,4 +19,7 @@ third_party {
     month: 8
     day: 20
   }
+  security {
+      tag: "NVD-CPE2.3:cpe:/a:xmlsoft:libxml2:2.9.2:-"
+  }
 }
