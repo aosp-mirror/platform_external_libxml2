@@ -1886,6 +1886,7 @@ libxml_xmlFreeParserCtxt(ATTRIBUTE_UNUSED PyObject *self, PyObject *args) {
     return(Py_None);
 }
 
+#ifdef LIBXML_VALID_ENABLED
 /***
  * xmlValidCtxt stuff
  */
@@ -2045,6 +2046,7 @@ libxml_xmlFreeValidCtxt(PyObject *self ATTRIBUTE_UNUSED, PyObject *args) {
     Py_INCREF(Py_None);
     return(Py_None);
 }
+#endif /* LIBXML_VALID_ENABLED */
 
 #ifdef LIBXML_READER_ENABLED
 /************************************************************************
@@ -3053,6 +3055,7 @@ libxml_saveNodeTo(ATTRIBUTE_UNUSED PyObject * self, PyObject * args)
     if (encoding != NULL) {
         handler = xmlFindCharEncodingHandler(encoding);
         if (handler == NULL) {
+            PyFile_Release(output);
             return (PyLong_FromLong((long) -1));
         }
     }
@@ -3724,7 +3727,10 @@ libxml_C14NDocSaveTo(ATTRIBUTE_UNUSED PyObject * self,
     buf = xmlOutputBufferCreateFile(output, NULL);
 
     result = PyxmlNodeSet_Convert(pyobj_nodes, &nodes);
-    if (result < 0) return NULL;
+    if (result < 0) {
+        xmlOutputBufferClose(buf);
+        return NULL;
+    }
 
     if (exclusive) {
         result = PystringSet_Convert(pyobj_prefixes, &prefixes);
@@ -3733,6 +3739,7 @@ libxml_C14NDocSaveTo(ATTRIBUTE_UNUSED PyObject * self,
                 xmlFree(nodes->nodeTab);
                 xmlFree(nodes);
             }
+            xmlOutputBufferClose(buf);
             return NULL;
         }
     }
@@ -3833,8 +3840,10 @@ static PyMethodDef libxmlMethods[] = {
     {(char *) "doc", libxml_doc, METH_VARARGS, NULL},
     {(char *) "xmlNewNode", libxml_xmlNewNode, METH_VARARGS, NULL},
     {(char *) "xmlNodeRemoveNsDef", libxml_xmlNodeRemoveNsDef, METH_VARARGS, NULL},
+#ifdef LIBXML_VALID_ENABLED
     {(char *)"xmlSetValidErrors", libxml_xmlSetValidErrors, METH_VARARGS, NULL},
     {(char *)"xmlFreeValidCtxt", libxml_xmlFreeValidCtxt, METH_VARARGS, NULL},
+#endif /* LIBXML_VALID_ENABLED */
 #ifdef LIBXML_OUTPUT_ENABLED
     {(char *) "serializeNode", libxml_serializeNode, METH_VARARGS, NULL},
     {(char *) "saveNodeTo", libxml_saveNodeTo, METH_VARARGS, NULL},
