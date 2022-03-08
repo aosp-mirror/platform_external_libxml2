@@ -13,6 +13,7 @@ third_party {
     value: "https://github.com/GNOME/libxml2/archive/c41bc10da31a4a4e5416270110b6d1b79606cad1.zip"
   }
   version: "c41bc10da31a4a4e5416270110b6d1b79606cad1"
+  license_note: "contains GFDL documentation"
   license_type: BY_EXCEPTION_ONLY
   security {
     tag: "NVD-CPE2.3:cpe:/a:xmlsoft:libxml2:2.9.2:-"
