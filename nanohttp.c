@@ -1895,3 +1895,5 @@ int main(int argc, char **argv) {
 }
 #endif /* STANDALONE */
 #endif /* LIBXML_HTTP_ENABLED */
+#define bottom_nanohttp
+#include "elfgcchack.h"

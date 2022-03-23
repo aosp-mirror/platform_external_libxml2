@@ -915,7 +915,6 @@ xmlParseCatalogFile(const char *filename) {
 
     inputStream = xmlNewInputStream(ctxt);
     if (inputStream == NULL) {
-	xmlFreeParserInputBuffer(buf);
 	xmlFreeParserCtxt(ctxt);
 	return(NULL);
     }
@@ -2359,7 +2358,6 @@ xmlParseSGMLCatalog(xmlCatalogPtr catal, const xmlChar *value,
 	    }
 	    if (!IS_BLANK_CH(*cur)) {
 		/* error */
-		xmlFree(name);
 		break;
 	    }
 	    SKIP_BLANKS;
@@ -3825,4 +3823,6 @@ xmlCatalogGetPublic(const xmlChar *pubID) {
     return(NULL);
 }
 
+#define bottom_catalog
+#include "elfgcchack.h"
 #endif /* LIBXML_CATALOG_ENABLED */
