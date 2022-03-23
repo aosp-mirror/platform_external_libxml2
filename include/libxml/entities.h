@@ -75,7 +75,6 @@ typedef xmlEntitiesTable *xmlEntitiesTablePtr;
  */
 
 #ifdef LIBXML_LEGACY_ENABLED
-XML_DEPRECATED
 XMLPUBFUN void XMLCALL
 		xmlInitializePredefinedEntities	(void);
 #endif /* LIBXML_LEGACY_ENABLED */
@@ -113,7 +112,6 @@ XMLPUBFUN xmlEntityPtr XMLCALL
 			xmlGetParameterEntity	(xmlDocPtr doc,
 						 const xmlChar *name);
 #ifdef LIBXML_LEGACY_ENABLED
-XML_DEPRECATED
 XMLPUBFUN const xmlChar * XMLCALL
 			xmlEncodeEntities	(xmlDocPtr doc,
 						 const xmlChar *input);

@@ -2517,8 +2517,6 @@ htmlNewDocNoDtD(const xmlChar *URI, const xmlChar *ExternalID) {
     if ((ExternalID != NULL) ||
 	(URI != NULL))
 	xmlCreateIntSubset(cur, BAD_CAST "html", ExternalID, URI);
-    if ((__xmlRegisterCallbacks) && (xmlRegisterNodeDefaultValue))
-	xmlRegisterNodeDefaultValue((xmlNodePtr)cur);
     return(cur);
 }
 
@@ -3047,7 +3045,7 @@ htmlParsePubidLiteral(htmlParserCtxtPtr ctxt) {
         NEXT;
     }
 
-    if (CUR != quote) {
+    if (CUR != '"') {
         htmlParseErr(ctxt, XML_ERR_LITERAL_NOT_FINISHED,
                      "Unfinished PubidLiteral\n", NULL, NULL);
     } else {
@@ -3960,6 +3958,14 @@ htmlParseStartTag(htmlParserCtxtPtr ctxt) {
 	htmlParseErr(ctxt, XML_ERR_NAME_REQUIRED,
 	             "htmlParseStartTag: invalid element name\n",
 		     NULL, NULL);
+	/* if recover preserve text on classic misconstructs */
+	if ((ctxt->recovery) && ((IS_BLANK_CH(CUR)) || (CUR == '<') ||
+	    (CUR == '=') || (CUR == '>') || (((CUR >= '0') && (CUR <= '9'))))) {
+	    htmlParseCharDataInternal(ctxt, '<');
+	    return(-1);
+	}
+
+
 	/* Dump the bogus tag like browsers do */
 	while ((CUR != 0) && (CUR != '>') &&
                (ctxt->instate != XML_PARSER_EOF))
@@ -4412,14 +4418,8 @@ htmlParseContent(htmlParserCtxtPtr ctxt) {
 	    /*
 	     * Third case :  a sub-element.
 	     */
-	    else if ((CUR == '<') && IS_ASCII_LETTER(NXT(1))) {
-		htmlParseElement(ctxt);
-	    }
 	    else if (CUR == '<') {
-                if ((ctxt->sax != NULL) && (!ctxt->disableSAX) &&
-                    (ctxt->sax->characters != NULL))
-                    ctxt->sax->characters(ctxt->userData, BAD_CAST "<", 1);
-                NEXT;
+		htmlParseElement(ctxt);
 	    }
 
 	    /*
@@ -4817,19 +4817,13 @@ htmlParseContentInternal(htmlParserCtxtPtr ctxt) {
 	    /*
 	     * Third case :  a sub-element.
 	     */
-	    else if ((CUR == '<') && IS_ASCII_LETTER(NXT(1))) {
+	    else if (CUR == '<') {
 		htmlParseElementInternal(ctxt);
 		if (currentNode != NULL) xmlFree(currentNode);
 
 		currentNode = xmlStrdup(ctxt->name);
 		depth = ctxt->nameNr;
 	    }
-	    else if (CUR == '<') {
-                if ((ctxt->sax != NULL) && (!ctxt->disableSAX) &&
-                    (ctxt->sax->characters != NULL))
-                    ctxt->sax->characters(ctxt->userData, BAD_CAST "<", 1);
-                NEXT;
-            }
 
 	    /*
 	     * Fourth case : a reference. If if has not been resolved,
@@ -5110,7 +5104,7 @@ htmlInitParserCtxt(htmlParserCtxtPtr ctxt)
     ctxt->linenumbers = xmlLineNumbersDefaultValue;
     ctxt->keepBlanks = xmlKeepBlanksDefaultValue;
     ctxt->html = 1;
-    ctxt->vctxt.flags = XML_VCTXT_USE_PCTXT;
+    ctxt->vctxt.finishDtd = XML_CTXT_FINISH_DTD_0;
     ctxt->vctxt.userData = ctxt;
     ctxt->vctxt.error = xmlParserValidityError;
     ctxt->vctxt.warning = xmlParserValidityWarning;
@@ -5191,7 +5185,6 @@ htmlCreateMemoryParserCtxt(const char *buffer, int size) {
 
     input = xmlNewInputStream(ctxt);
     if (input == NULL) {
-	xmlFreeParserInputBuffer(buf);
 	xmlFreeParserCtxt(ctxt);
 	return(NULL);
     }
@@ -5996,22 +5989,36 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 				"HPP: entering END_TAG\n");
 #endif
 			break;
-		    } else if ((cur == '<') && IS_ASCII_LETTER(next)) {
+		    } else if (cur == '<') {
                         if ((!terminate) && (next == 0))
                             goto done;
-                        ctxt->instate = XML_PARSER_START_TAG;
-                        ctxt->checkIndex = 0;
+                        /*
+                         * Only switch to START_TAG if the next character
+                         * starts a valid name. Otherwise, htmlParseStartTag
+                         * might return without consuming all characters
+                         * up to the final '>'.
+                         */
+                        if ((IS_ASCII_LETTER(next)) ||
+                            (next == '_') || (next == ':') || (next == '.')) {
+                            ctxt->instate = XML_PARSER_START_TAG;
+                            ctxt->checkIndex = 0;
 #ifdef DEBUG_PUSH
-                        xmlGenericError(xmlGenericErrorContext,
-                                "HPP: entering START_TAG\n");
+                            xmlGenericError(xmlGenericErrorContext,
+                                    "HPP: entering START_TAG\n");
 #endif
+                        } else {
+                            htmlParseErr(ctxt, XML_ERR_NAME_REQUIRED,
+                                         "htmlParseTryOrFinish: "
+                                         "invalid element name\n",
+                                         NULL, NULL);
+                            htmlCheckParagraph(ctxt);
+                            if ((ctxt->sax != NULL) &&
+                                (ctxt->sax->characters != NULL))
+                                ctxt->sax->characters(ctxt->userData,
+                                                      in->cur, 1);
+                            NEXT;
+                        }
 			break;
-		    } else if (cur == '<') {
-                        if ((ctxt->sax != NULL) && (!ctxt->disableSAX) &&
-                            (ctxt->sax->characters != NULL))
-			    ctxt->sax->characters(ctxt->userData,
-						  BAD_CAST "<", 1);
-                        NEXT;
 		    } else {
 		        /*
 			 * check that the text sequence is complete
@@ -6992,9 +6999,7 @@ htmlReadMemory(const char *buffer, int size, const char *URL, const char *encodi
  * @encoding:  the document encoding, or NULL
  * @options:  a combination of htmlParserOption(s)
  *
- * parse an HTML from a file descriptor and build a tree.
- * NOTE that the file descriptor will not be closed when the
- *      reader is closed or reset.
+ * parse an XML from a file descriptor and build a tree.
  *
  * Returns the resulting document tree
  */
@@ -7003,17 +7008,17 @@ htmlReadFd(int fd, const char *URL, const char *encoding, int options)
 {
     htmlParserCtxtPtr ctxt;
     xmlParserInputBufferPtr input;
-    htmlParserInputPtr stream;
+    xmlParserInputPtr stream;
 
     if (fd < 0)
         return (NULL);
+    xmlInitParser();
 
     xmlInitParser();
     input = xmlParserInputBufferCreateFd(fd, XML_CHAR_ENCODING_NONE);
     if (input == NULL)
         return (NULL);
-    input->closecallback = NULL;
-    ctxt = htmlNewParserCtxt();
+    ctxt = xmlNewParserCtxt();
     if (ctxt == NULL) {
         xmlFreeParserInputBuffer(input);
         return (NULL);
@@ -7021,7 +7026,7 @@ htmlReadFd(int fd, const char *URL, const char *encoding, int options)
     stream = xmlNewIOInputStream(ctxt, input, XML_CHAR_ENCODING_NONE);
     if (stream == NULL) {
         xmlFreeParserInputBuffer(input);
-	htmlFreeParserCtxt(ctxt);
+	xmlFreeParserCtxt(ctxt);
         return (NULL);
     }
     inputPush(ctxt, stream);
@@ -7277,4 +7282,6 @@ htmlCtxtReadIO(htmlParserCtxtPtr ctxt, xmlInputReadCallback ioread,
     return (htmlDoRead(ctxt, URL, encoding, options, 1));
 }
 
+#define bottom_HTMLparser
+#include "elfgcchack.h"
 #endif /* LIBXML_HTML_ENABLED */

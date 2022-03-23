@@ -1294,3 +1294,5 @@ xmlDictGetUsage(xmlDictPtr dict) {
     return(limit);
 }
 
+#define bottom_dict
+#include "elfgcchack.h"
