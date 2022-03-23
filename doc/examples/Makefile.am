@@ -5,7 +5,7 @@
 
 AM_CPPFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(srcdir)/include
 AM_CFLAGS = $(THREAD_CFLAGS) $(Z_CFLAGS)
-LDADD = $(RDL_LIBS) $(top_builddir)/libxml2.la $(THREAD_LIBS) $(Z_LIBS) $(ICONV_LIBS) -lm $(WIN32_EXTRA_LIBADD)
+LDADD = $(RDL_LIBS) $(STATIC_BINARIES) $(top_builddir)/libxml2.la $(THREAD_LIBS) $(Z_LIBS) $(ICONV_LIBS) -lm $(WIN32_EXTRA_LIBADD)
 
 CLEANFILES = *.tmp
 
@@ -23,8 +23,8 @@ index.html: examples.xml examples.xsl
 endif
 
 install-data-local: 
-	$(MKDIR_P) $(DESTDIR)$(HTML_DIR)/examples
-	-$(INSTALL) -m 0644 $(srcdir)/*.html $(srcdir)/*.c $(srcdir)/*.xml $(srcdir)/*.xsl $(srcdir)/*.res $(DESTDIR)$(HTML_DIR)/examples/
+	$(MKDIR_P) $(DESTDIR)$(HTML_DIR)
+	-$(INSTALL) -m 0644 $(srcdir)/*.html $(srcdir)/*.c $(srcdir)/*.xml $(srcdir)/*.xsl $(srcdir)/*.res $(DESTDIR)$(HTML_DIR)
 
 clean-local:
 	test -f Makefile.am || rm -f test?.xml

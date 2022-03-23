@@ -60,17 +60,17 @@ typedef void (XMLCDECL *xmlValidityWarningFunc) (void *ctx,
 
 #ifdef IN_LIBXML
 /**
- * XML_VCTXT_DTD_VALIDATED:
+ * XML_CTXT_FINISH_DTD_0:
  *
- * Set after xmlValidateDtdFinal was called.
+ * Special value for finishDtd field when embedded in an xmlParserCtxt
  */
-#define XML_VCTXT_DTD_VALIDATED (1u << 0)
+#define XML_CTXT_FINISH_DTD_0 0xabcd1234
 /**
- * XML_VCTXT_USE_PCTXT:
+ * XML_CTXT_FINISH_DTD_1:
  *
- * Set if the validation context is part of a parser context.
+ * Special value for finishDtd field when embedded in an xmlParserCtxt
  */
-#define XML_VCTXT_USE_PCTXT (1u << 1)
+#define XML_CTXT_FINISH_DTD_1 0xabcd1235
 #endif
 
 /*
@@ -90,7 +90,7 @@ struct _xmlValidCtxt {
     int                nodeMax;       /* Max depth of the parsing stack */
     xmlNodePtr        *nodeTab;       /* array of nodes */
 
-    unsigned int         flags;       /* internal flags */
+    unsigned int     finishDtd;       /* finished validating the Dtd ? */
     xmlDocPtr              doc;       /* the document */
     int                  valid;       /* temporary validity check result */
 
@@ -283,25 +283,20 @@ XMLPUBFUN int XMLCALL
 					xmlAttrPtr attr);
 
 /* IDREFs */
-XML_DEPRECATED
 XMLPUBFUN xmlRefPtr XMLCALL
 		xmlAddRef	       (xmlValidCtxtPtr ctxt,
 					xmlDocPtr doc,
 					const xmlChar *value,
 					xmlAttrPtr attr);
-XML_DEPRECATED
 XMLPUBFUN void XMLCALL
 		xmlFreeRefTable	       (xmlRefTablePtr table);
-XML_DEPRECATED
 XMLPUBFUN int XMLCALL
 		xmlIsRef	       (xmlDocPtr doc,
 					xmlNodePtr elem,
 					xmlAttrPtr attr);
-XML_DEPRECATED
 XMLPUBFUN int XMLCALL
 		xmlRemoveRef	       (xmlDocPtr doc,
 					xmlAttrPtr attr);
-XML_DEPRECATED
 XMLPUBFUN xmlListPtr XMLCALL
 		xmlGetRefs	       (xmlDocPtr doc,
 					const xmlChar *ID);

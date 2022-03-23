@@ -78,7 +78,7 @@ void xmlMallocBreakpoint(void);
  * Each of the blocks allocated begin with a header containing information
  */
 
-#define MEMTAG 0x5aa5U
+#define MEMTAG 0x5aa5
 
 #define MALLOC_TYPE 1
 #define REALLOC_TYPE 2
@@ -1159,3 +1159,5 @@ xmlGcMemGet(xmlFreeFunc *freeFunc, xmlMallocFunc *mallocFunc,
     return(0);
 }
 
+#define bottom_xmlmemory
+#include "elfgcchack.h"
