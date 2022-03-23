@@ -459,6 +459,8 @@ xmlUCSIsCat(int code, const char *cat) {
     return (func(code));
 }
 
+#define bottom_xmlunicode
+#include "elfgcchack.h"
 #endif /* LIBXML_UNICODE_ENABLED */
 """)
 
