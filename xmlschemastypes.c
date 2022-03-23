@@ -5431,6 +5431,7 @@ xmlSchemaValidateFacetInternal(xmlSchemaFacetPtr facet,
 			       xmlSchemaWhitespaceValueType ws)
 {
     int ret;
+    int stringType;
 
     if (facet == NULL)
 	return(-1);
@@ -5448,16 +5449,10 @@ xmlSchemaValidateFacetInternal(xmlSchemaFacetPtr facet,
 	    * the datatype.
 	    * See https://www.w3.org/TR/xmlschema-2/#rf-pattern
 	    */
-	    if (val &&
-                val->value.str &&
-                ((val->type >= XML_SCHEMAS_STRING &&
-                  val->type <= XML_SCHEMAS_NORMSTRING) ||
-                 (val->type >= XML_SCHEMAS_TOKEN &&
-                  val->type <= XML_SCHEMAS_ENTITIES &&
-                  val->type != XML_SCHEMAS_QNAME))) {
-                value = val->value.str;
-            }
-	    ret = xmlRegexpExec(facet->regexp, value);
+	    stringType = val && ((val->type >= XML_SCHEMAS_STRING && val->type <= XML_SCHEMAS_NORMSTRING)
+			      || (val->type >= XML_SCHEMAS_TOKEN && val->type <= XML_SCHEMAS_NCNAME));
+	    ret = xmlRegexpExec(facet->regexp,
+	                        (stringType && val->value.str) ? val->value.str : value);
 	    if (ret == 1)
 		return(0);
 	    if (ret == 0)
@@ -6276,4 +6271,6 @@ xmlSchemaGetValType(xmlSchemaValPtr val)
     return (val->type);
 }
 
+#define bottom_xmlschemastypes
+#include "elfgcchack.h"
 #endif /* LIBXML_SCHEMAS_ENABLED */

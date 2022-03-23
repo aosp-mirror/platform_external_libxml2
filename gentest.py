@@ -58,6 +58,11 @@ function_defines = {
     "xmlSAX2StartElement" : "LIBXML_SAX1_ENABLED",
     "xmlSAXDefaultVersion" : "LIBXML_SAX1_ENABLED",
     "UTF8Toisolat1" : "LIBXML_OUTPUT_ENABLED",
+    "xmlCleanupPredefinedEntities": "LIBXML_LEGACY_ENABLED",
+    "xmlInitializePredefinedEntities": "LIBXML_LEGACY_ENABLED",
+    "xmlSetFeature": "LIBXML_LEGACY_ENABLED",
+    "xmlGetFeature": "LIBXML_LEGACY_ENABLED",
+    "xmlGetFeaturesList": "LIBXML_LEGACY_ENABLED",
     "xmlIOParseDTD": "LIBXML_VALID_ENABLED",
     "xmlParseDTD": "LIBXML_VALID_ENABLED",
     "xmlParseDoc": "LIBXML_SAX1_ENABLED",
@@ -156,9 +161,6 @@ skipped_functions = [
 "xmlParseXMLDecl", "xmlParseTextDecl", "xmlParseMisc",
 "xmlParseExternalSubset", "xmlParserHandlePEReference",
 "xmlSkipBlankChars",
-# Legacy
-"xmlCleanupPredefinedEntities", "xmlInitializePredefinedEntities",
-"xmlSetFeature", "xmlGetFeature", "xmlGetFeaturesList",
 ]
 
 #
