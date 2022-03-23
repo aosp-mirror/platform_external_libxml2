@@ -851,6 +851,7 @@ static void xmlXPtrEvalChildSeq(xmlXPathParserContextPtr ctxt, xmlChar *name);
  *
  * Dirty macros, i.e. one need to make assumption on the context to use them
  *
+ *   CUR_PTR return the current pointer to the xmlChar to be parsed.
  *   CUR     returns the current xmlChar value, i.e. a 8 bit value
  *           in ISO-Latin or UTF-8.
  *           This should be used internally by the parser
@@ -870,6 +871,7 @@ static void xmlXPtrEvalChildSeq(xmlXPathParserContextPtr ctxt, xmlChar *name);
 #define CUR (*ctxt->cur)
 #define SKIP(val) ctxt->cur += (val)
 #define NXT(val) ctxt->cur[(val)]
+#define CUR_PTR ctxt->cur
 
 #define SKIP_BLANKS							\
     while (IS_BLANK_CH(*(ctxt->cur))) NEXT
@@ -997,10 +999,9 @@ xmlXPtrEvalXPtrPart(xmlXPathParserContextPtr ctxt, xmlChar *name) {
     }
 
     if (xmlStrEqual(name, (xmlChar *) "xpointer")) {
-	const xmlChar *oldBase = ctxt->base;
-	const xmlChar *oldCur = ctxt->cur;
+	const xmlChar *left = CUR_PTR;
 
-	ctxt->cur = ctxt->base = buffer;
+	CUR_PTR = buffer;
 	/*
 	 * To evaluate an xpointer scheme element (4.3) we need:
 	 *   context initialized to the root
@@ -1011,49 +1012,42 @@ xmlXPtrEvalXPtrPart(xmlXPathParserContextPtr ctxt, xmlChar *name) {
 	ctxt->context->proximityPosition = 1;
 	ctxt->context->contextSize = 1;
 	xmlXPathEvalExpr(ctxt);
-	ctxt->base = oldBase;
-        ctxt->cur = oldCur;
+	CUR_PTR=left;
     } else if (xmlStrEqual(name, (xmlChar *) "element")) {
-	const xmlChar *oldBase = ctxt->base;
-	const xmlChar *oldCur = ctxt->cur;
+	const xmlChar *left = CUR_PTR;
 	xmlChar *name2;
 
-	ctxt->cur = ctxt->base = buffer;
+	CUR_PTR = buffer;
 	if (buffer[0] == '/') {
 	    xmlXPathRoot(ctxt);
 	    xmlXPtrEvalChildSeq(ctxt, NULL);
 	} else {
 	    name2 = xmlXPathParseName(ctxt);
 	    if (name2 == NULL) {
-                ctxt->base = oldBase;
-                ctxt->cur = oldCur;
+		CUR_PTR = left;
 		xmlFree(buffer);
                 xmlFree(name);
 		XP_ERROR(XPATH_EXPR_ERROR);
 	    }
 	    xmlXPtrEvalChildSeq(ctxt, name2);
 	}
-	ctxt->base = oldBase;
-        ctxt->cur = oldCur;
+	CUR_PTR = left;
 #ifdef XPTR_XMLNS_SCHEME
     } else if (xmlStrEqual(name, (xmlChar *) "xmlns")) {
-	const xmlChar *oldBase = ctxt->base;
-	const xmlChar *oldCur = ctxt->cur;
+	const xmlChar *left = CUR_PTR;
 	xmlChar *prefix;
+	xmlChar *URI;
+	xmlURIPtr value;
 
-	ctxt->cur = ctxt->base = buffer;
+	CUR_PTR = buffer;
         prefix = xmlXPathParseNCName(ctxt);
 	if (prefix == NULL) {
-            ctxt->base = oldBase;
-            ctxt->cur = oldCur;
 	    xmlFree(buffer);
 	    xmlFree(name);
 	    XP_ERROR(XPTR_SYNTAX_ERROR);
 	}
 	SKIP_BLANKS;
 	if (CUR != '=') {
-            ctxt->base = oldBase;
-            ctxt->cur = oldCur;
 	    xmlFree(prefix);
 	    xmlFree(buffer);
 	    xmlFree(name);
@@ -1061,10 +1055,27 @@ xmlXPtrEvalXPtrPart(xmlXPathParserContextPtr ctxt, xmlChar *name) {
 	}
 	NEXT;
 	SKIP_BLANKS;
+	/* @@ check escaping in the XPointer WD */
 
-	xmlXPathRegisterNs(ctxt->context, prefix, ctxt->cur);
-        ctxt->base = oldBase;
-        ctxt->cur = oldCur;
+	value = xmlParseURI((const char *)ctxt->cur);
+	if (value == NULL) {
+	    xmlFree(prefix);
+	    xmlFree(buffer);
+	    xmlFree(name);
+	    XP_ERROR(XPTR_SYNTAX_ERROR);
+	}
+	URI = xmlSaveUri(value);
+	xmlFreeURI(value);
+	if (URI == NULL) {
+	    xmlFree(prefix);
+	    xmlFree(buffer);
+	    xmlFree(name);
+	    XP_ERROR(XPATH_MEMORY_ERROR);
+	}
+
+	xmlXPathRegisterNs(ctxt->context, prefix, URI);
+	CUR_PTR = left;
+	xmlFree(URI);
 	xmlFree(prefix);
 #endif /* XPTR_XMLNS_SCHEME */
     } else {
@@ -1459,16 +1470,16 @@ xmlXPtrBuildRangeNodeList(xmlXPathObjectPtr range) {
 		return(list);
 	    } else {
 		tmp = xmlCopyNode(cur, 0);
-		if (list == NULL) {
+		if (list == NULL)
 		    list = tmp;
-		    parent = tmp;
-		} else {
+		else {
 		    if (last != NULL)
-			parent = xmlAddNextSibling(last, tmp);
+			xmlAddNextSibling(last, tmp);
 		    else
-			parent = xmlAddChild(parent, tmp);
+			xmlAddChild(parent, tmp);
 		}
 		last = NULL;
+		parent = tmp;
 
 		if (index2 > 1) {
 		    end = xmlXPtrGetNthChild(cur, index2 - 1);
@@ -1550,7 +1561,8 @@ xmlXPtrBuildRangeNodeList(xmlXPathObjectPtr range) {
 		if (last != NULL)
 		    xmlAddNextSibling(last, tmp);
 		else {
-		    last = xmlAddChild(parent, tmp);
+		    xmlAddChild(parent, tmp);
+		    last = tmp;
 		}
 	    }
 	}
@@ -2951,5 +2963,7 @@ xmlXPtrEvalRangePredicate(xmlXPathParserContextPtr ctxt) {
     SKIP_BLANKS;
 }
 
+#define bottom_xpointer
+#include "elfgcchack.h"
 #endif
 

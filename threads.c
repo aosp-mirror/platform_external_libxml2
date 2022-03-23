@@ -1045,3 +1045,5 @@ DllMain(ATTRIBUTE_UNUSED HINSTANCE hinstDLL, DWORD fdwReason,
     return TRUE;
 }
 #endif
+#define bottom_threads
+#include "elfgcchack.h"

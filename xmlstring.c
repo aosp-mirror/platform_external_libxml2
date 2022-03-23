@@ -18,7 +18,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parserInternals.h>
 #include <libxml/xmlstring.h>
@@ -43,7 +42,7 @@ xmlStrndup(const xmlChar *cur, int len) {
     xmlChar *ret;
 
     if ((cur == NULL) || (len < 0)) return(NULL);
-    ret = (xmlChar *) xmlMallocAtomic(((size_t) len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic((len + 1) * sizeof(xmlChar));
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(NULL);
@@ -88,7 +87,7 @@ xmlCharStrndup(const char *cur, int len) {
     xmlChar *ret;
 
     if ((cur == NULL) || (len < 0)) return(NULL);
-    ret = (xmlChar *) xmlMallocAtomic(((size_t) len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic((len + 1) * sizeof(xmlChar));
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(NULL);
@@ -424,14 +423,14 @@ xmlStrsub(const xmlChar *str, int start, int len) {
 
 int
 xmlStrlen(const xmlChar *str) {
-    size_t len = 0;
+    int len = 0;
 
     if (str == NULL) return(0);
     while (*str != 0) { /* non input consuming */
         str++;
         len++;
     }
-    return(len > INT_MAX ? 0 : len);
+    return(len);
 }
 
 /**
@@ -461,9 +460,9 @@ xmlStrncat(xmlChar *cur, const xmlChar *add, int len) {
         return(xmlStrndup(add, len));
 
     size = xmlStrlen(cur);
-    if ((size < 0) || (size > INT_MAX - len))
+    if (size < 0)
         return(NULL);
-    ret = (xmlChar *) xmlRealloc(cur, ((size_t) size + len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlRealloc(cur, (size + len + 1) * sizeof(xmlChar));
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(cur);
@@ -501,9 +500,9 @@ xmlStrncatNew(const xmlChar *str1, const xmlChar *str2, int len) {
         return(xmlStrndup(str2, len));
 
     size = xmlStrlen(str1);
-    if ((size < 0) || (size > INT_MAX - len))
+    if (size < 0)
         return(NULL);
-    ret = (xmlChar *) xmlMalloc(((size_t) size + len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMalloc((size + len + 1) * sizeof(xmlChar));
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(xmlStrndup(str1, size));
@@ -668,7 +667,7 @@ xmlUTF8Charcmp(const xmlChar *utf1, const xmlChar *utf2) {
  */
 int
 xmlUTF8Strlen(const xmlChar *utf) {
-    size_t ret = 0;
+    int ret = 0;
 
     if (utf == NULL)
         return(-1);
@@ -695,7 +694,7 @@ xmlUTF8Strlen(const xmlChar *utf) {
         }
         ret++;
     }
-    return(ret > INT_MAX ? 0 : ret);
+    return(ret);
 }
 
 /**
@@ -797,28 +796,26 @@ xmlCheckUTF8(const unsigned char *utf)
      *    1110xxxx 10xxxxxx 10xxxxxx                    valid 3-byte
      *    11110xxx 10xxxxxx 10xxxxxx 10xxxxxx           valid 4-byte
      */
-    while ((c = utf[0])) {      /* string is 0-terminated */
-        ix = 0;
+    for (ix = 0; (c = utf[ix]);) {      /* string is 0-terminated */
         if ((c & 0x80) == 0x00) {	/* 1-byte code, starts with 10 */
-            ix = 1;
+            ix++;
 	} else if ((c & 0xe0) == 0xc0) {/* 2-byte code, starts with 110 */
-	    if ((utf[1] & 0xc0 ) != 0x80)
+	    if ((utf[ix+1] & 0xc0 ) != 0x80)
 	        return 0;
-	    ix = 2;
+	    ix += 2;
 	} else if ((c & 0xf0) == 0xe0) {/* 3-byte code, starts with 1110 */
-	    if (((utf[1] & 0xc0) != 0x80) ||
-	        ((utf[2] & 0xc0) != 0x80))
+	    if (((utf[ix+1] & 0xc0) != 0x80) ||
+	        ((utf[ix+2] & 0xc0) != 0x80))
 		    return 0;
-	    ix = 3;
+	    ix += 3;
 	} else if ((c & 0xf8) == 0xf0) {/* 4-byte code, starts with 11110 */
-	    if (((utf[1] & 0xc0) != 0x80) ||
-	        ((utf[2] & 0xc0) != 0x80) ||
-		((utf[3] & 0xc0) != 0x80))
+	    if (((utf[ix+1] & 0xc0) != 0x80) ||
+	        ((utf[ix+2] & 0xc0) != 0x80) ||
+		((utf[ix+3] & 0xc0) != 0x80))
 		    return 0;
-	    ix = 4;
+	    ix += 4;
 	} else				/* unknown encoding */
 	    return 0;
-        utf += ix;
       }
       return(1);
 }
@@ -837,9 +834,8 @@ xmlCheckUTF8(const unsigned char *utf)
 
 int
 xmlUTF8Strsize(const xmlChar *utf, int len) {
-    const xmlChar *ptr=utf;
-    int ch;
-    size_t ret;
+    const xmlChar   *ptr=utf;
+    xmlChar         ch;
 
     if (utf == NULL)
         return(0);
@@ -856,8 +852,7 @@ xmlUTF8Strsize(const xmlChar *utf, int len) {
                 ptr++;
 	    }
     }
-    ret = ptr - utf;
-    return (ret > INT_MAX ? 0 : ret);
+    return (ptr - utf);
 }
 
 
@@ -877,8 +872,11 @@ xmlUTF8Strndup(const xmlChar *utf, int len) {
 
     if ((utf == NULL) || (len < 0)) return(NULL);
     i = xmlUTF8Strsize(utf, len);
-    ret = (xmlChar *) xmlMallocAtomic(((size_t) i + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic((i + 1) * sizeof(xmlChar));
     if (ret == NULL) {
+        xmlGenericError(xmlGenericErrorContext,
+                "malloc of %ld byte failed\n",
+                (len + 1) * (long)sizeof(xmlChar));
         return(NULL);
     }
     memcpy(ret, utf, i * sizeof(xmlChar));
@@ -898,7 +896,7 @@ xmlUTF8Strndup(const xmlChar *utf, int len) {
  */
 const xmlChar *
 xmlUTF8Strpos(const xmlChar *utf, int pos) {
-    int ch;
+    xmlChar ch;
 
     if (utf == NULL) return(NULL);
     if (pos < 0)
@@ -930,15 +928,14 @@ xmlUTF8Strpos(const xmlChar *utf, int pos) {
  */
 int
 xmlUTF8Strloc(const xmlChar *utf, const xmlChar *utfchar) {
-    size_t i;
-    int size;
-    int ch;
+    int i, size;
+    xmlChar ch;
 
     if (utf==NULL || utfchar==NULL) return -1;
     size = xmlUTF8Strsize(utfchar, 1);
         for(i=0; (ch=*utf) != 0; i++) {
             if (xmlStrncmp(utf, utfchar, size)==0)
-                return(i > INT_MAX ? 0 : i);
+                return(i);
             utf++;
             if ( ch & 0x80 ) {
                 /* if not simple ascii, verify proper format */
@@ -968,8 +965,8 @@ xmlUTF8Strloc(const xmlChar *utf, const xmlChar *utfchar) {
 
 xmlChar *
 xmlUTF8Strsub(const xmlChar *utf, int start, int len) {
-    int i;
-    int ch;
+    int            i;
+    xmlChar ch;
 
     if (utf == NULL) return(NULL);
     if (start < 0) return(NULL);
@@ -1025,8 +1022,6 @@ xmlEscapeFormatString(xmlChar **msg)
     if (count == 0)
         return(*msg);
 
-    if ((count > INT_MAX) || (msgLen > INT_MAX - count))
-        return(NULL);
     resultLen = msgLen + count + 1;
     result = (xmlChar *) xmlMallocAtomic(resultLen * sizeof(xmlChar));
     if (result == NULL) {
@@ -1051,3 +1046,5 @@ xmlEscapeFormatString(xmlChar **msg)
     return *msg;
 }
 
+#define bottom_xmlstring
+#include "elfgcchack.h"

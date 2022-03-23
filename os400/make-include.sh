@@ -52,6 +52,9 @@ do      CMD="cat \"${HFILE}\""
 
         case "`basename \"${HFILE}\"`" in
 
+        xmlwin32version.h*)
+                continue;;      # Not on M$W !
+
         *.in)   CMD="${CMD} | versioned_copy";;
 
         xmlschemastypes.h)      #       Special case: rename colliding file.

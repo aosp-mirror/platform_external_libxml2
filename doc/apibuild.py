@@ -31,6 +31,7 @@ ignored_files = {
   "testOOMlib.c": "out of memory tester",
   "rngparser.c": "not yet integrated",
   "rngparser.h": "not yet integrated",
+  "elfgcchack.h": "not a normal header",
   "testHTML.c": "test tool",
   "testReader.c": "test tool",
   "testSchemas.c": "test tool",
@@ -2113,11 +2114,11 @@ def rebuild():
     if glob.glob("parser.c") != [] :
         print("Rebuilding API description for libxml2")
         builder = docBuilder("libxml2", [".", "."],
-                             ["tst.c"])
+                             ["xmlwin32version.h", "tst.c"])
     elif glob.glob("../parser.c") != [] :
         print("Rebuilding API description for libxml2")
         builder = docBuilder("libxml2", ["..", "../include/libxml"],
-                             ["tst.c"])
+                             ["xmlwin32version.h", "tst.c"])
     elif glob.glob("../libxslt/transform.c") != [] :
         print("Rebuilding API description for libxslt")
         builder = docBuilder("libxslt", ["../libxslt"],

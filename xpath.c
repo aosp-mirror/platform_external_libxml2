@@ -10983,7 +10983,7 @@ xmlXPathCompileExpr(xmlXPathParserContextPtr ctxt, int sort) {
     }
 
     if (xpctxt != NULL)
-        xpctxt->depth -= 10;
+        xpctxt->depth -= 1;
 }
 
 /**
@@ -11120,9 +11120,7 @@ xmlXPathCompNodeTest(xmlXPathParserContextPtr ctxt, xmlXPathTestVal *test,
 	    name = NULL;
 	    if (CUR != ')') {
 		name = xmlXPathParseLiteral(ctxt);
-                if (name == NULL) {
-	            XP_ERRORNULL(XPATH_EXPR_ERROR);
-                }
+		CHECK_ERROR NULL;
 		*test = NODE_TEST_PI;
 		SKIP_BLANKS;
 	    }
@@ -14732,3 +14730,5 @@ xmlXPathRegisterAllFunctions(xmlXPathContextPtr ctxt)
 }
 
 #endif /* LIBXML_XPATH_ENABLED */
+#define bottom_xpath
+#include "elfgcchack.h"
