@@ -26,7 +26,7 @@ EXTRA_DIST_wc = xmlcatalog_man.xml $(wildcard tutorial/*.html) \
     $(wildcard *.gif) w3c.png $(wildcard html/*.html) \
     $(wildcard html/*.png) libxml2-api.xml index.py search.php \
     apibuild.py libxml2.xsa xmllint.xml xmlcatalog_man.xml \
-    README.docs symbols.xml
+    symbols.xml
 endif
 
 # Expanded form of EXTRA_DIST_wc
@@ -66,13 +66,11 @@ EXTRA_DIST = \
 	APIfiles.html \
 	APIfunctions.html \
 	APIsymbols.html \
-	ChangeLog.xsl \
 	DOM.gif \
 	DOM.html \
 	FAQ.html \
 	Libxml2-Logo-180x168.gif \
 	Libxml2-Logo-90x34.gif \
-	README.docs \
 	XMLinfo.html \
 	XSLT.html \
 	api.xsl \
@@ -85,7 +83,6 @@ EXTRA_DIST = \
 	contribs.html \
 	docs.html \
 	downloads.html \
-	elfgcchack.xsl \
 	encoding.html \
 	entities.html \
 	example.html \
@@ -218,7 +215,6 @@ EXTRA_DIST = \
 	tutorial/includexpath.c \
 	tutorial/index.html \
 	tutorial/ix01.html \
-	tutorial/xmltutorial.pdf \
 	upgrade.html \
 	w3c.png \
 	wiki.xsl \
@@ -240,18 +236,9 @@ man_MANS = xmllint.1 xmlcatalog.1
 if REBUILD_DOCS
 docs: web $(top_builddir)/NEWS libxml2.xsa $(man_MANS)
 
-api: libxml2-api.xml libxml2-refs.xml $(APIPAGES) $(srcdir)/html/index.html $(WIN32_DIR)/libxml2.def.src ../elfgcchack.h $(srcdir)/site.xsl
+api: libxml2-api.xml libxml2-refs.xml $(APIPAGES) $(srcdir)/html/index.html $(WIN32_DIR)/libxml2.def.src $(srcdir)/site.xsl
 
 web: $(PAGES) xmllint.html xmlcatalog_man.html
-
-../elfgcchack.h: $(srcdir)/elfgcchack.xsl $(srcdir)/libxml2-api.xml
-	-@(if [ -x $(XSLTPROC) ] ; then \
-	  echo "Rebuilding the elfgcchack.h header" ; \
-	  $(XSLTPROC) --nonet $(srcdir)/elfgcchack.xsl $(srcdir)/libxml2-api.xml > elfgcchack.h ; \
-	  if [ "`diff -q elfgcchack.h ../elfgcchack.h`" ] ; then \
-	    echo "updating ../elfgcchack.h"; \
-	    cp elfgcchack.h ../elfgcchack.h; \
-	  fi ; rm -f elfgcchack.h ;  fi );
 
 $(PAGES): xml.html $(srcdir)/site.xsl
 	-@(if [ -x $(XSLTPROC) ] ; then \
