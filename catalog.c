@@ -56,7 +56,7 @@
  * TODO:
  *
  * macro to flag unimplemented blocks
- * XML_CATALOG_PREFER user env to select between system/public preferred
+ * XML_CATALOG_PREFER user env to select between system/public prefered
  * option. C.f. Richard Tobin <richard@cogsci.ed.ac.uk>
  *> Just FYI, I am using an environment variable XML_CATALOG_PREFER with
  *> values "system" and "public".  I have made the default be "system" to
@@ -216,7 +216,7 @@ static int xmlCatalogInitialized = 0;
 
 /**
  * xmlCatalogErrMemory:
- * @extra:  extra information
+ * @extra:  extra informations
  *
  * Handle an out of memory condition
  */
@@ -234,7 +234,7 @@ xmlCatalogErrMemory(const char *extra)
  * @catal: the Catalog entry
  * @node: the context node
  * @msg:  the error message
- * @extra:  extra information
+ * @extra:  extra informations
  *
  * Handle a catalog error
  */
@@ -924,7 +924,7 @@ xmlParseCatalogFile(const char *filename) {
     xmlBufResetInput(buf->buffer, inputStream);
 
     inputPush(ctxt, inputStream);
-    if (ctxt->directory == NULL)
+    if ((ctxt->directory == NULL) && (directory == NULL))
         directory = xmlParserGetDirectory(filename);
     if ((ctxt->directory == NULL) && (directory != NULL))
         ctxt->directory = directory;
@@ -2069,7 +2069,8 @@ xmlCatalogListXMLResolve(xmlCatalogEntryPtr catal, const xmlChar *pubID,
 		ret = xmlCatalogXMLResolve(catal->children, pubID, sysID);
 		if (ret != NULL) {
 		    break;
-                } else if (catal->children->depth > MAX_CATAL_DEPTH) {
+                } else if ((catal->children != NULL) &&
+		           (catal->children->depth > MAX_CATAL_DEPTH)) {
 	            ret = NULL;
 		    break;
 	        }
@@ -2352,7 +2353,7 @@ xmlParseSGMLCatalog(xmlCatalogPtr catal, const xmlChar *value,
 	    xmlCatalogEntryType type = XML_CATA_NONE;
 
 	    cur = xmlParseSGMLCatalogName(cur, &name);
-	    if (cur == NULL || name == NULL) {
+	    if (name == NULL) {
 		/* error */
 		break;
 	    }
@@ -3253,7 +3254,6 @@ xmlLoadCatalogs(const char *pathss) {
 	    while ((*cur != 0) && (*cur != PATH_SEPARATOR) && (!xmlIsBlank_ch(*cur)))
 		cur++;
 	    path = xmlStrndup((const xmlChar *)paths, cur - paths);
-	    if (path != NULL) {
 #ifdef _WIN32
         iLen = strlen((const char*)path);
         for(i = 0; i < iLen; i++) {
@@ -3262,6 +3262,7 @@ xmlLoadCatalogs(const char *pathss) {
             }
         }
 #endif
+	    if (path != NULL) {
 		xmlLoadCatalog((const char *) path);
 		xmlFree(path);
 	    }
@@ -3426,10 +3427,9 @@ xmlCatalogAdd(const xmlChar *type, const xmlChar *orig, const xmlChar *replace) 
 	(xmlStrEqual(type, BAD_CAST "catalog"))) {
 	xmlDefaultCatalog = xmlCreateNewCatalog(XML_XML_CATALOG_TYPE,
 		                          xmlCatalogDefaultPrefer);
-	if (xmlDefaultCatalog != NULL) {
-	   xmlDefaultCatalog->xml = xmlNewCatalogEntry(XML_CATA_CATALOG, NULL,
+	xmlDefaultCatalog->xml = xmlNewCatalogEntry(XML_CATA_CATALOG, NULL,
 				    orig, NULL,  xmlCatalogDefaultPrefer, NULL);
-	}
+
 	xmlRMutexUnlock(xmlCatalogMutex);
 	return(0);
     }

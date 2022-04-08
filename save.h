@@ -1,7 +1,7 @@
 /*
  * Summary: Internal Interfaces for saving in libxml2
  * Description: this module describes a few interfaces which were
- *              added along with the API changes in 2.9.0
+ *              addded along with the API changes in 2.9.0
  *              those are private routines at this point
  *
  * Copy: See Copyright for the status of this software.
@@ -25,9 +25,8 @@ void xmlBufDumpNotationTable(xmlBufPtr buf, xmlNotationTablePtr table);
 void xmlBufDumpElementDecl(xmlBufPtr buf, xmlElementPtr elem);
 void xmlBufDumpAttributeDecl(xmlBufPtr buf, xmlAttributePtr attr);
 void xmlBufDumpEntityDecl(xmlBufPtr buf, xmlEntityPtr ent);
-#endif
-
 xmlChar *xmlEncodeAttributeEntities(xmlDocPtr doc, const xmlChar *input);
+#endif
 
 #ifdef __cplusplus
 }

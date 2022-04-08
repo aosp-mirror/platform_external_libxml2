@@ -11,7 +11,7 @@
  *
  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS AND
+ * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS AND
  * CONTRIBUTORS ACCEPT NO RESPONSIBILITY IN ANY CONCEIVABLE MANNER.
  *
  * Author: breese@users.sourceforge.net
@@ -33,8 +33,7 @@
  * it seems that having hash randomization might be a good idea
  * when using XML with untrusted data
  */
-#if defined(HAVE_RAND) && defined(HAVE_SRAND) && defined(HAVE_TIME) && \
-    !defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+#if defined(HAVE_RAND) && defined(HAVE_SRAND) && defined(HAVE_TIME)
 #define HASH_RANDOMIZATION
 #endif
 
@@ -79,9 +78,6 @@ struct _xmlHashTable {
  * xmlHashComputeKey:
  * Calculate the hash key
  */
-#ifdef __clang__
-ATTRIBUTE_NO_SANITIZE("unsigned-integer-overflow")
-#endif
 static unsigned long
 xmlHashComputeKey(xmlHashTablePtr table, const xmlChar *name,
 	          const xmlChar *name2, const xmlChar *name3) {
@@ -112,9 +108,6 @@ xmlHashComputeKey(xmlHashTablePtr table, const xmlChar *name,
     return (value % table->size);
 }
 
-#ifdef __clang__
-ATTRIBUTE_NO_SANITIZE("unsigned-integer-overflow")
-#endif
 static unsigned long
 xmlHashComputeQKey(xmlHashTablePtr table,
 		   const xmlChar *prefix, const xmlChar *name,

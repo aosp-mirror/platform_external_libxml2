@@ -97,7 +97,9 @@ int main(int argc, char **argv) {
 		    ctxt = xmlSchemaNewMemParserCtxt((char *)base,info.st_size);
 
 		    xmlSchemaSetParserErrors(ctxt,
-                            xmlGenericError, xmlGenericError, NULL);
+			    (xmlSchemaValidityErrorFunc) fprintf,
+			    (xmlSchemaValidityWarningFunc) fprintf,
+			    stderr);
 		    schema = xmlSchemaParse(ctxt);
 		    xmlSchemaFreeParserCtxt(ctxt);
 		    munmap((char *) base, info.st_size);
@@ -106,7 +108,9 @@ int main(int argc, char **argv) {
 		{
 		    ctxt = xmlSchemaNewParserCtxt(argv[i]);
 		    xmlSchemaSetParserErrors(ctxt,
-                            xmlGenericError, xmlGenericError, NULL);
+			    (xmlSchemaValidityErrorFunc) fprintf,
+			    (xmlSchemaValidityWarningFunc) fprintf,
+			    stderr);
 		    schema = xmlSchemaParse(ctxt);
 		    xmlSchemaFreeParserCtxt(ctxt);
 		}
@@ -131,7 +135,9 @@ int main(int argc, char **argv) {
 
 		    ctxt = xmlSchemaNewValidCtxt(schema);
 		    xmlSchemaSetValidErrors(ctxt,
-                            xmlGenericError, xmlGenericError, NULL);
+			    (xmlSchemaValidityErrorFunc) fprintf,
+			    (xmlSchemaValidityWarningFunc) fprintf,
+			    stderr);
 		    ret = xmlSchemaValidateDoc(ctxt, doc);
 		    if (ret == 0) {
 			printf("%s validates\n", argv[i]);

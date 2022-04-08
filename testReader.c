@@ -1,5 +1,5 @@
 /*
- * testReader.c : a small tester program for parsing using the xmlReader
+ * testSAX.c : a small tester program for parsing using the SAX API.
  *
  * See Copyright for the status of this software.
  *

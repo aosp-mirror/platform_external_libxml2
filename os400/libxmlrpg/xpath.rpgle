@@ -389,7 +389,7 @@
 
       * xmlXPathParserContext:
       *
-      * An XPath parser context. It contains pure parsing information,
+      * An XPath parser context. It contains pure parsing informations,
       * an xmlXPathContext, and the stack of objects.
 
      d xmlXPathParserContext...

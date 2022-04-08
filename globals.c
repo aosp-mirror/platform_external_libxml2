@@ -107,7 +107,7 @@ xmlMallocFunc xmlMalloc = malloc;
  * @size:  the size requested in bytes
  *
  * The variable holding the libxml malloc() implementation for atomic
- * data (i.e. blocks not containing pointers), useful when using a
+ * data (i.e. blocks not containings pointers), useful when using a
  * garbage collecting allocator.
  *
  * Returns a pointer to the newly allocated block or NULL in case of error
@@ -215,7 +215,7 @@ int oldXMLWDcompatibility = 0; /* DEPRECATED */
 /**
  * xmlParserDebugEntities:
  *
- * Global setting, asking the parser to print out debugging information.
+ * Global setting, asking the parser to print out debugging informations.
  * while handling entities.
  * Disabled by default
  */
@@ -260,7 +260,7 @@ static int xmlPedanticParserDefaultValueThrDef = 0;
  * Global setting, indicate that the parser should store the line number
  * in the content field of elements in the DOM tree.
  * Disabled by default since this may not be safe for old classes of
- * application.
+ * applicaton.
  */
 int xmlLineNumbersDefaultValue = 0;
 static int xmlLineNumbersDefaultValueThrDef = 0;
@@ -361,7 +361,7 @@ static const char *xmlTreeIndentStringThrDef = "  ";
  * xmlSaveNoEmptyTags:
  *
  * Global setting, asking the serializer to not output empty tags
- * as <empty/> but <empty></empty>. those two forms are indistinguishable
+ * as <empty/> but <empty></empty>. those two forms are undistinguishable
  * once parsed.
  * Disabled by default
  */

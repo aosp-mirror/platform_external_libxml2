@@ -33,7 +33,7 @@
 
       * XML_CATALOG_PI:
       *
-      * The specific XML Catalog Processing Instruction name.
+      * The specific XML Catalog Processing Instuction name.
 
      d XML_CATALOG_PI  c                   'oasis-xml-catalog'
 

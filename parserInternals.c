@@ -105,7 +105,7 @@ xmlCheckVersion(int version) {
 /**
  * xmlErrMemory:
  * @ctxt:  an XML parser context
- * @extra:  extra information
+ * @extra:  extra informations
  *
  * Handle a redefinition of attribute error
  */
@@ -165,7 +165,7 @@ __xmlErrEncoding(xmlParserCtxtPtr ctxt, xmlParserErrors xmlerr,
  * xmlErrInternal:
  * @ctxt:  an XML parser context
  * @msg:  the error message
- * @str:  error information
+ * @str:  error informations
  *
  * Handle an internal error
  */
@@ -519,6 +519,8 @@ xmlNextChar(xmlParserCtxtPtr ctxt)
         } else
             /* 1-byte code */
             ctxt->input->cur++;
+
+        ctxt->nbChars++;
     } else {
         /*
          * Assume it's a fixed length encoding (1) with
@@ -531,6 +533,7 @@ xmlNextChar(xmlParserCtxtPtr ctxt)
         } else
             ctxt->input->col++;
         ctxt->input->cur++;
+        ctxt->nbChars++;
     }
     if (*ctxt->input->cur == 0)
         xmlParserInputGrow(ctxt->input, INPUT_CHUNK);
@@ -674,6 +677,7 @@ xmlCurrentChar(xmlParserCtxtPtr ctxt, int *len) {
 	    }
 	    if (*ctxt->input->cur == 0xD) {
 		if (ctxt->input->cur[1] == 0xA) {
+		    ctxt->nbChars++;
 		    ctxt->input->cur++;
 		}
 		return(0xA);
@@ -689,6 +693,7 @@ xmlCurrentChar(xmlParserCtxtPtr ctxt, int *len) {
     *len = 1;
     if (*ctxt->input->cur == 0xD) {
 	if (ctxt->input->cur[1] == 0xA) {
+	    ctxt->nbChars++;
 	    ctxt->input->cur++;
 	}
 	return(0xA);
@@ -698,7 +703,7 @@ encoding_error:
     /*
      * An encoding problem may arise from a truncated input buffer
      * splitting a character in the middle. In that case do not raise
-     * an error but return 0 to indicate an end of stream problem
+     * an error but return 0 to endicate an end of stream problem
      */
     if (ctxt->input->end - ctxt->input->cur < 4) {
 	*len = 0;
@@ -811,7 +816,7 @@ encoding_error:
     /*
      * An encoding problem may arise from a truncated input buffer
      * splitting a character in the middle. In that case do not raise
-     * an error but return 0 to indicate an end of stream problem
+     * an error but return 0 to endicate an end of stream problem
      */
     if ((ctxt == NULL) || (ctxt->input == NULL) ||
         (ctxt->input->end - ctxt->input->cur < 4)) {
@@ -1088,7 +1093,7 @@ xmlSwitchEncoding(xmlParserCtxtPtr ctxt, xmlCharEncoding enc)
 	}
     }
     /*
-     * TODO: We could recover from errors in external entities if we
+     * TODO: We could recover from errors in external entites if we
      * didn't stop the parser. But most callers of this function don't
      * check the return value.
      */
@@ -1133,7 +1138,7 @@ xmlSwitchInputEncodingInt(xmlParserCtxtPtr ctxt, xmlParserInputPtr input,
     if (input->buf != NULL) {
         if (input->buf->encoder != NULL) {
             /*
-             * Check in case the auto encoding detection triggered
+             * Check in case the auto encoding detetection triggered
              * in already.
              */
             if (input->buf->encoder == handler)
@@ -1153,11 +1158,6 @@ xmlSwitchInputEncodingInt(xmlParserCtxtPtr ctxt, xmlParserInputPtr input,
              * Note: this is a bit dangerous, but that's what it
              * takes to use nearly compatible signature for different
              * encodings.
-             *
-             * FIXME: Encoders might buffer partial byte sequences, so
-             * this probably can't work. We should return an error and
-             * make sure that callers never try to switch the encoding
-             * twice.
              */
             xmlCharEncCloseFunc(input->buf->encoder);
             input->buf->encoder = handler;
@@ -1748,6 +1748,7 @@ xmlInitParserCtxt(xmlParserCtxtPtr ctxt)
         ctxt->options |= XML_PARSE_NOENT;
     }
     ctxt->record_info = 0;
+    ctxt->nbChars = 0;
     ctxt->checkIndex = 0;
     ctxt->inSubset = 0;
     ctxt->errNo = XML_ERR_OK;
@@ -1876,7 +1877,7 @@ xmlNewParserCtxt(void)
 
 /************************************************************************
  *									*
- *		Handling of node information				*
+ *		Handling of node informations				*
  *									*
  ************************************************************************/
 

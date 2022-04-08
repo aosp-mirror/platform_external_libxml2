@@ -1,5 +1,5 @@
 /*
- * wincecompat.c : wince compatibility module
+ * wincecompat.c : wince compatiblity module
  *
  * See Copyright for the status of this software.
  *

@@ -59,7 +59,7 @@ typedef unsigned __int64 uint64_t;
 #define SORT_SWAP(x,y) {SORT_TYPE __SORT_SWAP_t = (x); (x) = (y); (y) = __SORT_SWAP_t;}
 
 
-/* Common, type-agnostic functions and constants that we don't want to declare twice. */
+/* Common, type-agnosting functions and constants that we don't want to declare twice. */
 #ifndef SORT_COMMON_H
 #define SORT_COMMON_H
 
@@ -74,7 +74,7 @@ typedef unsigned __int64 uint64_t;
 static int compute_minrun(const uint64_t);
 
 #ifndef CLZ
-#if defined(__GNUC__) && ((__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ > 3))
+#ifdef __GNUC__
 #define CLZ __builtin_clzll
 #else
 
@@ -404,8 +404,7 @@ static void TIM_SORT_MERGE(SORT_TYPE *dst, const TIM_SORT_RUN_T *stack, const in
     j = curr + A;
     k = curr + A + B;
 
-    while (k > curr) {
-      k--;
+    while (k-- > curr) {
       if ((i > 0) && (j > curr)) {
         if (SORT_CMP(dst[j - 1], storage[i - 1]) > 0) {
           dst[k] = dst[--j];

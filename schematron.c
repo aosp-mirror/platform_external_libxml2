@@ -220,7 +220,7 @@ struct _xmlSchematronParserCtxt {
 /**
  * xmlSchematronPErrMemory:
  * @node: a context node
- * @extra:  extra information
+ * @extra:  extra informations
  *
  * Handle an out of memory condition
  */
@@ -268,7 +268,7 @@ xmlSchematronPErr(xmlSchematronParserCtxtPtr ctxt, xmlNodePtr node, int error,
 /**
  * xmlSchematronVTypeErrMemory:
  * @node: a context node
- * @extra:  extra information
+ * @extra:  extra informations
  *
  * Handle an out of memory condition
  */
@@ -1068,7 +1068,7 @@ done:
  * @ctxt:  a schema validation context
  *
  * parse a schema definition resource and build an internal
- * XML Schema structure which can be used to validate instances.
+ * XML Shema struture which can be used to validate instances.
  *
  * Returns the internal XML Schematron structure built from the resource or
  *         NULL in case of error
@@ -1287,7 +1287,7 @@ xmlSchematronReportOutput(xmlSchematronValidCtxtPtr ctxt ATTRIBUTE_UNUSED,
  * Build the string being reported to the user.
  *
  * Returns a report string or NULL in case of error. The string needs
- *         to be deallocated by the caller
+ *         to be deallocated by teh caller
  */
 static xmlChar *
 xmlSchematronFormatReport(xmlSchematronValidCtxtPtr ctxt,
@@ -1591,7 +1591,7 @@ xmlSchematronNextNode(xmlNodePtr cur) {
  * xmlSchematronRunTest:
  * @ctxt:  the schema validation context
  * @test:  the current test
- * @instance:  the document instance tree
+ * @instance:  the document instace tree
  * @cur:  the current node in the instance
  *
  * Validate a rule against a tree instance at a given position
@@ -1655,7 +1655,7 @@ xmlSchematronRunTest(xmlSchematronValidCtxtPtr ctxt,
 /**
  * xmlSchematronValidateDoc:
  * @ctxt:  the schema validation context
- * @instance:  the document instance tree
+ * @instance:  the document instace tree
  *
  * Validate a tree instance against the schematron
  *

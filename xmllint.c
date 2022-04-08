@@ -165,7 +165,6 @@ static int xinclude = 0;
 static int dtdattrs = 0;
 static int loaddtd = 0;
 static xmllintReturnCode progresult = XMLLINT_RETURN_OK;
-static int quiet = 0;
 static int timing = 0;
 static int generate = 0;
 static int dropdtd = 0;
@@ -181,17 +180,17 @@ static int exc_canonical = 0;
 #ifdef LIBXML_READER_ENABLED
 static int stream = 0;
 static int walker = 0;
-#ifdef LIBXML_PATTERN_ENABLED
-static const char *pattern = NULL;
-static xmlPatternPtr patternc = NULL;
-static xmlStreamCtxtPtr patstream = NULL;
-#endif
 #endif /* LIBXML_READER_ENABLED */
 static int chkregister = 0;
 static int nbregister = 0;
 #ifdef LIBXML_SAX1_ENABLED
 static int sax1 = 0;
 #endif /* LIBXML_SAX1_ENABLED */
+#ifdef LIBXML_PATTERN_ENABLED
+static const char *pattern = NULL;
+static xmlPatternPtr patternc = NULL;
+static xmlStreamCtxtPtr patstream = NULL;
+#endif
 #ifdef LIBXML_XPATH_ENABLED
 static const char *xpathquery = NULL;
 #endif
@@ -520,7 +519,7 @@ endTimer(char *format, ...)
 #endif
 /************************************************************************
  *									*
- *			HTML output					*
+ *			HTML ouput					*
  *									*
  ************************************************************************/
 static char buffer[50000];
@@ -529,12 +528,6 @@ static void
 xmlHTMLEncodeSend(void) {
     char *result;
 
-    /*
-     * xmlEncodeEntitiesReentrant assumes valid UTF-8, but the buffer might
-     * end with a truncated UTF-8 sequence. This is a hack to at least avoid
-     * an out-of-bounds read.
-     */
-    memset(&buffer[sizeof(buffer)-4], 0, 4);
     result = (char *) xmlEncodeEntitiesReentrant(NULL, BAD_CAST buffer);
     if (result) {
 	xmlGenericError(xmlGenericErrorContext, "%s", result);
@@ -547,7 +540,7 @@ xmlHTMLEncodeSend(void) {
  * xmlHTMLPrintFileInfo:
  * @input:  an xmlParserInputPtr input
  *
- * Displays the associated file and line information for the current input
+ * Displays the associated file and line informations for the current input
  */
 
 static void
@@ -1659,16 +1652,17 @@ testSAX(const char *filename) {
 	xmlSchemaValidCtxtPtr vctxt;
 
 	vctxt = xmlSchemaNewValidCtxt(wxschemas);
-	xmlSchemaSetValidErrors(vctxt, xmlGenericError, xmlGenericError, NULL);
+	xmlSchemaSetValidErrors(vctxt,
+		(xmlSchemaValidityErrorFunc) fprintf,
+		(xmlSchemaValidityWarningFunc) fprintf,
+		stderr);
 	xmlSchemaValidateSetFilename(vctxt, filename);
 
 	ret = xmlSchemaValidateStream(vctxt, buf, 0, handler,
 	                              (void *)user_data);
 	if (repeat == 0) {
 	    if (ret == 0) {
-	        if (!quiet) {
-	            fprintf(stderr, "%s validates\n", filename);
-	        }
+		fprintf(stderr, "%s validates\n", filename);
 	    } else if (ret > 0) {
 		fprintf(stderr, "%s fails to validate\n", filename);
 		progresult = XMLLINT_ERR_VALID;
@@ -1951,9 +1945,7 @@ static void streamFile(char *filename) {
 		fprintf(stderr, "%s fails to validate\n", filename);
 		progresult = XMLLINT_ERR_VALID;
 	    } else {
-	        if (!quiet) {
-	            fprintf(stderr, "%s validates\n", filename);
-	        }
+		fprintf(stderr, "%s validates\n", filename);
 	    }
 	}
 #endif
@@ -2094,7 +2086,7 @@ static void doXPathDump(xmlXPathObjectPtr cur) {
             }
             for (i = 0;i < cur->nodesetval->nodeNr;i++) {
                 node = cur->nodesetval->nodeTab[i];
-                xmlNodeDumpOutput(buf, NULL, node, 0, 0, NULL);
+                xmlNodeDumpOutput(buf, node->doc, node, 0, 0, NULL);
                 xmlOutputBufferWrite(buf, 1, "\n");
             }
             xmlOutputBufferClose(buf);
@@ -2193,17 +2185,13 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
     else if ((html) && (push)) {
         FILE *f;
 
-        if ((filename[0] == '-') && (filename[1] == 0)) {
-            f = stdin;
-        } else {
 #if defined(_WIN32) || defined (__DJGPP__) && !defined (__CYGWIN__)
-	    f = fopen(filename, "rb");
+	f = fopen(filename, "rb");
 #elif defined(__OS400__)
-	    f = fopen(filename, "rb");
+	f = fopen(filename, "rb");
 #else
-	    f = fopen(filename, "r");
+	f = fopen(filename, "r");
 #endif
-        }
         if (f != NULL) {
             int res;
             char chars[4096];
@@ -2213,7 +2201,7 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
             if (res > 0) {
                 ctxt = htmlCreatePushParserCtxt(NULL, NULL,
                             chars, res, filename, XML_CHAR_ENCODING_NONE);
-                htmlCtxtUseOptions(ctxt, options);
+                xmlCtxtUseOptions(ctxt, options);
                 while ((res = fread(chars, 1, pushsize, f)) > 0) {
                     htmlParseChunk(ctxt, chars, res, 0);
                 }
@@ -2292,7 +2280,7 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 		    doc = ctxt->myDoc;
 		    ret = ctxt->wellFormed;
 		    xmlFreeParserCtxt(ctxt);
-		    if ((!ret) && (!recovery)) {
+		    if (!ret) {
 			xmlFreeDoc(doc);
 			doc = NULL;
 		    }
@@ -2426,7 +2414,6 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	dtd = xmlGetIntSubset(doc);
 	if (dtd != NULL) {
 	    xmlUnlinkNode((xmlNodePtr)dtd);
-            doc->intSubset = NULL;
 	    xmlFreeDtd(dtd);
 	}
     }
@@ -2773,9 +2760,9 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 			"Couldn't allocate validation context\n");
 		exit(-1);
 	    }
-	    cvp->userData = NULL;
-	    cvp->error    = xmlGenericError;
-	    cvp->warning  = xmlGenericError;
+	    cvp->userData = (void *) stderr;
+	    cvp->error    = (xmlValidityErrorFunc) fprintf;
+	    cvp->warning  = (xmlValidityWarningFunc) fprintf;
 
 	    if ((timing) && (!repeat)) {
 		startTimer();
@@ -2809,9 +2796,9 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	if ((timing) && (!repeat)) {
 	    startTimer();
 	}
-	cvp->userData = NULL;
-	cvp->error    = xmlGenericError;
-	cvp->warning  = xmlGenericError;
+	cvp->userData = (void *) stderr;
+	cvp->error    = (xmlValidityErrorFunc) fprintf;
+	cvp->warning  = (xmlValidityWarningFunc) fprintf;
 	if (!xmlValidateDocument(cvp, doc)) {
 	    xmlGenericError(xmlGenericErrorContext,
 		    "Document %s does not validate\n", filename);
@@ -2841,14 +2828,14 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	    flag |= XML_SCHEMATRON_OUT_QUIET;
 	ctxt = xmlSchematronNewValidCtxt(wxschematron, flag);
 #if 0
-	xmlSchematronSetValidErrors(ctxt, xmlGenericError, xmlGenericError,
-                NULL);
+	xmlSchematronSetValidErrors(ctxt,
+		(xmlSchematronValidityErrorFunc) fprintf,
+		(xmlSchematronValidityWarningFunc) fprintf,
+		stderr);
 #endif
 	ret = xmlSchematronValidateDoc(ctxt, doc);
 	if (ret == 0) {
-	    if (!quiet) {
-	        fprintf(stderr, "%s validates\n", filename);
-	    }
+	    fprintf(stderr, "%s validates\n", filename);
 	} else if (ret > 0) {
 	    fprintf(stderr, "%s fails to validate\n", filename);
 	    progresult = XMLLINT_ERR_VALID;
@@ -2873,12 +2860,13 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	}
 
 	ctxt = xmlRelaxNGNewValidCtxt(relaxngschemas);
-	xmlRelaxNGSetValidErrors(ctxt, xmlGenericError, xmlGenericError, NULL);
+	xmlRelaxNGSetValidErrors(ctxt,
+		(xmlRelaxNGValidityErrorFunc) fprintf,
+		(xmlRelaxNGValidityWarningFunc) fprintf,
+		stderr);
 	ret = xmlRelaxNGValidateDoc(ctxt, doc);
 	if (ret == 0) {
-	    if (!quiet) {
-	        fprintf(stderr, "%s validates\n", filename);
-	    }
+	    fprintf(stderr, "%s validates\n", filename);
 	} else if (ret > 0) {
 	    fprintf(stderr, "%s fails to validate\n", filename);
 	    progresult = XMLLINT_ERR_VALID;
@@ -2900,12 +2888,13 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	}
 
 	ctxt = xmlSchemaNewValidCtxt(wxschemas);
-	xmlSchemaSetValidErrors(ctxt, xmlGenericError, xmlGenericError, NULL);
+	xmlSchemaSetValidErrors(ctxt,
+		(xmlSchemaValidityErrorFunc) fprintf,
+		(xmlSchemaValidityWarningFunc) fprintf,
+		stderr);
 	ret = xmlSchemaValidateDoc(ctxt, doc);
 	if (ret == 0) {
-	    if (!quiet) {
-	        fprintf(stderr, "%s validates\n", filename);
-	    }
+	    fprintf(stderr, "%s validates\n", filename);
 	} else if (ret > 0) {
 	    fprintf(stderr, "%s fails to validate\n", filename);
 	    progresult = XMLLINT_ERR_VALID;
@@ -3022,7 +3011,6 @@ static void usage(FILE *f, const char *name) {
     fprintf(f, "\t--dtdvalid URL : do a posteriori validation against a given DTD\n");
     fprintf(f, "\t--dtdvalidfpi FPI : same but name the DTD with a Public Identifier\n");
 #endif /* LIBXML_VALID_ENABLED */
-    fprintf(f, "\t--quiet : be quiet when succeeded\n");
     fprintf(f, "\t--timing : print some timings\n");
     fprintf(f, "\t--output file or -o file: save to a given file\n");
     fprintf(f, "\t--repeat : repeat 100 times, for timing or profiling\n");
@@ -3081,10 +3069,10 @@ static void usage(FILE *f, const char *name) {
 #ifdef LIBXML_READER_ENABLED
     fprintf(f, "\t--stream : use the streaming interface to process very large files\n");
     fprintf(f, "\t--walker : create a reader and walk though the resulting doc\n");
+#endif /* LIBXML_READER_ENABLED */
 #ifdef LIBXML_PATTERN_ENABLED
     fprintf(f, "\t--pattern pattern_value : test the pattern support\n");
 #endif
-#endif /* LIBXML_READER_ENABLED */
     fprintf(f, "\t--chkregister : verify the node registration code\n");
 #ifdef LIBXML_SCHEMAS_ENABLED
     fprintf(f, "\t--relaxng schema : do RelaxNG validation against the schema\n");
@@ -3257,9 +3245,6 @@ main(int argc, char **argv) {
 	else if ((!strcmp(argv[i], "-insert")) ||
 	         (!strcmp(argv[i], "--insert")))
 	    insert++;
-	else if ((!strcmp(argv[i], "-quiet")) ||
-	         (!strcmp(argv[i], "--quiet")))
-	    quiet++;
 	else if ((!strcmp(argv[i], "-timing")) ||
 	         (!strcmp(argv[i], "--timing")))
 	    timing++;
@@ -3419,12 +3404,6 @@ main(int argc, char **argv) {
 	         (!strcmp(argv[i], "--walker"))) {
 	     walker++;
              noout++;
-#ifdef LIBXML_PATTERN_ENABLED
-        } else if ((!strcmp(argv[i], "-pattern")) ||
-                   (!strcmp(argv[i], "--pattern"))) {
-	    i++;
-	    pattern = argv[i];
-#endif
 	}
 #endif /* LIBXML_READER_ENABLED */
 #ifdef LIBXML_SAX1_ENABLED
@@ -3475,6 +3454,12 @@ main(int argc, char **argv) {
                    (!strcmp(argv[i], "--path"))) {
 	    i++;
 	    parsePath(BAD_CAST argv[i]);
+#ifdef LIBXML_PATTERN_ENABLED
+        } else if ((!strcmp(argv[i], "-pattern")) ||
+                   (!strcmp(argv[i], "--pattern"))) {
+	    i++;
+	    pattern = argv[i];
+#endif
 #ifdef LIBXML_XPATH_ENABLED
         } else if ((!strcmp(argv[i], "-xpath")) ||
                    (!strcmp(argv[i], "--xpath"))) {
@@ -3567,8 +3552,10 @@ main(int argc, char **argv) {
 	}
 	ctxt = xmlSchematronNewParserCtxt(schematron);
 #if 0
-	xmlSchematronSetParserErrors(ctxt, xmlGenericError, xmlGenericError,
-                NULL);
+	xmlSchematronSetParserErrors(ctxt,
+		(xmlSchematronValidityErrorFunc) fprintf,
+		(xmlSchematronValidityWarningFunc) fprintf,
+		stderr);
 #endif
 	wxschematron = xmlSchematronParse(ctxt);
 	if (wxschematron == NULL) {
@@ -3598,8 +3585,10 @@ main(int argc, char **argv) {
 	    startTimer();
 	}
 	ctxt = xmlRelaxNGNewParserCtxt(relaxng);
-	xmlRelaxNGSetParserErrors(ctxt, xmlGenericError, xmlGenericError,
-                NULL);
+	xmlRelaxNGSetParserErrors(ctxt,
+		(xmlRelaxNGValidityErrorFunc) fprintf,
+		(xmlRelaxNGValidityWarningFunc) fprintf,
+		stderr);
 	relaxngschemas = xmlRelaxNGParse(ctxt);
 	if (relaxngschemas == NULL) {
 	    xmlGenericError(xmlGenericErrorContext,
@@ -3622,7 +3611,10 @@ main(int argc, char **argv) {
 	    startTimer();
 	}
 	ctxt = xmlSchemaNewParserCtxt(schema);
-	xmlSchemaSetParserErrors(ctxt, xmlGenericError, xmlGenericError, NULL);
+	xmlSchemaSetParserErrors(ctxt,
+		(xmlSchemaValidityErrorFunc) fprintf,
+		(xmlSchemaValidityWarningFunc) fprintf,
+		stderr);
 	wxschemas = xmlSchemaParse(ctxt);
 	if (wxschemas == NULL) {
 	    xmlGenericError(xmlGenericErrorContext,
@@ -3636,8 +3628,12 @@ main(int argc, char **argv) {
 	}
     }
 #endif /* LIBXML_SCHEMAS_ENABLED */
-#if defined(LIBXML_READER_ENABLED) && defined(LIBXML_PATTERN_ENABLED)
-    if ((pattern != NULL) && (walker == 0)) {
+#ifdef LIBXML_PATTERN_ENABLED
+    if ((pattern != NULL)
+#ifdef LIBXML_READER_ENABLED
+        && (walker == 0)
+#endif
+	) {
         patternc = xmlPatterncompile((const xmlChar *) pattern, NULL, 0, NULL);
 	if (patternc == NULL) {
 	    xmlGenericError(xmlGenericErrorContext,
@@ -3646,7 +3642,7 @@ main(int argc, char **argv) {
 	    pattern = NULL;
 	}
     }
-#endif /* LIBXML_READER_ENABLED && LIBXML_PATTERN_ENABLED */
+#endif /* LIBXML_PATTERN_ENABLED */
     for (i = 1; i < argc ; i++) {
 	if ((!strcmp(argv[i], "-encode")) ||
 	         (!strcmp(argv[i], "--encode"))) {
@@ -3700,7 +3696,7 @@ main(int argc, char **argv) {
 	    i++;
 	    continue;
         }
-#if defined(LIBXML_READER_ENABLED) && defined(LIBXML_PATTERN_ENABLED)
+#ifdef LIBXML_PATTERN_ENABLED
         if ((!strcmp(argv[i], "-pattern")) ||
 	    (!strcmp(argv[i], "--pattern"))) {
 	    i++;
@@ -3784,7 +3780,7 @@ main(int argc, char **argv) {
 	xmlSchemaFree(wxschemas);
     xmlRelaxNGCleanupTypes();
 #endif
-#if defined(LIBXML_READER_ENABLED) && defined(LIBXML_PATTERN_ENABLED)
+#ifdef LIBXML_PATTERN_ENABLED
     if (patternc != NULL)
         xmlFreePattern(patternc);
 #endif

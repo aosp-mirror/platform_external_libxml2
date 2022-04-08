@@ -15,16 +15,13 @@ Makefile.in
 aclocal.m4
 autom4te.cache
 bissect*
-compile
 config.guess
-config.h
 config.h.in
 config.h.in~
 config.log
 config.status
 config.sub
 configure
-dba100000.xml
 depcomp
 doc/Makefile
 doc/Makefile.in
@@ -56,12 +53,10 @@ include/Makefile
 include/Makefile.in
 include/libxml/Makefile
 include/libxml/Makefile.in
-include/libxml/xmlversion.h
 install-sh
 libtool
 libxml-2.0-uninstalled.pc
 libxml-2.0.pc
-libxml2-config.cmake
 libxml2.la
 libxml2.spec
 list
@@ -120,7 +115,6 @@ xml2Conf.sh
 xmlcatalog
 xmlconf
 xmllint
-xstc/*-test.py
 xstc/Makefile
 xstc/Makefile.in
 xstc/Tests

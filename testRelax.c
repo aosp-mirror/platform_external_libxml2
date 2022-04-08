@@ -101,7 +101,9 @@ int main(int argc, char **argv) {
 		    ctxt = xmlRelaxNGNewMemParserCtxt((char *)base,info.st_size);
 
 		    xmlRelaxNGSetParserErrors(ctxt,
-                            xmlGenericError, xmlGenericError, NULL);
+			    (xmlRelaxNGValidityErrorFunc) fprintf,
+			    (xmlRelaxNGValidityWarningFunc) fprintf,
+			    stderr);
 		    schema = xmlRelaxNGParse(ctxt);
 		    xmlRelaxNGFreeParserCtxt(ctxt);
 		    munmap((char *) base, info.st_size);
@@ -110,7 +112,9 @@ int main(int argc, char **argv) {
 		{
 		    ctxt = xmlRelaxNGNewParserCtxt(argv[i]);
 		    xmlRelaxNGSetParserErrors(ctxt,
-                            xmlGenericError, xmlGenericError, NULL);
+			    (xmlRelaxNGValidityErrorFunc) fprintf,
+			    (xmlRelaxNGValidityWarningFunc) fprintf,
+			    stderr);
 		    schema = xmlRelaxNGParse(ctxt);
 		    xmlRelaxNGFreeParserCtxt(ctxt);
 		}
@@ -140,7 +144,9 @@ int main(int argc, char **argv) {
 
 		    ctxt = xmlRelaxNGNewValidCtxt(schema);
 		    xmlRelaxNGSetValidErrors(ctxt,
-                            xmlGenericError, xmlGenericError, NULL);
+			    (xmlRelaxNGValidityErrorFunc) fprintf,
+			    (xmlRelaxNGValidityWarningFunc) fprintf,
+			    stderr);
 		    ret = xmlRelaxNGValidateDoc(ctxt, doc);
 		    if (ret == 0) {
 			printf("%s validates\n", argv[i]);

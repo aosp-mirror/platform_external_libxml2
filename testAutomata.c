@@ -1,5 +1,5 @@
 /*
- * testAutomata.c: simple module for testing regexp automata
+ * testRegexp.c: simple module for testing regular expressions
  *
  * See Copyright for the status of this software.
  *
