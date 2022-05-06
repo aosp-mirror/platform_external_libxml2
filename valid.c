@@ -11,10 +11,7 @@
 #include "libxml.h"
 
 #include <string.h>
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
 
 #include <libxml/xmlmemory.h>
 #include <libxml/hash.h>
@@ -521,11 +518,6 @@ xmlValidPrintNode(xmlNodePtr cur) {
 	case XML_HTML_DOCUMENT_NODE:
 	    xmlGenericError(xmlGenericErrorContext, "?html? ");
 	    break;
-#ifdef LIBXML_DOCB_ENABLED
-	case XML_DOCB_DOCUMENT_NODE:
-	    xmlGenericError(xmlGenericErrorContext, "?docb? ");
-	    break;
-#endif
 	case XML_DTD_NODE:
 	    xmlGenericError(xmlGenericErrorContext, "?dtd? ");
 	    break;
@@ -1047,6 +1039,7 @@ xmlCopyDocElementContent(xmlDocPtr doc, xmlElementContentPtr cur) {
 	    tmp->type = cur->type;
 	    tmp->ocur = cur->ocur;
 	    prev->c2 = tmp;
+	    tmp->parent = prev;
 	    if (cur->name != NULL) {
 		if (dict)
 		    tmp->name = xmlDictLookup(dict, cur->name, -1);
@@ -5286,9 +5279,6 @@ xmlSnprintfElements(char *buf, int size, xmlNodePtr node, int glob) {
 		break;
             case XML_ATTRIBUTE_NODE:
             case XML_DOCUMENT_NODE:
-#ifdef LIBXML_DOCB_ENABLED
-	    case XML_DOCB_DOCUMENT_NODE:
-#endif
 	    case XML_HTML_DOCUMENT_NODE:
             case XML_DOCUMENT_TYPE_NODE:
             case XML_DOCUMENT_FRAG_NODE:
