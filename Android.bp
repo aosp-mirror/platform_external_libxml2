@@ -179,9 +179,8 @@ cc_library {
     },
     apex_available: [
         "//apex_available:platform",
-        "com.android.art", // used by odrefresh
-        "com.android.art.debug", // used by odrefreshd
         "com.android.runtime", // used by linkerconfig
+        "com.android.uwb",
         "com.android.virt",
     ],
     min_sdk_version: "apex_inherit",
@@ -244,18 +243,14 @@ genrule {
     name: "libxml2_schema_fuzz_corpus",
     tools: ["libxml2_genseed"],
     srcs: [
-        "test/schemas",
+        "test/schemas/*.xsd",
     ],
     // The genseed tool only writes under its current directory.
-    // Soong does not run the tool from within the jail, so
-    // the shell must first 'cd' to the right path. However,
-    // then the location of the tool is lost, as $(location) gives
-    // a relative path.
-    cmd: "mkdir -p $(genDir)/fuzz/seed/schema && " +
-         "TOP_DIR=$$(pwd) && " +
-         "cd $(genDir)/fuzz && " +
-         "$${TOP_DIR}/$(location libxml2_genseed) schema " +
-           "$${TOP_DIR}/$(location test/schemas)/*.xsd",
+    // We move outputs to the correct location after generation..
+    cmd: "mkdir -p seed/schema && " +
+         "$(location libxml2_genseed) schema $(in) && " +
+         "mkdir -p $(genDir)/fuzz/seed/schema && " +
+         "mv -f seed/schema/* $(genDir)/fuzz/seed/schema",
     out: [
         "fuzz/seed/schema/570702_0.xsd",
         "fuzz/seed/schema/579746_0.xsd",
@@ -439,34 +434,22 @@ genrule {
     name: "libxml2_xml_fuzz_corpus",
     tools: ["libxml2_genseed"],
     srcs: [
-        "test",
-        "test/errors",
-        "test/errors10",
-        "test/namespaces",
-        "test/valid",
-        "test/VC",
-        "test/VCM",
-        "test/XInclude/docs",
-        "test/xmlid",
+        "test/*",
+        "test/errors/*.xml",
+        "test/errors10/*.xml",
+        "test/namespaces/*",
+        "test/valid/*.xml",
+        "test/VC/*",
+        "test/VCM/*",
+        "test/XInclude/docs/*",
+        "test/xmlid/*",
     ],
     // The genseed tool only writes under its current directory.
-    // Soong does not run the tool from within the jail, so
-    // the shell must first 'cd' to the right path. However,
-    // then the location of the tool is lost, as $(location) gives
-    // a relative path.
-    cmd: "mkdir -p $(genDir)/fuzz/seed/xml && " +
-         "TOP_DIR=$$(pwd) && " +
-         "cd $(genDir)/fuzz && " +
-         "$${TOP_DIR}/$(location libxml2_genseed) xml " +
-           "$${TOP_DIR}/$(location test)/* " +
-           "$${TOP_DIR}/$(location test/errors)/*.xml " +
-           "$${TOP_DIR}/$(location test/errors10)/*.xml " +
-           "$${TOP_DIR}/$(location test/namespaces)/* " +
-           "$${TOP_DIR}/$(location test/valid)/*.xml " +
-           "$${TOP_DIR}/$(location test/VC)/* " +
-           "$${TOP_DIR}/$(location test/VCM)/* " +
-           "$${TOP_DIR}/$(location test/XInclude/docs)/* " +
-           "$${TOP_DIR}/$(location test/xmlid)/*",
+    // We move outputs to the correct location after generation..
+    cmd: "mkdir -p seed/xml && " +
+         "$(location libxml2_genseed) xml $(in) &&" +
+         "mkdir -p $(genDir)/fuzz/seed/xml && " +
+         "mv seed/xml/* $(genDir)/fuzz/seed/xml",
     out: [
         "fuzz/seed/xml/127772.xml",
         "fuzz/seed/xml/21.xml",
@@ -736,18 +719,16 @@ genrule {
     name: "libxml2_xpath_fuzz_corpus",
     tools: ["libxml2_genseed"],
     srcs: [
-        "test/XPath",
+        "test/XPath/*/*",
     ],
     // The genseed tool only writes under its current directory.
-    // Soong does not run the tool from within the jail, so
-    // the shell must first 'cd' to the right path. However,
-    // then the location of the tool is lost, as $(location) gives
-    // a relative path.
-    cmd: "mkdir -p $(genDir)/fuzz/seed/xpath && " +
-         "TOP_DIR=$$(pwd) && " +
-         "cd $(genDir)/fuzz && " +
-         "$${TOP_DIR}/$(location libxml2_genseed) xpath " +
-           "$${TOP_DIR}/$(location test/XPath)",
+    // We move outputs to the correct location after generation..
+    cmd: "inputs=( $(in) ) && " +
+         "inputDir=$$(dirname $$(dirname $${inputs})) && " +
+         "mkdir -p seed/xpath && " +
+         "$(location libxml2_genseed) xpath $${inputDir} && " +
+         "mkdir -p $(genDir)/fuzz/seed/xpath && " +
+         "mv seed/xpath/* $(genDir)/fuzz/seed/xpath",
     out: [
         "fuzz/seed/xpath/chapters-1",
         "fuzz/seed/xpath/chapters-10",
