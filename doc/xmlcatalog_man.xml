@@ -25,8 +25,6 @@
 			</address>
 		</affiliation>
 	</author>
-	<!-- date should be the date of the latest change or the release version -->
-	<date>$Date$</date>
 	<!-- still a bit buggy output, will talk to docbook-xsl upstream to fix this -->
 	<!-- <releaseinfo>This is release 0.3 of the xmlcatalog Manual.</releaseinfo> -->
 	<!-- <edition>0.3</edition> -->
@@ -367,9 +365,9 @@
 	<listitem>
 		<para><acronym>XML</acronym> catalog behavior can be changed by redirecting
 			queries to the user's own set of catalogs. This can be done by setting
-			the <envar>XML_CATALOG_FILES</envar> environment variable to a list
-			of catalogs. An empty one should deactivate loading the
-			default <filename>/etc/xml/catalog</filename> catalog.
+			the <envar>XML_CATALOG_FILES</envar> environment variable to a space-separated
+			list of catalogs. Use percent-encoding to escape spaces or other characters.
+			An empty variable should deactivate loading the default <filename>/etc/xml/catalog</filename> catalog.
 		</para>
 	</listitem>
 		</varlistentry>
@@ -437,7 +435,7 @@
 				<para><citerefentry>
 						<refentrytitle>libxml</refentrytitle>
 						<manvolnum>3</manvolnum>
-					</citerefentry> web page <ulink url="http://www.xmlsoft.org/"/>
+					</citerefentry> web page <ulink url="https://gitlab.gnome.org/GNOME/libxml2"/>
 				</para>
 			</listitem>
 			<listitem>
@@ -445,7 +443,7 @@
 						<refentrytitle>libxml</refentrytitle>
 						<manvolnum>3</manvolnum>
 					</citerefentry> catalog support web page
-					at <ulink url="http://www.xmlsoft.org/catalog.html"/>
+					at <ulink url="https://gitlab.gnome.org/GNOME/libxml2/-/wikis/Catalog-support"/>
 				</para>
 			</listitem>
 			<listitem>
