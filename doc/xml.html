@@ -189,8 +189,7 @@ libxml2</p>
 <h3><a name="Installati">Installation</a></h3>
 <ol>
   <li><strong><span style="background-color: #FF0000">Do Not Use
-    libxml1</span></strong>, use libxml2</li>
-  <p></p>
+    libxml1</span></strong>, use libxml2<p></p></li>
   <li><em>Where can I get libxml</em> ?
     <p>The original distribution comes from <a
     href="ftp://xmlsoft.org/libxml2/">xmlsoft.org</a> or <a
@@ -200,7 +199,6 @@ libxml2</p>
     <p>David Doolin provides precompiled Windows versions at <a
     href="http://www.ce.berkeley.edu/~doolin/code/libxmlwin32/         ">http://www.ce.berkeley.edu/~doolin/code/libxmlwin32/</a></p>
   </li>
-  <p></p>
   <li><em>I see libxml and libxml2 releases, which one should I install ?</em>
     <ul>
       <li>If you are not constrained by backward compatibility issues with
@@ -220,6 +218,7 @@ libxml2</p>
       <li>If you are developing a new application, please develop against
         libxml2(-devel)</li>
     </ul>
+    <p></p>
   </li>
   <li><em>I can't install the libxml package, it conflicts with libxml0</em>
     <p>You probably have an old libxml0 package used to provide the shared
@@ -272,8 +271,8 @@ libxml2</p>
         library</a> which source can be found <a
         href="ftp://ftp.ilog.fr/pub/Users/haible/gnu/">here</a>.</li>
     </ul>
+    <p></p>
   </li>
-  <p></p>
   <li><em>Make check fails on some platforms</em>
     <p>Sometimes the regression tests' results don't completely match the
     value produced by the parser, and the makefile uses diff to print the
@@ -350,9 +349,8 @@ libxml2</p>
         default one, and this will <em>automatically</em> get the correct
         libraries linked with your program.</li>
     </ul>
+    <p></p>
   </li>
-
-  <p></p>
   <li><em>xmlDocDump() generates output on one line.</em>
     <p>Libxml2 will not <strong>invent</strong> spaces in the content of a
     document since <strong>all spaces in the content of a document are
@@ -370,8 +368,8 @@ libxml2</p>
         href="http://xmlsoft.org/html/libxml-tree.html#xmlSaveFormatFile">xmlSaveFormatFile
         ()</a></li>
     </ol>
+    <p></p>
   </li>
-  <p></p>
   <li><em>Extra nodes in the document:</em>
     <p><em>For an XML file as below:</em></p>
     <pre>&lt;?xml version="1.0"?&gt;
@@ -445,8 +443,8 @@ pnode=pxmlDoc-&gt;children-&gt;children;</pre>
         of <a href="http://svn.gnome.org/viewvc/libxml2/trunk/xmllint.c?view=markup">xmllint.c</a> and of the various testXXX.c test programs should
         provide good examples of how to do things with the library.</li>
     </ul>
+    <p></p>
   </li>
-  <p></p>
   <li><em>What about C++ ?</em>
     <p>libxml2 is written in pure C in order to allow easy reuse on a number
     of platforms, including embedded systems. I don't intend to convert to
@@ -455,9 +453,9 @@ pnode=pxmlDoc-&gt;children-&gt;children;</pre>
     <ul>
       <li>by Ari Johnson &lt;ari@btigate.com&gt;:
         <p>Website: <a
-        href="http://libxmlplusplus.sourceforge.net/">http://libxmlplusplus.sourceforge.net/</a></p>
+        href="https://libxmlplusplus.github.io/libxmlplusplus/">https://libxmlplusplus.github.io/libxmlplusplus/</a></p>
         <p>Download: <a
-        href="http://sourceforge.net/project/showfiles.php?group_id=12999">http://sourceforge.net/project/showfiles.php?group_id=12999</a></p>
+        href="https://download.gnome.org/sources/libxml++/">https://download.gnome.org/sources/libxml++/</a></p>
       </li>
     </ul>
   </li>
@@ -708,6 +706,114 @@ href="python.html">bindings section</a></p>
 to the <a href="https://gitlab.gnome.org/GNOME/libxml2">GIT</a> code base.</p>
 
 <p>Here is the list of public releases:</p>
+
+<h3>v2.9.13: Feb 19 2022</h3>
+<ul>
+  <li>Security:<br/>
+  [CVE-2022-23308] Use-after-free of ID and IDREF attributes
+  (Thanks to Shinji Sato for the report)<br/>
+  Use-after-free in xmlXIncludeCopyRange (David Kilzer)<br/>
+  Fix Null-deref-in-xmlSchemaGetComponentTargetNs (huangduirong)<br/>
+  Fix memory leak in xmlXPathCompNodeTest<br/>
+  Fix null pointer deref in xmlStringGetNodeList<br/>
+  Fix several memory leaks found by Coverity (David King)<br/>
+  </li>
+
+  <li>Fixed regressions:<br/>
+  Fix regression in RelaxNG pattern matching<br/>
+  Properly handle nested documents in xmlFreeNode<br/>
+  Fix regression with PEs in external DTD<br/>
+  Fix random dropping of characters on dumping ASCII encoded XML (Mohammad Razavi)<br/>
+  Revert "Make schema validation fail with multiple top-level elements"<br/>
+  Fix regression when parsing invalid HTML tags in push mode<br/>
+  Fix regression parsing public IDs literals in HTML<br/>
+  Fix buffering in xmlOutputBufferWrite<br/>
+  Fix whitespace when serializing empty HTML documents<br/>
+  Fix XPath recursion limit<br/>
+  Fix regression in xmlNodeDumpOutputInternal<br/>
+  Work around lxml API abuse<br/>
+  </li>
+
+  <li>Bug fixes:<br/>
+  Fix xmlSetTreeDoc with entity references<br/>
+  Fix double counting of CRLF in comments<br/>
+  Make sure to grow input buffer in xmlParseMisc<br/>
+  Don't ignore xmllint options after "-"<br/>
+  Don't normalize namespace URIs in XPointer xmlns() scheme<br/>
+  Fix handling of XSD with empty namespace<br/>
+  Also register HTML document nodes<br/>
+  Make xmllint return an error if arguments are missing<br/>
+  Fix handling of ctxt-&gt;base in xmlXPtrEvalXPtrPart<br/>
+  Fix xmllint --maxmem<br/>
+  Fix htmlReadFd, which was using a mix of xml and html context functions (Finn Barber)<br/>
+  Move current position before possible calling of ctxt-&gt;sax-&gt;characters (Yulin Li)<br/>
+  Fix parse failure when 4-byte character in UTF-16 BE is split across a chunk (David Kilzer)<br/>
+  Patch to forbid epsilon-reduction of final states (Arne Becker)<br/>
+  Avoid segfault at exit when using custom memory functions (Mike Dalessio)<br/>
+  </li>
+
+  <li>Tests, code quality, fuzzing:<br/>
+  Remove .travis.yml<br/>
+  Make xmlFuzzReadString return a zero size in error case<br/>
+  Fix unused function warning in testapi.c<br/>
+  Update NewsML DTD in test suite<br/>
+  Add more checks for malloc failures in xmllint.c<br/>
+  Avoid potential integer overflow in xmlstring.c<br/>
+  Run CI tests with UBSan implicit-conversion checks<br/>
+  Fix casting of line numbers in SAX2.c<br/>
+  Fix integer conversion warnings in hash.c<br/>
+  Add explicit casts in runtest.c <br/>
+  Fix integer conversion warning in xmlIconvWrapper<br/>
+  Add suffix to unsigned constant in xmlmemory.c<br/>
+  Add explicit casts in testchar.c<br/>
+  Fix integer conversion warnings in xmlstring.c<br/>
+  Add explicit cast in xmlURIUnescapeString<br/>
+  Remove unused variable in xmlCharEncOutFunc (David King)<br/>
+  </li>
+
+  <li>Build system, portability:<br/>
+  Remove xmlwin32version.h<br/>
+  Fix fuzzer test with VPATH build<br/>
+  Support custom prefix when installing Python module<br/>
+  Remove Makefile.win<br/>
+  Remove CVS and SVN-related code<br/>
+  Port python 3.x module to Windows and improve distutils (Chun-wei Fan)<br/>
+  Correctly install the HTML examples into their subdirectory (Mattia Rizzolo)<br/>
+  Refactor the settings of $docdir (Mattia Rizzolo)<br/>
+  Remove unused configure checks (Ben Boeckel)<br/>
+  python/Makefile.am: use *_LIBADD, not *_LDFLAGS for LIBS (Sam James)<br/>
+  Fix check for libtool in autogen.sh<br/>
+  Use version in configure.ac for CMake (Timothy Lyanguzov)<br/>
+  Add CMake alias targets for embedded projects (Markus Rickert)<br/>
+  </li>
+
+  <li>Documentation:<br/>
+  Remove SVN keyword anchors<br/>
+  Rework README<br/>
+  Remove README.cvs-commits<br/>
+  Remove old ChangeLog<br/>
+  Update hyperlinks<br/>
+  Remove README.docs<br/>
+  Remove MAINTAINERS <br/>
+  Remove xmltutorial.pdf<br/>
+  Upload documentation to GitLab pages<br/>
+  Document how to escape XML_CATALOG_FILES<br/>
+  Fix libxml2.doap<br/>
+  Update URL for libxml++ C++ binding (Kjell Ahlstedt)<br/>
+  Generate devhelp2 index file (Emmanuele Bassi)<br/>
+  Mention XML_CATALOG_FILES is space-separated (Jan Tojnar)<br/>
+  Add documentaiton for xmllint exit code 10 (Rainer Canavan)<br/>
+  Fix some validation errors in the FAQ (David King)<br/>
+  Add instructions on how to use CMake to compile libxml (Markus Rickert)<br/>
+  </li>
+</ul>
+
+<h3>v2.9.12: May 13 2021</h3>
+<ul>
+  <li>Build system:<br/>
+  Add fuzz.h and seed/regexp to EXTRA_DIST<br/>
+  </li>
+</ul>
 
 <h3>v2.9.11: May 13 2021</h3>
 <ul>
@@ -4403,11 +4509,11 @@ href="http://mail.gnome.org/mailman/listinfo/xml-bindings">xml-bindings@gnome.or
 order to get updates to this list or to discuss the specific topic of libxml2
 or libxslt wrappers or bindings:</p>
 <ul>
-  <li><a href="http://libxmlplusplus.sourceforge.net/">Libxml++</a> seems the
+  <li><a href="https://libxmlplusplus.github.io/libxmlplusplus/">Libxml++</a> seems the
     most up-to-date C++ bindings for libxml2, check the <a
-    href="http://libxmlplusplus.sourceforge.net/reference/html/hierarchy.html">documentation</a>
+    href="https://developer-old.gnome.org/libxml++/">documentation</a>
     and the <a
-    href="http://cvs.sourceforge.net/cgi-bin/viewcvs.cgi/libxmlplusplus/libxml%2b%2b/examples/">examples</a>.</li>
+    href="https://github.com/libxmlplusplus/libxmlplusplus/tree/master/examples">examples</a>.</li>
   <li>There is another <a href="http://libgdome-cpp.berlios.de/">C++ wrapper
     based on the gdome2 bindings</a> maintained by Tobias Peters.</li>
   <li>and a third C++ wrapper by Peter Jones &lt;pjones@pmade.org&gt;
