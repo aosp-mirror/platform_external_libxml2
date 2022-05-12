@@ -1,4 +1,4 @@
-#!/usr/bin/python -u
+#!/usr/bin/env python
 #
 # Indexes the examples and build an XML description
 #
@@ -225,28 +225,22 @@ def dump_Makefile():
 ## DO NOT EDIT !!!
 ##
 
-AM_CPPFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(srcdir)/include
-AM_CFLAGS = $(THREAD_CFLAGS) $(Z_CFLAGS)
-LDADD = $(RDL_LIBS) $(top_builddir)/libxml2.la $(THREAD_LIBS) $(Z_LIBS) $(ICONV_LIBS) -lm $(WIN32_EXTRA_LIBADD)
+AM_CPPFLAGS = -I$(top_builddir)/include -I$(top_srcdir)/include
+LDADD = $(top_builddir)/libxml2.la
 
 CLEANFILES = *.tmp
 
-if REBUILD_DOCS
-rebuild: examples.xml index.html
-.PHONY: rebuild
-
-examples.xml: index.py $(check_PROGRAMS:=.c)
+rebuild:
 	cd $(srcdir) && $(PYTHON) index.py
 	$(MAKE) Makefile
-
-index.html: examples.xml examples.xsl
-	cd $(srcdir) && xsltproc examples.xsl examples.xml && echo "Rebuilt web page"
+	cd $(srcdir) && xsltproc examples.xsl examples.xml
 	-cd $(srcdir) && xmllint --valid --noout index.html
-endif
+
+.PHONY: rebuild
 
 install-data-local: 
-	$(MKDIR_P) $(DESTDIR)$(HTML_DIR)
-	-$(INSTALL) -m 0644 $(srcdir)/*.html $(srcdir)/*.c $(srcdir)/*.xml $(srcdir)/*.xsl $(srcdir)/*.res $(DESTDIR)$(HTML_DIR)
+	$(MKDIR_P) $(DESTDIR)$(docdir)/examples
+	-$(INSTALL) -m 0644 $(srcdir)/*.html $(srcdir)/*.c $(DESTDIR)$(docdir)/examples/
 
 clean-local:
 	test -f Makefile.am || rm -f test?.xml
