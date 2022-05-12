@@ -10,17 +10,17 @@ third_party {
   }
   url {
     type: ARCHIVE
-    value: "https://github.com/GNOME/libxml2/archive/c41bc10da31a4a4e5416270110b6d1b79606cad1.zip"
+    value: "https://github.com/GNOME/libxml2/archive/c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83.zip"
   }
-  version: "c41bc10da31a4a4e5416270110b6d1b79606cad1"
-  license_note: "contains GFDL documentation"
+  version: "c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83"
   license_type: BY_EXCEPTION_ONLY
+  license_note: "contains GFDL documentation"
   security {
     tag: "NVD-CPE2.3:cpe:/a:xmlsoft:libxml2:2.9.2:-"
   }
   last_upgrade_date {
     year: 2022
-    month: 2
-    day: 23
+    month: 5
+    day: 6
   }
 }
