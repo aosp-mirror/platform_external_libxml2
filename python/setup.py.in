@@ -1,4 +1,4 @@
-#!/usr/bin/python -u
+#!/usr/bin/env python
 #
 # Setup script for libxml2 and libxslt if found
 #
@@ -6,7 +6,7 @@ import sys, os
 
 try:
     import setuptools
-except ModuleNotFoundError:
+except ImportError:
     pass
 
 from distutils.core import setup, Extension
