@@ -161,6 +161,9 @@
     <ClInclude Include="..\..\acconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\elfgcchack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\libxml.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -1014,15 +1014,15 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlDocPtr target,
 		if (list == NULL) {
 		    list = tmp;
 		    listParent = cur->parent;
-		    last = tmp;
 		} else {
 		    if (level == lastLevel)
-			last = xmlAddNextSibling(last, tmp);
+			xmlAddNextSibling(last, tmp);
 		    else {
-			last = xmlAddChild(last, tmp);
+			xmlAddChild(last, tmp);
 			lastLevel = level;
 		    }
 		}
+		last = tmp;
 
 		if (index2 > 1) {
 		    end = xmlXIncludeGetNthChild(cur, index2 - 1);
@@ -1103,11 +1103,12 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlDocPtr target,
 	    }
 	    if (tmp != NULL) {
 		if (level == lastLevel)
-		    last = xmlAddNextSibling(last, tmp);
+		    xmlAddNextSibling(last, tmp);
 		else {
-		    last = xmlAddChild(last, tmp);
+		    xmlAddChild(last, tmp);
 		    lastLevel = level;
 		}
+		last = tmp;
 	    }
 	}
 	/*
@@ -1185,7 +1186,8 @@ xmlXIncludeCopyXPointer(xmlXIncludeCtxtPtr ctxt, xmlDocPtr target,
 				    if (last == NULL) {
 					list = last = tmp;
 				    } else {
-					last = xmlAddNextSibling(last, tmp);
+					xmlAddNextSibling(last, tmp);
+					last = tmp;
 				    }
 				    cur = cur->next;
 				    continue;
@@ -2651,3 +2653,5 @@ xmlXIncludeProcessNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
 
 #else /* !LIBXML_XINCLUDE_ENABLED */
 #endif
+#define bottom_xinclude
+#include "elfgcchack.h"

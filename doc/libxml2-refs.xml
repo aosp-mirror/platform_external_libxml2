@@ -14926,6 +14926,9 @@
         <word name='CJKUnifiedIdeographsExtensionB'>
           <ref name='xmlUCSIsCJKUnifiedIdeographsExtensionB'/>
         </word>
+        <word name='CVS'>
+          <ref name='LIBXML_VERSION_EXTRA'/>
+        </word>
         <word name='CWD'>
           <ref name='xmlNanoFTPCwd'/>
         </word>
@@ -16734,7 +16737,6 @@
           <ref name='xmlValidateDtdFinal'/>
         </word>
         <word name='NOTE'>
-          <ref name='htmlReadFd'/>
           <ref name='xmlBufShrink'/>
           <ref name='xmlCtxtReadFd'/>
           <ref name='xmlParseExternalID'/>
@@ -20488,7 +20490,6 @@
           <ref name='xmlTextReaderClose'/>
         </word>
         <word name='closed'>
-          <ref name='htmlReadFd'/>
           <ref name='xmlCtxtReadFd'/>
           <ref name='xmlModuleClose'/>
           <ref name='xmlNewTextWriter'/>
@@ -20601,9 +20602,6 @@
           <ref name='xmlDocSetRootElement'/>
           <ref name='xmlParseComment'/>
         </word>
-        <word name='commit'>
-          <ref name='LIBXML_VERSION_EXTRA'/>
-        </word>
         <word name='commodity'>
           <ref name='xmlKeepBlanksDefault'/>
         </word>
@@ -20664,6 +20662,7 @@
           <ref name='xmlShellPwd'/>
         </word>
         <word name='compilation'>
+          <ref name='LIBXML_VERSION_EXTRA'/>
           <ref name='XML_XPATH_CHECKNS'/>
           <ref name='_xmlXPathContext'/>
           <ref name='xmlPatterncompile'/>
@@ -21692,7 +21691,6 @@
           <ref name='xmlParseElementMixedContentDecl'/>
         </word>
         <word name='description'>
-          <ref name='LIBXML_VERSION_EXTRA'/>
           <ref name='_htmlElemDesc'/>
           <ref name='_htmlEntityDesc'/>
           <ref name='htmlElementAllowedHereDesc'/>
@@ -23500,9 +23498,6 @@
         </word>
         <word name='gif'>
           <ref name='xmlBuildRelativeURI'/>
-        </word>
-        <word name='git'>
-          <ref name='LIBXML_VERSION_EXTRA'/>
         </word>
         <word name='give'>
           <ref name='_xmlParserInput'/>
@@ -27876,7 +27871,6 @@
           <ref name='xmlURIEscapeStr'/>
         </word>
         <word name='reset'>
-          <ref name='htmlReadFd'/>
           <ref name='initGenericErrorDefaultFunc'/>
           <ref name='xmlBufferDetach'/>
           <ref name='xmlCtxtReadFd'/>

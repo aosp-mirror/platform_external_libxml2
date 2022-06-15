@@ -571,5 +571,8 @@ header.write("""
 
 header.close()
 
+output.write("""#define bottom_chvalid
+#include "elfgcchack.h"
+""")
 output.close()
 
