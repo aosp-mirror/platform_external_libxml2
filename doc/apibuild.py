@@ -1,4 +1,4 @@
-#!/usr/bin/python -u
+#!/usr/bin/env python
 #
 # This is the API builder, it parses the C sources and build the
 # API formal description in XML.
@@ -31,18 +31,9 @@ ignored_files = {
   "testOOMlib.c": "out of memory tester",
   "rngparser.c": "not yet integrated",
   "rngparser.h": "not yet integrated",
-  "testHTML.c": "test tool",
-  "testReader.c": "test tool",
-  "testSchemas.c": "test tool",
-  "testXPath.c": "test tool",
   "testAutomata.c": "test tool",
   "testModule.c": "test tool",
-  "testRegexp.c": "test tool",
   "testThreads.c": "test tool",
-  "testC14N.c": "test tool",
-  "testRelax.c": "test tool",
-  "testSAX.c": "test tool",
-  "testURI.c": "test tool",
   "testapi.c": "generated regression tests",
   "runtest.c": "regression tests program",
   "runsuite.c": "regression tests program",
@@ -81,6 +72,7 @@ ignored_words = {
   "LIBXML_ATTR_FORMAT": (5, "macro for gcc printf args checking extension"),
   "LIBXML_ATTR_ALLOC_SIZE": (3, "macro for gcc checking extension"),
   "ATTRIBUTE_NO_SANITIZE": (3, "macro keyword"),
+  "XML_DEPRECATED": (0, "macro keyword"),
 }
 
 def escape(raw):
