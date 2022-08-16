@@ -178,6 +178,7 @@ cc_library {
     },
     apex_available: [
         "//apex_available:platform",
+        "com.android.uwb",
         "com.android.virt",
     ],
     min_sdk_version: "apex_inherit",
