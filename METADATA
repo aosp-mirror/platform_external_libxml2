@@ -9,8 +9,8 @@ third_party {
     value: "http://www.xmlsoft.org/"
   }
   url {
-    type: ARCHIVE
-    value: "https://github.com/GNOME/libxml2/archive/c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83.zip"
+    type: GIT
+    value: "https://github.com/GNOME/libxml2/"
   }
   version: "c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83"
   license_type: BY_EXCEPTION_ONLY
