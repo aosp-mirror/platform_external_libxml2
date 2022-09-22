@@ -14,9 +14,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -33,7 +30,7 @@
 #include <lzma.h>
 #endif
 
-#include "xzlib.h"
+#include "private/xzlib.h"
 #include <libxml/xmlmemory.h>
 
 /* values for xz_state how */
