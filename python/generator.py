@@ -291,6 +291,8 @@ skip_impl = (
 deprecated_funcs = {
     'htmlDefaultSAXHandlerInit': True,
     'htmlInitAutoClose': True,
+    'htmlParseCharRef': True,
+    'htmlParseElement': True,
     'xmlCleanupCharEncodingHandlers': True,
     'xmlCleanupGlobals': True,
     'xmlDefaultSAXHandlerInit': True,
@@ -310,15 +312,55 @@ deprecated_funcs = {
     'xmlNanoFTPProxy': True,
     'xmlNanoFTPScanProxy': True,
     'xmlNewGlobalNs': True,
+    'xmlParseAttValue': True,
+    'xmlParseAttributeListDecl': True,
+    'xmlParseCDSect': True,
+    'xmlParseCharData': True,
+    'xmlParseCharRef': True,
+    'xmlParseComment': True,
+    'xmlParseDocTypeDecl': True,
+    'xmlParseElement': True,
+    'xmlParseElementDecl': True,
+    'xmlParseEncName': True,
+    'xmlParseEncodingDecl': True,
+    'xmlParseEndTag': True,
+    'xmlParseEntity': True,
+    'xmlParseEntityDecl': True,
+    'xmlParseEntityRef': True,
+    'xmlParseMarkupDecl': True,
+    'xmlParseMisc': True,
+    'xmlParseName': True,
     'xmlParseNamespace': True,
+    'xmlParseNmtoken': True,
+    'xmlParseNotationDecl': True,
+    'xmlParsePEReference': True,
+    'xmlParsePI': True,
+    'xmlParsePITarget': True,
+    'xmlParsePubidLiteral': True,
     'xmlParseQuotedString': True,
+    'xmlParseReference': True,
+    'xmlParseSDDecl': True,
+    'xmlParseStartTag': True,
+    'xmlParseSystemLiteral': True,
+    'xmlParseTextDecl': True,
+    'xmlParseVersionInfo': True,
+    'xmlParseVersionNum': True,
+    'xmlParseXMLDecl': True,
     'xmlParserHandleReference': True,
+    'xmlRecoverDoc': True,
+    'xmlRecoverFile': True,
+    'xmlRecoverMemory': True,
     'xmlRelaxNGCleanupTypes': True,
     'xmlRelaxNGInitTypes': True,
     'xmlRemoveRef': True,
+    'xmlSAXDefaultVersion': True,
     'xmlScanName': True,
     'xmlSchemaCleanupTypes': True,
     'xmlSchemaInitTypes': True,
+    'xmlSetupParserForBuffer': True,
+    'xmlThrDefDefaultBufferSize': True,
+    'xmlThrDefLineNumbersDefaultValue': True,
+    'xmlThrDefPedanticParserDefaultValue': True,
     'xmlXPathInit': True,
     'xmlXPtrEvalRangePredicate': True,
     'xmlXPtrNewCollapsedRange': True,
@@ -627,12 +669,12 @@ def buildStubs():
     export.close()
     wrapper.close()
 
-    print("Generated %d wrapper functions, %d failed, %d skipped\n" % (nb_wrap,
+    print("Generated %d wrapper functions, %d failed, %d skipped" % (nb_wrap,
                                                               failed, skipped))
-    print("Missing type converters: ")
-    for type in list(unknown_types.keys()):
-        print("%s:%d " % (type, len(unknown_types[type])))
-    print()
+#    print("Missing type converters: ")
+#    for type in list(unknown_types.keys()):
+#        print("%s:%d " % (type, len(unknown_types[type])))
+#    print()
 
 #######################################################################
 #
