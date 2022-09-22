@@ -18,9 +18,6 @@
 #ifdef LIBXML_CATALOG_ENABLED
 #include <stdlib.h>
 #include <string.h>
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -39,7 +36,8 @@
 #include <libxml/threads.h>
 #include <libxml/globals.h>
 
-#include "buf.h"
+#include "private/buf.h"
+#include "private/error.h"
 
 #define MAX_DELEGATE	50
 #define MAX_CATAL_DEPTH	50
@@ -891,11 +889,7 @@ xmlParseCatalogFile(const char *filename) {
 
     ctxt = xmlNewParserCtxt();
     if (ctxt == NULL) {
-#ifdef LIBXML_SAX1_ENABLED
-	if (xmlDefaultSAXHandler.error != NULL) {
-	    xmlDefaultSAXHandler.error(NULL, "out of memory\n");
-	}
-#endif
+        xmlCatalogErrMemory("allocating parser context");
 	return(NULL);
     }
 
@@ -2190,7 +2184,7 @@ xmlParseSGMLCatalogPubid(const xmlChar *cur, xmlChar **id) {
     } else {
 	stop = ' ';
     }
-    buf = (xmlChar *) xmlMallocAtomic(size * sizeof(xmlChar));
+    buf = (xmlChar *) xmlMallocAtomic(size);
     if (buf == NULL) {
         xmlCatalogErrMemory("allocating public ID");
 	return(NULL);
@@ -2202,7 +2196,7 @@ xmlParseSGMLCatalogPubid(const xmlChar *cur, xmlChar **id) {
 	    break;
 	if (len + 1 >= size) {
 	    size *= 2;
-	    tmp = (xmlChar *) xmlRealloc(buf, size * sizeof(xmlChar));
+	    tmp = (xmlChar *) xmlRealloc(buf, size);
 	    if (tmp == NULL) {
 		xmlCatalogErrMemory("allocating public ID");
 		xmlFree(buf);
