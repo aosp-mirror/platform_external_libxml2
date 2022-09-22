@@ -29,28 +29,28 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * the version string like "1.2.3"
  */
-#define LIBXML_DOTTED_VERSION "2.9.13"
+#define LIBXML_DOTTED_VERSION "2.11.0"
 
 /**
  * LIBXML_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXML_VERSION 20913
+#define LIBXML_VERSION 21100
 
 /**
  * LIBXML_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXML_VERSION_STRING "20913"
+#define LIBXML_VERSION_STRING "21100"
 
 /**
  * LIBXML_VERSION_EXTRA:
  *
  * extra version information, used to show a git commit description
  */
-#define LIBXML_VERSION_EXTRA ""
+#define LIBXML_VERSION_EXTRA "-GITv2.9.13-1008-g0ff93abfe"
 
 /**
  * LIBXML_TEST_VERSION:
@@ -58,7 +58,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  * Macro to check that the libxml version in use is compatible with
  * the version the software has been compiled against
  */
-#define LIBXML_TEST_VERSION xmlCheckVersion(20913);
+#define LIBXML_TEST_VERSION xmlCheckVersion(21100);
 
 #ifndef VMS
 #if 0
@@ -476,6 +476,19 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
 #  endif
 #endif
 
+#if defined(__clang__) || (__GNUC__ * 100 + __GNUC_MINOR__ >= 406)
+#define XML_IGNORE_FPTR_CAST_WARNINGS \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wpedantic\"") \
+    _Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
+#define XML_POP_WARNINGS \
+    _Pragma("GCC diagnostic pop")
+#else
+#define XML_IGNORE_FPTR_CAST_WARNINGS
+#define XML_POP_WARNINGS
+#endif
+
+/** DOC_ENABLE */
 #else /* ! __GNUC__ */
 /**
  * ATTRIBUTE_UNUSED:
@@ -504,6 +517,18 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
 #ifndef XML_DEPRECATED
 #define XML_DEPRECATED
 #endif
+/**
+ * LIBXML_IGNORE_FPTR_CAST_WARNINGS:
+ *
+ * Macro used to ignore pointer cast warnings that can't be worked around.
+ */
+#define XML_IGNORE_FPTR_CAST_WARNINGS
+/**
+ * LIBXML_POP_WARNINGS:
+ *
+ * Macro used to restore warnings state.
+ */
+#define XML_POP_WARNINGS
 #endif /* __GNUC__ */
 
 #ifdef __cplusplus
