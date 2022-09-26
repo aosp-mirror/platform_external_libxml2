@@ -27,7 +27,8 @@
 #ifdef LIBXML_XINCLUDE_ENABLED
 #include <libxml/xinclude.h>
 
-#include "buf.h"
+#include "private/buf.h"
+#include "private/error.h"
 
 #define XINCLUDE_MAX_DEPTH 40
 
@@ -988,7 +989,7 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlDocPtr target,
 		int len;
 
 		if (content == NULL) {
-		    tmp = xmlNewTextLen(NULL, 0);
+		    tmp = xmlNewDocTextLen(target, NULL, 0);
 		} else {
 		    len = index2;
 		    if ((cur == start) && (index1 > 1)) {
@@ -997,7 +998,7 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlDocPtr target,
 		    } else {
 			len = index2;
 		    }
-		    tmp = xmlNewTextLen(content, len);
+		    tmp = xmlNewDocTextLen(target, content, len);
 		}
 		/* single sub text node selection */
 		if (list == NULL)
@@ -1048,13 +1049,13 @@ xmlXIncludeCopyRange(xmlXIncludeCtxtPtr ctxt, xmlDocPtr target,
 		const xmlChar *content = cur->content;
 
 		if (content == NULL) {
-		    tmp = xmlNewTextLen(NULL, 0);
+		    tmp = xmlNewDocTextLen(target, NULL, 0);
 		} else {
 		    if (index1 > 1) {
 			content += (index1 - 1);
 			index1 = 0;
 		    }
-		    tmp = xmlNewText(content);
+		    tmp = xmlNewDocText(target, content);
 		}
 		last = list = tmp;
 		listParent = cur->parent;
@@ -1713,7 +1714,7 @@ loaded:
 		       "trying to build relative URI from %s\n", URL);
 	    } else {
 		/* If the URI doesn't contain a slash, it's not relative */
-	        if (!xmlStrchr(curBase, (xmlChar) '/'))
+	        if (!xmlStrchr(curBase, '/'))
 		    xmlFree(curBase);
 		else
 		    base = curBase;
@@ -1849,7 +1850,7 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url, int nr) {
      */
     for (i = 0; i < ctxt->txtNr; i++) {
 	if (xmlStrEqual(URL, ctxt->txturlTab[i])) {
-            node = xmlNewText(ctxt->txtTab[i]);
+            node = xmlNewDocText(ctxt->doc, ctxt->txtTab[i]);
 	    goto loaded;
 	}
     }
@@ -1898,7 +1899,7 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url, int nr) {
     if (buf->encoder)
 	xmlCharEncCloseFunc(buf->encoder);
     buf->encoder = xmlGetCharEncodingHandler(enc);
-    node = xmlNewText(NULL);
+    node = xmlNewDocText(ctxt->doc, NULL);
 
     /*
      * Scan all chars from the resource and add the to the node
