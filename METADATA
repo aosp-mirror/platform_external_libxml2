@@ -9,10 +9,10 @@ third_party {
     value: "http://www.xmlsoft.org/"
   }
   url {
-    type: ARCHIVE
-    value: "https://github.com/GNOME/libxml2/archive/c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83.zip"
+    type: GIT
+    value: "https://github.com/GNOME/libxml2/"
   }
-  version: "c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83"
+  version: "1d4f5d24ac3976012ab1f5b811385e7b00caaecf"
   license_type: BY_EXCEPTION_ONLY
   license_note: "contains GFDL documentation"
   security {
@@ -20,7 +20,7 @@ third_party {
   }
   last_upgrade_date {
     year: 2022
-    month: 5
-    day: 6
+    month: 9
+    day: 15
   }
 }
