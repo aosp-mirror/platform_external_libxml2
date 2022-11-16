@@ -2220,7 +2220,7 @@ xmlSkipBlankChars(xmlParserCtxtPtr ctxt) {
     } else {
         int expandPE = ((ctxt->external != 0) || (ctxt->inputNr != 1));
 
-	while (1) {
+	while (ctxt->instate != XML_PARSER_EOF) {
             if (IS_BLANK_CH(CUR)) { /* CHECKED tstblanks.xml */
 		NEXT;
 	    } else if (CUR == '%') {
@@ -4807,7 +4807,7 @@ xmlParseCommentComplex(xmlParserCtxtPtr ctxt, xmlChar *buf,
     if (!IS_CHAR(r)) {
         xmlFatalErrMsgInt(ctxt, XML_ERR_INVALID_CHAR,
                           "xmlParseComment: invalid xmlChar value %d\n",
-	                  q);
+	                  r);
 	xmlFree (buf);
 	return;
     }
@@ -7518,8 +7518,8 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
 			    firstChild = cur;
 			}
 			xmlAddChild((xmlNodePtr) ent, nw);
-			xmlAddChild(ctxt->node, cur);
 		    }
+		    xmlAddChild(ctxt->node, cur);
 		    if (cur == last)
 			break;
 		    cur = next;
@@ -12577,6 +12577,7 @@ xmlCreatePushParserCtxt(xmlSAXHandlerPtr sax, void *user_data,
 	inputStream->filename = (char *)
 	    xmlCanonicPath((const xmlChar *) filename);
 	if (inputStream->filename == NULL) {
+            xmlFreeInputStream(inputStream);
 	    xmlFreeParserCtxt(ctxt);
 	    xmlFreeParserInputBuffer(buf);
 	    return(NULL);
