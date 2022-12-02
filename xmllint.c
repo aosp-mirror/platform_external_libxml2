@@ -20,9 +20,6 @@
 #ifdef HAVE_SYS_TIMEB_H
 #include <sys/timeb.h>
 #endif
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -31,6 +28,8 @@
 #endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#elif defined (_WIN32)
+#include <io.h>
 #endif
 #ifdef HAVE_SYS_MMAN_H
 #include <sys/mman.h>
@@ -112,8 +111,8 @@ static int noenc = 0;
 static int noblanks = 0;
 static int noout = 0;
 static int nowrap = 0;
-#ifdef LIBXML_OUTPUT_ENABLED
 static int format = 0;
+#ifdef LIBXML_OUTPUT_ENABLED
 static const char *output = NULL;
 static int compress = 0;
 static int oldout = 0;
@@ -1586,10 +1585,6 @@ static void
 testSAX(const char *filename) {
     xmlSAXHandlerPtr handler;
     const char *user_data = "user_data"; /* mostly for debugging */
-    xmlParserInputBufferPtr buf = NULL;
-    xmlParserInputPtr inputStream;
-    xmlParserCtxtPtr ctxt = NULL;
-    xmlSAXHandlerPtr old_sax = NULL;
 
     callbacks = 0;
 
@@ -1603,24 +1598,22 @@ testSAX(const char *filename) {
         handler = debugSAX2Handler;
     }
 
-    /*
-     * it's not the simplest code but the most generic in term of I/O
-     */
-    buf = xmlParserInputBufferCreateFilename(filename, XML_CHAR_ENCODING_NONE);
-    if (buf == NULL) {
-        goto error;
-    }
-
 #ifdef LIBXML_SCHEMAS_ENABLED
     if (wxschemas != NULL) {
         int ret;
 	xmlSchemaValidCtxtPtr vctxt;
+        xmlParserInputBufferPtr buf;
+
+        buf = xmlParserInputBufferCreateFilename(filename,
+                XML_CHAR_ENCODING_NONE);
+        if (buf == NULL)
+            return;
 
 	vctxt = xmlSchemaNewValidCtxt(wxschemas);
         if (vctxt == NULL) {
             progresult = XMLLINT_ERR_MEM;
             xmlFreeParserInputBuffer(buf);
-            goto error;
+            return;
         }
 	xmlSchemaSetValidErrors(vctxt, xmlGenericError, xmlGenericError, NULL);
 	xmlSchemaValidateSetFilename(vctxt, filename);
@@ -1645,38 +1638,23 @@ testSAX(const char *filename) {
     } else
 #endif
     {
+        xmlParserCtxtPtr ctxt = NULL;
+
 	/*
 	 * Create the parser context amd hook the input
 	 */
-	ctxt = xmlNewParserCtxt();
+	ctxt = xmlNewSAXParserCtxt(handler, (void *) user_data);
 	if (ctxt == NULL) {
             progresult = XMLLINT_ERR_MEM;
-	    xmlFreeParserInputBuffer(buf);
-	    goto error;
+	    return;
 	}
-	old_sax = ctxt->sax;
-	ctxt->sax = handler;
-	ctxt->userData = (void *) user_data;
-	inputStream = xmlNewIOInputStream(ctxt, buf, XML_CHAR_ENCODING_NONE);
-	if (inputStream == NULL) {
-	    xmlFreeParserInputBuffer(buf);
-	    goto error;
-	}
-	inputPush(ctxt, inputStream);
-
-	/* do the parsing */
-	xmlParseDocument(ctxt);
+        xmlCtxtReadFile(ctxt, filename, NULL, options);
 
 	if (ctxt->myDoc != NULL) {
 	    fprintf(stderr, "SAX generated a doc !\n");
 	    xmlFreeDoc(ctxt->myDoc);
 	    ctxt->myDoc = NULL;
 	}
-    }
-
-error:
-    if (ctxt != NULL) {
-        ctxt->sax = old_sax;
         xmlFreeParserCtxt(ctxt);
     }
 }
@@ -2046,8 +2024,9 @@ static void doXPathDump(xmlXPathObjectPtr cur) {
             xmlOutputBufferPtr buf;
 
             if ((cur->nodesetval == NULL) || (cur->nodesetval->nodeNr <= 0)) {
-                fprintf(stderr, "XPath set is empty\n");
-                progresult = XMLLINT_ERR_XPATH;
+                if (!quiet) {
+                    fprintf(stderr, "XPath set is empty\n");
+                }
                 break;
             }
             buf = xmlOutputBufferCreateFile(stdout, NULL);
@@ -2357,14 +2336,8 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	} else {
 	    if (rectxt != NULL)
 	        doc = xmlCtxtReadFile(rectxt, filename, NULL, options);
-	    else {
-#ifdef LIBXML_SAX1_ENABLED
-                if (sax1)
-		    doc = xmlParseFile(filename);
-		else
-#endif /* LIBXML_SAX1_ENABLED */
+	    else
 		doc = xmlReadFile(filename, NULL, options);
-	    }
 	}
     }
 
@@ -3164,8 +3137,7 @@ main(int argc, char **argv) {
 	    options |= XML_PARSE_HUGE;
 	} else if ((!strcmp(argv[i], "-noent")) ||
 	         (!strcmp(argv[i], "--noent"))) {
-	    noent++;
-	    options |= XML_PARSE_NOENT;
+	    noent = 1;
 	} else if ((!strcmp(argv[i], "-noenc")) ||
 	         (!strcmp(argv[i], "--noenc"))) {
 	    noenc++;
@@ -3318,15 +3290,13 @@ main(int argc, char **argv) {
 #endif /* LIBXML_OUTPUT_ENABLED */
 	else if ((!strcmp(argv[i], "-nowarning")) ||
 	         (!strcmp(argv[i], "--nowarning"))) {
-	    xmlGetWarningsDefaultValue = 0;
-	    xmlPedanticParserDefault(0);
 	    options |= XML_PARSE_NOWARNING;
+            options &= ~XML_PARSE_PEDANTIC;
         }
 	else if ((!strcmp(argv[i], "-pedantic")) ||
 	         (!strcmp(argv[i], "--pedantic"))) {
-	    xmlGetWarningsDefaultValue = 1;
-	    xmlPedanticParserDefault(1);
 	    options |= XML_PARSE_PEDANTIC;
+            options &= XML_PARSE_NOWARNING;
         }
 #ifdef LIBXML_DEBUG_ENABLED
 	else if ((!strcmp(argv[i], "-debugent")) ||
@@ -3372,9 +3342,7 @@ main(int argc, char **argv) {
         }
 	else if ((!strcmp(argv[i], "-noblanks")) ||
 	         (!strcmp(argv[i], "--noblanks"))) {
-	    noblanks++;
-	    xmlKeepBlanksDefault(0);
-	    options |= XML_PARSE_NOBLANKS;
+	    noblanks = 1;
         }
 	else if ((!strcmp(argv[i], "-maxmem")) ||
 	         (!strcmp(argv[i], "--maxmem"))) {
@@ -3382,23 +3350,16 @@ main(int argc, char **argv) {
         }
 	else if ((!strcmp(argv[i], "-format")) ||
 	         (!strcmp(argv[i], "--format"))) {
-	     noblanks++;
 #ifdef LIBXML_OUTPUT_ENABLED
-	     format = 1;
+	    format = 1;
 #endif /* LIBXML_OUTPUT_ENABLED */
-	     xmlKeepBlanksDefault(0);
 	}
 	else if ((!strcmp(argv[i], "-pretty")) ||
 	         (!strcmp(argv[i], "--pretty"))) {
-	     i++;
+	    i++;
 #ifdef LIBXML_OUTPUT_ENABLED
-       if (argv[i] != NULL) {
-	         format = atoi(argv[i]);
-	         if (format == 1) {
-	             noblanks++;
-	             xmlKeepBlanksDefault(0);
-	         }
-       }
+            if (argv[i] != NULL)
+	        format = atoi(argv[i]);
 #endif /* LIBXML_OUTPUT_ENABLED */
 	}
 #ifdef LIBXML_READER_ENABLED
@@ -3437,20 +3398,19 @@ main(int argc, char **argv) {
 	         (!strcmp(argv[i], "--relaxng"))) {
 	    i++;
 	    relaxng = argv[i];
-	    noent++;
-	    options |= XML_PARSE_NOENT;
+	    noent = 1;
 	} else if ((!strcmp(argv[i], "-schema")) ||
 	         (!strcmp(argv[i], "--schema"))) {
 	    i++;
 	    schema = argv[i];
-	    noent++;
+	    noent = 1;
 #endif
 #ifdef LIBXML_SCHEMATRON_ENABLED
 	} else if ((!strcmp(argv[i], "-schematron")) ||
 	         (!strcmp(argv[i], "--schematron"))) {
 	    i++;
 	    schematron = argv[i];
-	    noent++;
+	    noent = 1;
 #endif
         } else if ((!strcmp(argv[i], "-nonet")) ||
                    (!strcmp(argv[i], "--nonet"))) {
@@ -3499,13 +3459,6 @@ main(int argc, char **argv) {
     }
 #endif
 
-#ifdef LIBXML_SAX1_ENABLED
-    if (sax1)
-        xmlSAXDefaultVersion(1);
-    else
-        xmlSAXDefaultVersion(2);
-#endif /* LIBXML_SAX1_ENABLED */
-
     if (chkregister) {
 	xmlRegisterNodeDefault(registerNode);
 	xmlDeregisterNodeDefault(deregisterNode);
@@ -3520,15 +3473,14 @@ main(int argc, char **argv) {
     defaultEntityLoader = xmlGetExternalEntityLoader();
     xmlSetExternalEntityLoader(xmllintExternalEntityLoader);
 
-    xmlLineNumbersDefault(1);
     if (loaddtd != 0)
 	xmlLoadExtDtdDefaultValue |= XML_DETECT_IDS;
     if (dtdattrs)
 	xmlLoadExtDtdDefaultValue |= XML_COMPLETE_ATTRS;
-    if (noent != 0) xmlSubstituteEntitiesDefault(1);
-#ifdef LIBXML_VALID_ENABLED
-    if (valid != 0) xmlDoValidityCheckingDefaultValue = 1;
-#endif /* LIBXML_VALID_ENABLED */
+    if (noent != 0)
+        options |= XML_PARSE_NOENT;
+    if ((noblanks != 0) || (format == 1))
+        options |= XML_PARSE_NOBLANKS;
     if ((htmlout) && (!nowrap)) {
 	xmlGenericError(xmlGenericErrorContext,
          "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\"\n");

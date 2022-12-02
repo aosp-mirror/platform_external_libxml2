@@ -19,6 +19,8 @@
 #include <libxml/globals.h>
 #include <libxml/xmlerror.h>
 
+#include "private/error.h"
+
 /**
  * MAX_URI_LENGTH:
  *
@@ -768,8 +770,6 @@ xmlParse3986HierPart(xmlURIPtr uri, const char **str)
         cur += 2;
 	ret = xmlParse3986Authority(uri, &cur);
 	if (ret != 0) return(ret);
-	if (uri->server == NULL)
-	    uri->port = -1;
 	ret = xmlParse3986PathAbEmpty(uri, &cur);
 	if (ret != 0) return(ret);
 	*str = cur;
@@ -1074,7 +1074,7 @@ xmlSaveUri(xmlURIPtr uri) {
 
 
     max = 80;
-    ret = (xmlChar *) xmlMallocAtomic((max + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic(max + 1);
     if (ret == NULL) {
         xmlURIErrMemory("saving URI\n");
 	return(NULL);
@@ -1655,6 +1655,7 @@ xmlURIUnescapeString(const char *str, int len, char *target) {
 	        c = c * 16 + (*in - 'A') + 10;
 	    in++;
 	    len -= 3;
+            /* Explicit sign change */
 	    *out++ = (char) c;
 	} else {
 	    *out++ = *in++;
@@ -1670,8 +1671,8 @@ xmlURIUnescapeString(const char *str, int len, char *target) {
  * @str:  string to escape
  * @list: exception list string of chars not to escape
  *
- * This routine escapes a string to hex, ignoring reserved characters (a-z)
- * and the characters in the exception list.
+ * This routine escapes a string to hex, ignoring reserved characters
+ * (a-z, A-Z, 0-9, "@-_.!~*'()") and the characters in the exception list.
  *
  * Returns a new escaped string or NULL in case of error.
  */
