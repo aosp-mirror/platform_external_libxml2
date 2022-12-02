@@ -29,7 +29,6 @@
  */
 #include "config.h"
 #include <libxml/xmlversion.h>
-#include <libxml/xmlstring.h>
 
 #ifndef SYSCONFDIR
   #define SYSCONFDIR "/etc"
@@ -55,16 +54,13 @@ int vfprintf(FILE *, const char *, va_list);
 #include "trio.h"
 #endif
 
-#if defined(__clang__) || \
-    (defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__ >= 406))
-#define XML_IGNORE_PEDANTIC_WARNINGS \
-    _Pragma("GCC diagnostic push") \
-    _Pragma("GCC diagnostic ignored \"-Wpedantic\"")
-#define XML_POP_WARNINGS \
-    _Pragma("GCC diagnostic pop")
+#if !defined(_WIN32) && \
+    !defined(__CYGWIN__) && \
+    (defined(__clang__) || \
+     (defined(__GNUC__) && (__GNUC__ >= 4)))
+#define XML_HIDDEN __attribute__((visibility("hidden")))
 #else
-#define XML_IGNORE_PEDANTIC_WARNINGS
-#define XML_POP_WARNINGS
+#define XML_HIDDEN
 #endif
 
 #if defined(__clang__) || \
@@ -73,42 +69,6 @@ int vfprintf(FILE *, const char *, va_list);
 #else
 #define ATTRIBUTE_NO_SANITIZE(arg)
 #endif
-
-/*
- * Internal variable indicating if a callback has been registered for
- * node creation/destruction. It avoids spending a lot of time in locking
- * function while checking if the callback exists.
- */
-extern int __xmlRegisterCallbacks;
-/*
- * internal error reporting routines, shared but not part of the API.
- */
-void __xmlIOErr(int domain, int code, const char *extra);
-void __xmlLoaderErr(void *ctx, const char *msg, const char *filename) LIBXML_ATTR_FORMAT(2,0);
-#ifdef LIBXML_HTML_ENABLED
-/*
- * internal function of HTML parser needed for xmlParseInNodeContext
- * but not part of the API
- */
-void __htmlParseContent(void *ctx);
-#endif
-
-/*
- * internal global initialization critical section routines.
- */
-void __xmlGlobalInitMutexLock(void);
-void __xmlGlobalInitMutexUnlock(void);
-void __xmlGlobalInitMutexDestroy(void);
-
-int __xmlInitializeDict(void);
-
-/*
- * internal thread safe random function
- */
-int __xmlRandom(void);
-
-XMLPUBFUN xmlChar * XMLCALL xmlEscapeFormatString(xmlChar **msg);
-int xmlInputReadCallbackNop(void *context, char *buffer, int len);
 
 #if !defined(PIC) && !defined(NOLIBTOOL) && !defined(LIBXML_STATIC)
 #  define LIBXML_STATIC

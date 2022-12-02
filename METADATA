@@ -1,6 +1,11 @@
-# *** THIS PACKAGE HAS SPECIAL LICENSING CONDITIONS.  PLEASE
-#     CONSULT THE OWNERS AND opensource-licensing@google.com BEFORE
-#     DEPENDING ON IT IN YOUR PROJECT. ***
+# THIS PACKAGE HAS SPECIAL LICENSING CONDITIONS. PLEASE
+# CONSULT THE OWNERS AND opensource-licensing@google.com BEFORE
+# DEPENDING ON IT IN YOUR PROJECT.
+
+# This project was upgraded with external_updater.
+# Usage: tools/external_updater/updater.sh update libxml2
+# For more info, check https://cs.android.com/android/platform/superproject/+/master:tools/external_updater/README.md
+
 name: "libxml2"
 description: "Libxml2 is the XML C parser and toolkit developed for the Gnome project (but usable outside of the Gnome platform), it is free software available under the MIT License."
 third_party {
@@ -9,10 +14,10 @@ third_party {
     value: "http://www.xmlsoft.org/"
   }
   url {
-    type: ARCHIVE
-    value: "https://github.com/GNOME/libxml2/archive/c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83.zip"
+    type: GIT
+    value: "https://github.com/GNOME/libxml2/"
   }
-  version: "c1632fbd0abdfecbdc8aa2c316f6e2d8cf848a83"
+  version: "ccb6d54409d2117262604f52dc4eabb666521a19"
   license_type: BY_EXCEPTION_ONLY
   license_note: "contains GFDL documentation"
   security {
@@ -20,7 +25,7 @@ third_party {
   }
   last_upgrade_date {
     year: 2022
-    month: 5
-    day: 6
+    month: 11
+    day: 29
   }
 }
