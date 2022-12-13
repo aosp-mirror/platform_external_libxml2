@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Portions of this script have been (shamelessly) stolen from the
 # prior work of Daniel Veillard (genUnicode.py)
@@ -258,7 +258,7 @@ struct _xmlChRangeGroup {
 /**
  * Range checking routine
  */
-XMLPUBFUN int XMLCALL
+XMLPUBFUN int
 \t\txmlCharInRange(unsigned int val, const xmlChRangeGroup *group);
 
 """ % (date, sources));
@@ -278,6 +278,8 @@ output.write(
 #define IN_LIBXML
 #include "libxml.h"
 #include <libxml/chvalid.h>
+
+#include <stddef.h>
 
 /*
  * The initial tables ({func_name}_tab) are used to validate whether a
@@ -557,7 +559,7 @@ for f in fkeys:
  */
 """)
     output.write("int\n%s(unsigned int ch) {\n    return(%sQ(ch));\n}\n\n" % (f,f))
-    header.write("XMLPUBFUN int XMLCALL\n\t\t%s(unsigned int ch);\n" % f);
+    header.write("XMLPUBFUN int\n\t\t%s(unsigned int ch);\n" % f);
 #
 # Run complete - write trailers and close the output files
 #
