@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # This is the API builder, it parses the C sources and build the
 # API formal description in XML.
@@ -50,9 +50,7 @@ ignored_words = {
   "XMLPUBFUN": (0, "Special macro for extern funcs for win32"),
   "XSLTPUBFUN": (0, "Special macro for extern funcs for win32"),
   "EXSLTPUBFUN": (0, "Special macro for extern funcs for win32"),
-  "XMLCALL": (0, "Special macro for win32 calls"),
   "XSLTCALL": (0, "Special macro for win32 calls"),
-  "XMLCDECL": (0, "Special macro for win32 calls"),
   "EXSLTCALL": (0, "Special macro for win32 calls"),
   "__declspec": (3, "Windows keyword"),
   "__stdcall": (0, "Windows keyword"),

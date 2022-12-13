@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # generate a tester program for the API
 #
@@ -799,9 +799,9 @@ test_%s(void) {
                 if btype == "const_char_ptr" or btype == "const_xmlChar_ptr":
                     test.write(
                         "        if ((%s != NULL) &&\n"
-                        "            (%s > (int) strlen((const char *) %s) + 1))\n"
-                        "            continue;\n"
-                        % (bnam, nam, bnam))
+                        "            (%s > xmlStrlen(BAD_CAST %s)))\n"
+                        "            %s = 0;\n"
+                        % (bnam, nam, bnam, nam))
                     break
         i = i + 1;
 
