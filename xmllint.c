@@ -10,6 +10,7 @@
 
 #include <string.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
@@ -427,7 +428,7 @@ startTimer(void)
  *           message about the timing performed; format is a printf
  *           type argument
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(1,2)
+static void LIBXML_ATTR_FORMAT(1,2)
 endTimer(const char *fmt, ...)
 {
     long msec;
@@ -460,7 +461,7 @@ startTimer(void)
 {
     begin = clock();
 }
-static void XMLCDECL LIBXML_ATTR_FORMAT(1,2)
+static void LIBXML_ATTR_FORMAT(1,2)
 endTimer(const char *fmt, ...)
 {
     long msec;
@@ -582,7 +583,7 @@ xmlHTMLPrintFileContext(xmlParserInputPtr input) {
  * Display and format an error messages, gives file, line, position and
  * extra parameters.
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(2,3)
+static void LIBXML_ATTR_FORMAT(2,3)
 xmlHTMLError(void *ctx, const char *msg, ...)
 {
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
@@ -619,7 +620,7 @@ xmlHTMLError(void *ctx, const char *msg, ...)
  * Display and format a warning messages, gives file, line, position and
  * extra parameters.
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(2,3)
+static void LIBXML_ATTR_FORMAT(2,3)
 xmlHTMLWarning(void *ctx, const char *msg, ...)
 {
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
@@ -657,7 +658,7 @@ xmlHTMLWarning(void *ctx, const char *msg, ...)
  * Display and format an validity error messages, gives file,
  * line, position and extra parameters.
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(2,3)
+static void LIBXML_ATTR_FORMAT(2,3)
 xmlHTMLValidityError(void *ctx, const char *msg, ...)
 {
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
@@ -694,7 +695,7 @@ xmlHTMLValidityError(void *ctx, const char *msg, ...)
  * Display and format a validity warning messages, gives file, line,
  * position and extra parameters.
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(2,3)
+static void LIBXML_ATTR_FORMAT(2,3)
 xmlHTMLValidityWarning(void *ctx, const char *msg, ...)
 {
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
@@ -1360,7 +1361,7 @@ commentDebug(void *ctx ATTRIBUTE_UNUSED, const xmlChar *value)
  * Display and format a warning messages, gives file, line, position and
  * extra parameters.
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(2,3)
+static void LIBXML_ATTR_FORMAT(2,3)
 warningDebug(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...)
 {
     va_list args;
@@ -1383,7 +1384,7 @@ warningDebug(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...)
  * Display and format a error messages, gives file, line, position and
  * extra parameters.
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(2,3)
+static void LIBXML_ATTR_FORMAT(2,3)
 errorDebug(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...)
 {
     va_list args;
@@ -1406,7 +1407,7 @@ errorDebug(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...)
  * Display and format a fatalError messages, gives file, line, position and
  * extra parameters.
  */
-static void XMLCDECL LIBXML_ATTR_FORMAT(2,3)
+static void LIBXML_ATTR_FORMAT(2,3)
 fatalErrorDebug(void *ctx ATTRIBUTE_UNUSED, const char *msg, ...)
 {
     va_list args;
@@ -2711,7 +2712,6 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
                 xmlFreeDtd(dtd);
                 return;
 	    }
-	    cvp->userData = NULL;
 	    cvp->error    = xmlGenericError;
 	    cvp->warning  = xmlGenericError;
 
@@ -2749,7 +2749,6 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	if ((timing) && (!repeat)) {
 	    startTimer();
 	}
-	cvp->userData = NULL;
 	cvp->error    = xmlGenericError;
 	cvp->warning  = xmlGenericError;
 	if (!xmlValidateDocument(cvp, doc)) {
