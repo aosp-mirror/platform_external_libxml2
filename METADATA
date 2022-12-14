@@ -17,7 +17,7 @@ third_party {
     type: GIT
     value: "https://github.com/GNOME/libxml2/"
   }
-  version: "ccb6d54409d2117262604f52dc4eabb666521a19"
+  version: "a77e32736c63bbb26714f9565d9ce74cf48f169d"
   license_type: BY_EXCEPTION_ONLY
   license_note: "contains GFDL documentation"
   security {
@@ -25,7 +25,7 @@ third_party {
   }
   last_upgrade_date {
     year: 2022
-    month: 11
-    day: 29
+    month: 12
+    day: 12
   }
 }
