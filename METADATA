@@ -17,15 +17,15 @@ third_party {
     type: GIT
     value: "https://github.com/GNOME/libxml2/"
   }
-  version: "a77e32736c63bbb26714f9565d9ce74cf48f169d"
+  version: "59b33661784359c6d3a8309ddbd2129fb2688548"
   license_type: BY_EXCEPTION_ONLY
   license_note: "contains GFDL documentation"
   security {
     tag: "NVD-CPE2.3:cpe:/a:xmlsoft:libxml2:2.9.2:-"
   }
   last_upgrade_date {
-    year: 2022
-    month: 12
-    day: 12
+    year: 2023
+    month: 1
+    day: 3
   }
 }
