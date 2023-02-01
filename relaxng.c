@@ -34,6 +34,10 @@
 #include <libxml/xmlregexp.h>
 #include <libxml/xmlschemastypes.h>
 
+#include "private/error.h"
+#include "private/regexp.h"
+#include "private/string.h"
+
 /*
  * The Relax-NG namespace
  */
@@ -2849,6 +2853,11 @@ xmlRelaxNGInitTypes(void)
 /**
  * xmlRelaxNGCleanupTypes:
  *
+ * DEPRECATED: This function will be made private. Call xmlCleanupParser
+ * to free global state but see the warnings there. xmlCleanupParser
+ * should be only called once at program exit. In most cases, you don't
+ * have call cleanup functions at all.
+ *
  * Cleanup the default Schemas type library associated to RelaxNG
  */
 void
@@ -2869,10 +2878,6 @@ xmlRelaxNGCleanupTypes(void)
  * This allows a faster execution and streamability at that level	*
  *									*
  ************************************************************************/
-
-/* from automata.c but not exported */
-void xmlAutomataSetFlags(xmlAutomataPtr am, int flags);
-
 
 static int xmlRelaxNGTryCompile(xmlRelaxNGParserCtxtPtr ctxt,
                                 xmlRelaxNGDefinePtr def);
@@ -7228,7 +7233,7 @@ xmlRelaxNGCleanupTree(xmlRelaxNGParserCtxtPtr ctxt, xmlNodePtr root)
 			                         BAD_CAST "name", NULL);
                             if (node != NULL) {
                                 xmlAddPrevSibling(cur->children, node);
-                                text = xmlNewText(name);
+                                text = xmlNewDocText(node->doc, name);
                                 xmlAddChild(node, text);
                                 text = node;
                             }
@@ -8583,7 +8588,7 @@ xmlRelaxNGNormalize(xmlRelaxNGValidCtxtPtr ctxt, const xmlChar * str)
         tmp++;
     len = tmp - str;
 
-    ret = (xmlChar *) xmlMallocAtomic((len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic(len + 1);
     if (ret == NULL) {
         xmlRngVErrMemory(ctxt, "validating\n");
         return (NULL);

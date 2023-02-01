@@ -23,6 +23,9 @@
 #include <libxml/parserInternals.h>
 #include <libxml/xmlstring.h>
 
+#include "private/parser.h"
+#include "private/string.h"
+
 /************************************************************************
  *                                                                      *
  *                Commodity functions to handle xmlChars                *
@@ -43,12 +46,12 @@ xmlStrndup(const xmlChar *cur, int len) {
     xmlChar *ret;
 
     if ((cur == NULL) || (len < 0)) return(NULL);
-    ret = (xmlChar *) xmlMallocAtomic(((size_t) len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic((size_t) len + 1);
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(NULL);
     }
-    memcpy(ret, cur, len * sizeof(xmlChar));
+    memcpy(ret, cur, len);
     ret[len] = 0;
     return(ret);
 }
@@ -88,12 +91,13 @@ xmlCharStrndup(const char *cur, int len) {
     xmlChar *ret;
 
     if ((cur == NULL) || (len < 0)) return(NULL);
-    ret = (xmlChar *) xmlMallocAtomic(((size_t) len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic((size_t) len + 1);
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(NULL);
     }
     for (i = 0;i < len;i++) {
+        /* Explicit sign change */
         ret[i] = (xmlChar) cur[i];
         if (ret[i] == 0) return(ret);
     }
@@ -424,13 +428,7 @@ xmlStrsub(const xmlChar *str, int start, int len) {
 
 int
 xmlStrlen(const xmlChar *str) {
-    size_t len = 0;
-
-    if (str == NULL) return(0);
-    while (*str != 0) { /* non input consuming */
-        str++;
-        len++;
-    }
+    size_t len = str ? strlen((const char *)str) : 0;
     return(len > INT_MAX ? 0 : len);
 }
 
@@ -463,12 +461,12 @@ xmlStrncat(xmlChar *cur, const xmlChar *add, int len) {
     size = xmlStrlen(cur);
     if ((size < 0) || (size > INT_MAX - len))
         return(NULL);
-    ret = (xmlChar *) xmlRealloc(cur, ((size_t) size + len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlRealloc(cur, (size_t) size + len + 1);
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(cur);
     }
-    memcpy(&ret[size], add, len * sizeof(xmlChar));
+    memcpy(&ret[size], add, len);
     ret[size + len] = 0;
     return(ret);
 }
@@ -503,13 +501,13 @@ xmlStrncatNew(const xmlChar *str1, const xmlChar *str2, int len) {
     size = xmlStrlen(str1);
     if ((size < 0) || (size > INT_MAX - len))
         return(NULL);
-    ret = (xmlChar *) xmlMalloc(((size_t) size + len + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMalloc((size_t) size + len + 1);
     if (ret == NULL) {
         xmlErrMemory(NULL, NULL);
         return(xmlStrndup(str1, size));
     }
-    memcpy(ret, str1, size * sizeof(xmlChar));
-    memcpy(&ret[size], str2, len * sizeof(xmlChar));
+    memcpy(ret, str1, size);
+    memcpy(&ret[size], str2, len);
     ret[size + len] = 0;
     return(ret);
 }
@@ -549,7 +547,7 @@ xmlStrcat(xmlChar *cur, const xmlChar *add) {
  *
  * Returns the number of characters written to @buf or -1 if an error occurs.
  */
-int XMLCDECL
+int
 xmlStrPrintf(xmlChar *buf, int len, const char *msg, ...) {
     va_list args;
     int ret;
@@ -877,11 +875,11 @@ xmlUTF8Strndup(const xmlChar *utf, int len) {
 
     if ((utf == NULL) || (len < 0)) return(NULL);
     i = xmlUTF8Strsize(utf, len);
-    ret = (xmlChar *) xmlMallocAtomic(((size_t) i + 1) * sizeof(xmlChar));
+    ret = (xmlChar *) xmlMallocAtomic((size_t) i + 1);
     if (ret == NULL) {
         return(NULL);
     }
-    memcpy(ret, utf, i * sizeof(xmlChar));
+    memcpy(ret, utf, i);
     ret[i] = 0;
     return(ret);
 }
@@ -1028,7 +1026,7 @@ xmlEscapeFormatString(xmlChar **msg)
     if ((count > INT_MAX) || (msgLen > INT_MAX - count))
         return(NULL);
     resultLen = msgLen + count + 1;
-    result = (xmlChar *) xmlMallocAtomic(resultLen * sizeof(xmlChar));
+    result = (xmlChar *) xmlMallocAtomic(resultLen);
     if (result == NULL) {
         /* Clear *msg to prevent format string vulnerabilities in
            out-of-memory situations. */

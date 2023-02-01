@@ -1,4 +1,4 @@
-#!/usr/bin/python -u
+#!/usr/bin/env python3
 #
 # generate python wrappers from the XML API description
 #
@@ -152,7 +152,6 @@ def enum(type, name, value):
 
 skipped_modules = {
     'xmlmemory': None,
-    'DOCBparser': None,
     'SAX': None,
     'hash': None,
     'list': None,
@@ -290,13 +289,90 @@ skip_impl = (
 )
 
 deprecated_funcs = {
+    'htmlDefaultSAXHandlerInit': True,
+    'htmlInitAutoClose': True,
+    'htmlParseCharRef': True,
+    'htmlParseElement': True,
+    'xmlCleanupCharEncodingHandlers': True,
+    'xmlCleanupGlobals': True,
+    'xmlDefaultSAXHandlerInit': True,
+    'xmlDecodeEntities': True,
+    'xmlDictCleanup': True,
+    'xmlEncodeEntities': True,
+    'xmlHandleEntity': True,
+    'xmlInitCharEncodingHandlers': True,
+    'xmlInitGlobals': True,
+    'xmlInitializeDict': True,
+    'xmlInitializePredefinedEntities': True,
     'xmlIsRef': True,
+    'xmlNamespaceParseNCName': True,
+    'xmlNamespaceParseNSDef': True,
+    'xmlNanoFTPCleanup': True,
+    'xmlNanoFTPInit': True,
+    'xmlNanoFTPProxy': True,
+    'xmlNanoFTPScanProxy': True,
+    'xmlNewGlobalNs': True,
+    'xmlParseAttValue': True,
+    'xmlParseAttributeListDecl': True,
+    'xmlParseCDSect': True,
+    'xmlParseCharData': True,
+    'xmlParseCharRef': True,
+    'xmlParseComment': True,
+    'xmlParseDocTypeDecl': True,
+    'xmlParseElement': True,
+    'xmlParseElementDecl': True,
+    'xmlParseEncName': True,
+    'xmlParseEncodingDecl': True,
+    'xmlParseEndTag': True,
+    'xmlParseEntity': True,
+    'xmlParseEntityDecl': True,
+    'xmlParseEntityRef': True,
+    'xmlParseMarkupDecl': True,
+    'xmlParseMisc': True,
+    'xmlParseName': True,
+    'xmlParseNamespace': True,
+    'xmlParseNmtoken': True,
+    'xmlParseNotationDecl': True,
+    'xmlParsePEReference': True,
+    'xmlParsePI': True,
+    'xmlParsePITarget': True,
+    'xmlParsePubidLiteral': True,
+    'xmlParseQuotedString': True,
+    'xmlParseReference': True,
+    'xmlParseSDDecl': True,
+    'xmlParseStartTag': True,
+    'xmlParseSystemLiteral': True,
+    'xmlParseTextDecl': True,
+    'xmlParseVersionInfo': True,
+    'xmlParseVersionNum': True,
+    'xmlParseXMLDecl': True,
+    'xmlParserHandleReference': True,
+    'xmlRecoverDoc': True,
+    'xmlRecoverFile': True,
+    'xmlRecoverMemory': True,
+    'xmlRelaxNGCleanupTypes': True,
+    'xmlRelaxNGInitTypes': True,
     'xmlRemoveRef': True,
+    'xmlSAXDefaultVersion': True,
+    'xmlScanName': True,
+    'xmlSchemaCleanupTypes': True,
+    'xmlSchemaInitTypes': True,
+    'xmlSetupParserForBuffer': True,
+    'xmlStringDecodeEntities': True,
+    'xmlStringLenDecodeEntities': True,
+    'xmlThrDefDefaultBufferSize': True,
+    'xmlThrDefLineNumbersDefaultValue': True,
+    'xmlThrDefPedanticParserDefaultValue': True,
+    'xmlXPathInit': True,
+    'xmlXPtrEvalRangePredicate': True,
+    'xmlXPtrNewCollapsedRange': True,
+    'xmlXPtrNewLocationSetNodes': True,
+    'xmlXPtrNewRange': True,
+    'xmlXPtrNewRangeNodes': True,
+    'xmlXPtrRangeToFunction': True,
 }
 
 def skip_function(name):
-    if name in deprecated_funcs:
-        return 1
     if name[0:12] == "xmlXPathWrap":
         return 1
     if name == "xmlFreeParserCtxt":
@@ -370,6 +446,8 @@ def print_function_wrapper(name, output, export, include):
     if name in skip_impl:
         # Don't delete the function entry in the caller.
         return 1
+
+    is_deprecated = name in deprecated_funcs
 
     c_call = ""
     format=""
@@ -484,6 +562,8 @@ def print_function_wrapper(name, output, export, include):
             output.write("#endif\n")
         return 1
 
+    if is_deprecated:
+        output.write("XML_IGNORE_DEPRECATION_WARNINGS\n")
     output.write("PyObject *\n")
     output.write("libxml_%s(PyObject *self ATTRIBUTE_UNUSED," % (name))
     output.write(" PyObject *args")
@@ -496,6 +576,10 @@ def print_function_wrapper(name, output, export, include):
         output.write(c_return)
     if c_args != "":
         output.write(c_args)
+    if is_deprecated:
+        output.write("\n    if (libxml_deprecationWarning(\"%s\") == -1)\n" %
+                     name)
+        output.write("        return(NULL);\n")
     if format != "":
         output.write("\n    if (!PyArg_ParseTuple(args, (char *)\"%s\"%s))\n" %
                      (format, format_args))
@@ -507,7 +591,11 @@ def print_function_wrapper(name, output, export, include):
     if c_release != "":
         output.write(c_release)
     output.write(ret_convert)
-    output.write("}\n\n")
+    output.write("}\n")
+    if is_deprecated:
+        output.write("XML_POP_WARNINGS\n")
+    output.write("\n")
+
     if cond != None and cond != "":
         include.write("#endif /* %s */\n" % cond)
         export.write("#endif /* %s */\n" % cond)
@@ -583,12 +671,12 @@ def buildStubs():
     export.close()
     wrapper.close()
 
-    print("Generated %d wrapper functions, %d failed, %d skipped\n" % (nb_wrap,
+    print("Generated %d wrapper functions, %d failed, %d skipped" % (nb_wrap,
                                                               failed, skipped))
-    print("Missing type converters: ")
-    for type in list(unknown_types.keys()):
-        print("%s:%d " % (type, len(unknown_types[type])))
-    print()
+#    print("Missing type converters: ")
+#    for type in list(unknown_types.keys()):
+#        print("%s:%d " % (type, len(unknown_types[type])))
+#    print()
 
 #######################################################################
 #
