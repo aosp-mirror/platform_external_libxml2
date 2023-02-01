@@ -157,7 +157,6 @@ cc_library {
     target: {
        android: {
            shared_libs: ["libandroidicu"],
-           export_shared_lib_headers: ["libandroidicu"],
        },
        host: {
            shared_libs: [
@@ -178,6 +177,7 @@ cc_library {
     },
     apex_available: [
         "//apex_available:platform",
+        "com.android.uwb",
         "com.android.virt",
     ],
     min_sdk_version: "apex_inherit",
@@ -439,6 +439,7 @@ genrule {
         "test/VC/*",
         "test/VCM/*",
         "test/XInclude/docs/*",
+        "test/XInclude/without-reader/*",
         "test/xmlid/*",
     ],
     // The genseed tool only writes under its current directory.
@@ -586,6 +587,7 @@ genrule {
         "fuzz/seed/xml/fallback4.xml",
         "fuzz/seed/xml/fallback5.xml",
         "fuzz/seed/xml/fallback6.xml",
+        "fuzz/seed/xml/fallback7.xml",
         "fuzz/seed/xml/fallback.xml",
         "fuzz/seed/xml/icu_parse_test.xml",
         "fuzz/seed/xml/id1.xml",
@@ -604,6 +606,8 @@ genrule {
         "fuzz/seed/xml/isolat1",
         "fuzz/seed/xml/isolat2",
         "fuzz/seed/xml/isolat3",
+        "fuzz/seed/xml/issue424-1.xml",
+        "fuzz/seed/xml/issue424-2.xml",
         "fuzz/seed/xml/japancrlf.xml",
         "fuzz/seed/xml/mixed_ns.xml",
         "fuzz/seed/xml/name2.xml",
