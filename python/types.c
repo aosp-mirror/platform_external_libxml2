@@ -78,14 +78,12 @@ myInvalidParameterHandler(const wchar_t *expression,
 
 FILE *
 libxml_PyFileGet(PyObject *f) {
-    int flags;
     FILE *res;
     const char *mode;
-
     int fd = PyObject_AsFileDescriptor(f);
-    intptr_t w_fh = -1;
 
 #ifdef _WIN32
+    intptr_t w_fh = -1;
     HMODULE hntdll = NULL;
     IO_STATUS_BLOCK status_block;
     FILE_ACCESS_INFORMATION ai;
@@ -113,8 +111,9 @@ libxml_PyFileGet(PyObject *f) {
 
     if (hntdll == NULL)
         return(NULL);
-
+XML_IGNORE_FPTR_CAST_WARNINGS
     NtQueryInformationFile = (t_NtQueryInformationFile)GetProcAddress(hntdll, "NtQueryInformationFile");
+XML_POP_WARNINGS
 
     if (NtQueryInformationFile != NULL &&
         (NtQueryInformationFile((HANDLE)w_fh,
@@ -130,23 +129,24 @@ libxml_PyFileGet(PyObject *f) {
             if (ai.AccessFlags & FILE_APPEND_DATA)
                 is_append = TRUE;
 
-            if (is_write && is_read)
-                if (is_append)
-                    mode = "a+";
-                else
-                    mode = "rw";
-
-            if (!is_write && is_read)
+            if (is_write) {
+                if (is_read) {
+                    if (is_append)
+                        mode = "a+";
+                    else
+                        mode = "rw";
+                } else {
+                    if (is_append)
+                        mode = "a";
+                    else
+                        mode = "w";
+                }
+            } else {
                 if (is_append)
                     mode = "r+";
                 else
                     mode = "r";
-
-            if (is_write && !is_read)
-                if (is_append)
-                    mode = "a";
-                else
-                    mode = "w";
+            }
         }
 
     FreeLibrary(hntdll);
@@ -154,31 +154,47 @@ libxml_PyFileGet(PyObject *f) {
     if (!is_write && !is_read) /* also happens if we did not load or run NtQueryInformationFile() successfully */
         return(NULL);
 #else
+    int flags;
+
     /*
-     * Get the flags on the fd to understand how it was opened
+     * macOS returns O_RDWR for standard streams, but fails to write to
+     * stdout or stderr when opened with fdopen(dup_fd, "rw").
      */
-    flags = fcntl(fd, F_GETFL, 0);
-    switch (flags & O_ACCMODE) {
-        case O_RDWR:
-	    if (flags & O_APPEND)
-	        mode = "a+";
-	    else
-	        mode = "rw";
-	    break;
-        case O_RDONLY:
-	    if (flags & O_APPEND)
-	        mode = "r+";
-	    else
-	        mode = "r";
-	    break;
-	case O_WRONLY:
-	    if (flags & O_APPEND)
-	        mode = "a";
-	    else
-	        mode = "w";
-	    break;
-	default:
-	    return(NULL);
+    switch (fd) {
+        case STDIN_FILENO:
+            mode = "r";
+            break;
+        case STDOUT_FILENO:
+        case STDERR_FILENO:
+            mode = "w";
+            break;
+        default:
+            /*
+             * Get the flags on the fd to understand how it was opened
+             */
+            flags = fcntl(fd, F_GETFL, 0);
+            switch (flags & O_ACCMODE) {
+                case O_RDWR:
+                    if (flags & O_APPEND)
+                        mode = "a+";
+                    else
+                        mode = "rw";
+                    break;
+                case O_RDONLY:
+                    if (flags & O_APPEND)
+                        mode = "r+";
+                    else
+                        mode = "r";
+                    break;
+                case O_WRONLY:
+                    if (flags & O_APPEND)
+                        mode = "a";
+                    else
+                        mode = "w";
+                    break;
+                default:
+                    return(NULL);
+            }
     }
 #endif
 

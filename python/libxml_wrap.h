@@ -68,11 +68,12 @@
 #define XML_IGNORE_DEPRECATION_WARNINGS \
     _Pragma("GCC diagnostic push") \
     _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#define XML_POP_WARNINGS \
-    _Pragma("GCC diagnostic pop")
+#elif defined (_MSC_VER) && (_MSC_VER >= 1400)
+#define XML_IGNORE_DEPRECATION_WARNINGS \
+    __pragma(warning(push)) \
+    __pragma(warning(disable : 4996))
 #else
-#define XML_IGNORE_PEDANTIC_WARNINGS
-#define XML_POP_WARNINGS
+#define XML_IGNORE_DEPRECATION_WARNINGS
 #endif
 
 #define PyxmlNode_Get(v) (((v) == Py_None) ? NULL : \
