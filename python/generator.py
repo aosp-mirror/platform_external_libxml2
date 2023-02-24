@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # generate python wrappers from the XML API description
 #
@@ -358,6 +358,8 @@ deprecated_funcs = {
     'xmlSchemaCleanupTypes': True,
     'xmlSchemaInitTypes': True,
     'xmlSetupParserForBuffer': True,
+    'xmlStringDecodeEntities': True,
+    'xmlStringLenDecodeEntities': True,
     'xmlThrDefDefaultBufferSize': True,
     'xmlThrDefLineNumbersDefaultValue': True,
     'xmlThrDefPedanticParserDefaultValue': True,
