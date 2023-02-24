@@ -1222,7 +1222,6 @@ static const htmlStartCloseEntry htmlStartClose[] = {
     { "menu", "form" },
     { "menu", "ul" },
     { "ol", "form" },
-    { "ol", "ul" },
     { "option", "optgroup" },
     { "option", "option" },
     { "p", "address" },
@@ -1306,7 +1305,6 @@ static const htmlStartCloseEntry htmlStartClose[] = {
     { "ul", "address" },
     { "ul", "form" },
     { "ul", "menu" },
-    { "ul", "ol" },
     { "ul", "pre" },
     { "xmp", "dd" },
     { "xmp", "dl" },
@@ -2316,7 +2314,7 @@ htmlEncodeEntities(unsigned char* out, int *outlen,
 	    else
 		cp = ent->name;
 	    len = strlen(cp);
-	    if (out + 2 + len > outend)
+	    if (outend - out < len + 2)
 		break;
 	    *out++ = '&';
 	    memcpy(out, cp, len);
@@ -6771,6 +6769,7 @@ htmlCtxtReset(htmlParserCtxtPtr ctxt)
     ctxt->disableSAX = 0;
     ctxt->valid = 1;
     ctxt->vctxt.userData = ctxt;
+    ctxt->vctxt.flags = XML_VCTXT_USE_PCTXT;
     ctxt->vctxt.error = xmlParserValidityError;
     ctxt->vctxt.warning = xmlParserValidityWarning;
     ctxt->record_info = 0;
@@ -6791,6 +6790,11 @@ htmlCtxtReset(htmlParserCtxtPtr ctxt)
         xmlHashFree(ctxt->attsSpecial, NULL);
         ctxt->attsSpecial = NULL;
     }
+
+    ctxt->nbErrors = 0;
+    ctxt->nbWarnings = 0;
+    if (ctxt->lastError.code != XML_ERR_OK)
+        xmlResetError(&ctxt->lastError);
 }
 
 /**
