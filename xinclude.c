@@ -96,13 +96,16 @@ struct _xmlXIncludeCtxt {
     xmlXIncludeDoc    *urlTab; /* document stack */
 
     int              nbErrors; /* the number of errors detected */
+    int              fatalErr; /* abort processing */
     int                legacy; /* using XINCLUDE_OLD_NS */
     int            parseFlags; /* the flags used for parsing XML documents */
     xmlChar *		 base; /* the current xml:base */
 
     void            *_private; /* application data */
 
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     unsigned long    incTotal; /* total number of processed inclusions */
+#endif
     int			depth; /* recursion depth */
     int		     isStream; /* streaming mode */
 };
@@ -272,14 +275,18 @@ xmlXIncludeNewRef(xmlXIncludeCtxtPtr ctxt, const xmlChar *URI,
 	}
     }
     if (ctxt->incNr >= ctxt->incMax) {
-	ctxt->incMax *= 2;
-        ctxt->incTab = (xmlXIncludeRefPtr *) xmlRealloc(ctxt->incTab,
-	             ctxt->incMax * sizeof(ctxt->incTab[0]));
-        if (ctxt->incTab == NULL) {
+        xmlXIncludeRefPtr *tmp;
+        size_t newSize = ctxt->incMax * 2;
+
+        tmp = (xmlXIncludeRefPtr *) xmlRealloc(ctxt->incTab,
+	             newSize * sizeof(ctxt->incTab[0]));
+        if (tmp == NULL) {
 	    xmlXIncludeErrMemory(ctxt, elem, "growing XInclude context");
 	    xmlXIncludeFreeRef(ret);
 	    return(NULL);
 	}
+        ctxt->incTab = tmp;
+        ctxt->incMax *= 2;
     }
     ctxt->incTab[ctxt->incNr++] = ret;
     return(ret);
@@ -584,6 +591,7 @@ xmlXIncludeAddNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr cur) {
     ref = xmlXIncludeNewRef(ctxt, URL, cur);
     xmlFree(URL);
     if (ref == NULL) {
+        xmlFree(fragment);
 	return(NULL);
     }
     ref->fragment = fragment;
@@ -1351,6 +1359,7 @@ xmlXIncludeLoadDoc(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
         if (tmp == NULL) {
             xmlXIncludeErrMemory(ctxt, ref->elem,
                                  "growing XInclude URL table");
+            xmlFreeDoc(doc);
             goto error;
         }
         ctxt->urlMax = newSize;
@@ -1624,15 +1633,18 @@ static int
 xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
                    xmlXIncludeRefPtr ref) {
     xmlParserInputBufferPtr buf;
-    xmlNodePtr node;
-    xmlURIPtr uri;
-    xmlChar *URL;
+    xmlNodePtr node = NULL;
+    xmlURIPtr uri = NULL;
+    xmlChar *URL = NULL;
     int i;
+    int ret = -1;
     xmlChar *encoding = NULL;
     xmlCharEncoding enc = (xmlCharEncoding) 0;
-    xmlParserCtxtPtr pctxt;
-    xmlParserInputPtr inputStream;
-    int xinclude_multibyte_fallback_used = 0;
+    xmlParserCtxtPtr pctxt = NULL;
+    xmlParserInputPtr inputStream = NULL;
+    int len;
+    const xmlChar *content;
+
 
     /* Don't read from stdin. */
     if (xmlStrcmp(url, BAD_CAST "-") == 0)
@@ -1645,21 +1657,19 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
     if (uri == NULL) {
 	xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_HREF_URI,
 	               "invalid value URI %s\n", url);
-	return(-1);
+	goto error;
     }
     if (uri->fragment != NULL) {
 	xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_TEXT_FRAGMENT,
 	               "fragment identifier forbidden for text: %s\n",
 		       (const xmlChar *) uri->fragment);
-	xmlFreeURI(uri);
-	return(-1);
+	goto error;
     }
     URL = xmlSaveUri(uri);
-    xmlFreeURI(uri);
     if (URL == NULL) {
 	xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_HREF_URI,
 	               "invalid value URI %s\n", url);
-	return(-1);
+	goto error;
     }
 
     /*
@@ -1669,8 +1679,7 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
     if (URL[0] == 0) {
 	xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_TEXT_DOCUMENT,
 		       "text serialization of document not available\n", NULL);
-	xmlFree(URL);
-	return(-1);
+	goto error;
     }
 
     /*
@@ -1700,11 +1709,8 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
 	if (enc == XML_CHAR_ENCODING_ERROR) {
 	    xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_UNKNOWN_ENCODING,
 			   "encoding %s not supported\n", encoding);
-	    xmlFree(encoding);
-	    xmlFree(URL);
-	    return(-1);
+	    goto error;
 	}
-	xmlFree(encoding);
     }
 
     /*
@@ -1712,62 +1718,43 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
      */
     pctxt = xmlNewParserCtxt();
     inputStream = xmlLoadExternalEntity((const char*)URL, NULL, pctxt);
-    if(inputStream == NULL) {
-	xmlFreeParserCtxt(pctxt);
-	xmlFree(URL);
-	return(-1);
-    }
+    if(inputStream == NULL)
+	goto error;
     buf = inputStream->buf;
-    if (buf == NULL) {
-	xmlFreeInputStream (inputStream);
-	xmlFreeParserCtxt(pctxt);
-	xmlFree(URL);
-	return(-1);
-    }
+    if (buf == NULL)
+	goto error;
     if (buf->encoder)
 	xmlCharEncCloseFunc(buf->encoder);
     buf->encoder = xmlGetCharEncodingHandler(enc);
     node = xmlNewDocText(ctxt->doc, NULL);
+    if (node == NULL) {
+        xmlXIncludeErrMemory(ctxt, ref->elem, NULL);
+	goto error;
+    }
 
     /*
      * Scan all chars from the resource and add the to the node
      */
-xinclude_multibyte_fallback:
-    while (xmlParserInputBufferRead(buf, 128) > 0) {
-	int len;
-	const xmlChar *content;
+    while (xmlParserInputBufferRead(buf, 4096) > 0)
+        ;
 
-	content = xmlBufContent(buf->buffer);
-	len = xmlBufLength(buf->buffer);
-	for (i = 0;i < len;) {
-	    int cur;
-	    int l;
+    content = xmlBufContent(buf->buffer);
+    len = xmlBufLength(buf->buffer);
+    for (i = 0; i < len;) {
+        int cur;
+        int l;
 
-	    cur = xmlStringCurrentChar(NULL, &content[i], &l);
-	    if (!IS_CHAR(cur)) {
-		/* Handle split multibyte char at buffer boundary */
-		if (((len - i) < 4) && (!xinclude_multibyte_fallback_used)) {
-		    xinclude_multibyte_fallback_used = 1;
-		    xmlBufShrink(buf->buffer, i);
-		    goto xinclude_multibyte_fallback;
-		} else {
-		    xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_INVALID_CHAR,
-				   "%s contains invalid char\n", URL);
-		    xmlFreeParserCtxt(pctxt);
-		    xmlFreeParserInputBuffer(buf);
-		    xmlFree(URL);
-		    return(-1);
-		}
-	    } else {
-		xinclude_multibyte_fallback_used = 0;
-		xmlNodeAddContentLen(node, &content[i], l);
-	    }
-	    i += l;
-	}
-	xmlBufShrink(buf->buffer, len);
+        cur = xmlStringCurrentChar(NULL, &content[i], &l);
+        if (!IS_CHAR(cur)) {
+            xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_INVALID_CHAR,
+                           "%s contains invalid char\n", URL);
+            goto error;
+        }
+
+        i += l;
     }
-    xmlFreeParserCtxt(pctxt);
-    xmlFreeInputStream(inputStream);
+
+    xmlNodeAddContentLen(node, content, len);
 
     if (ctxt->txtNr >= ctxt->txtMax) {
         xmlXIncludeTxt *tmp;
@@ -1777,7 +1764,7 @@ xinclude_multibyte_fallback:
         if (tmp == NULL) {
             xmlXIncludeErrMemory(ctxt, ref->elem,
                                  "growing XInclude text table");
-            return(-1);
+	    goto error;
         }
         ctxt->txtMax = newSize;
         ctxt->txtTab = tmp;
@@ -1791,8 +1778,17 @@ loaded:
      * Add the element as the replacement copy.
      */
     ref->inc = node;
+    node = NULL;
+    ret = 0;
+
+error:
+    xmlFreeNode(node);
+    xmlFreeInputStream(inputStream);
+    xmlFreeParserCtxt(pctxt);
+    xmlFree(encoding);
+    xmlFreeURI(uri);
     xmlFree(URL);
-    return(0);
+    return(ret);
 }
 
 /**
@@ -1855,11 +1851,25 @@ xmlXIncludeExpandNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
     xmlXIncludeRefPtr ref;
     int i;
 
+    if (ctxt->fatalErr)
+        return(NULL);
     if (ctxt->depth >= XINCLUDE_MAX_DEPTH) {
         xmlXIncludeErr(ctxt, node, XML_XINCLUDE_RECURSION,
                        "maximum recursion depth exceeded\n", NULL);
+        ctxt->fatalErr = 1;
         return(NULL);
     }
+
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+    /*
+     * The XInclude engine offers no protection against exponential
+     * expansion attacks similar to "billion laughs". Avoid timeouts by
+     * limiting the total number of replacements when fuzzing.
+     */
+    if (ctxt->incTotal >= 20)
+        return(NULL);
+    ctxt->incTotal++;
+#endif
 
     for (i = 0; i < ctxt->incNr; i++) {
         if (ctxt->incTab[i]->elem == node) {
@@ -2243,15 +2253,6 @@ xmlXIncludeDoProcess(xmlXIncludeCtxtPtr ctxt, xmlNodePtr tree) {
     do {
 	/* TODO: need to work on entities -> stack */
         if (xmlXIncludeTestNode(ctxt, cur) == 1) {
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-            /*
-             * Avoid superlinear expansion by limiting the total number
-             * of replacements.
-             */
-            if (ctxt->incTotal >= 20)
-                break;
-#endif
-            ctxt->incTotal++;
             ref = xmlXIncludeExpandNode(ctxt, cur);
             /*
              * Mark direct includes.
