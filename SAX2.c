@@ -1335,25 +1335,25 @@ xmlSAX2AttributeInternal(void *ctx, const xmlChar *fullname,
 
     /* !!!!!! <a toto:arg="" xmlns:toto="http://toto.com"> */
     ret = xmlNewNsPropEatName(ctxt->node, namespace, name, NULL);
+    if (ret == NULL)
+        goto error;
 
-    if (ret != NULL) {
-        if ((ctxt->replaceEntities == 0) && (!ctxt->html)) {
-	    xmlNodePtr tmp;
+    if ((ctxt->replaceEntities == 0) && (!ctxt->html)) {
+        xmlNodePtr tmp;
 
-	    ret->children = xmlStringGetNodeList(ctxt->myDoc, value);
-	    tmp = ret->children;
-	    while (tmp != NULL) {
-		tmp->parent = (xmlNodePtr) ret;
-		if (tmp->next == NULL)
-		    ret->last = tmp;
-		tmp = tmp->next;
-	    }
-	} else if (value != NULL) {
-	    ret->children = xmlNewDocText(ctxt->myDoc, value);
-	    ret->last = ret->children;
-	    if (ret->children != NULL)
-		ret->children->parent = (xmlNodePtr) ret;
-	}
+        ret->children = xmlStringGetNodeList(ctxt->myDoc, value);
+        tmp = ret->children;
+        while (tmp != NULL) {
+            tmp->parent = (xmlNodePtr) ret;
+            if (tmp->next == NULL)
+                ret->last = tmp;
+            tmp = tmp->next;
+        }
+    } else if (value != NULL) {
+        ret->children = xmlNewDocText(ctxt->myDoc, value);
+        ret->last = ret->children;
+        if (ret->children != NULL)
+            ret->children->parent = (xmlNodePtr) ret;
     }
 
 #ifdef LIBXML_VALID_ENABLED
@@ -2284,6 +2284,7 @@ xmlSAX2StartElementNs(void *ctx,
 	        ret->name = lname;
 	    if (ret->name == NULL) {
 	        xmlSAX2ErrMemory(ctxt, "xmlSAX2StartElementNs");
+                xmlFree(ret);
 		return;
 	    }
 	}
@@ -2655,7 +2656,8 @@ xmlSAX2Text(xmlParserCtxtPtr ctxt, const xmlChar *ch, int len,
 	    /* Mixed content, first time */
             if (type == XML_TEXT_NODE) {
                 lastChild = xmlSAX2TextNode(ctxt, ch, len);
-                lastChild->doc = ctxt->myDoc;
+                if (lastChild != NULL)
+                    lastChild->doc = ctxt->myDoc;
             } else
                 lastChild = xmlNewCDataBlock(ctxt->myDoc, ch, len);
 	    if (lastChild != NULL) {
