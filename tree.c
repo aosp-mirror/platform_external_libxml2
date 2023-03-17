@@ -1412,14 +1412,19 @@ xmlStringLenGetNodeList(const xmlDoc *doc, const xmlChar *value, int len) {
 			    goto out;
 			}
 			else if ((ent != NULL) &&
-                                 ((ent->flags & XML_ENT_PARSED) == 0)) {
+                                 ((ent->flags & XML_ENT_PARSED) == 0) &&
+                                 ((ent->flags & XML_ENT_EXPANDING) == 0)) {
 			    xmlNodePtr temp;
 
-                            /* Set to non-NULL value to avoid recursion. */
-			    ent->children = (xmlNodePtr) -1;
+                            /*
+                             * The entity should have been checked already,
+                             * but set the flag anyway to avoid recursion.
+                             */
+			    ent->flags |= XML_ENT_EXPANDING;
 			    ent->children = xmlStringGetNodeList(doc,
 				    (const xmlChar*)node->content);
 			    ent->owner = 1;
+			    ent->flags &= ~XML_ENT_EXPANDING;
                             ent->flags |= XML_ENT_PARSED;
 			    temp = ent->children;
 			    while (temp) {
@@ -1610,14 +1615,19 @@ xmlStringGetNodeList(const xmlDoc *doc, const xmlChar *value) {
 			if (node == NULL)
 			    goto out;
 			if ((ent != NULL) &&
-                            ((ent->flags & XML_ENT_PARSED) == 0)) {
+                            ((ent->flags & XML_ENT_PARSED) == 0) &&
+                            ((ent->flags & XML_ENT_EXPANDING) == 0)) {
 			    xmlNodePtr temp;
 
-                            /* Set to non-NULL value to avoid recursion. */
-			    ent->children = (xmlNodePtr) -1;
+                            /*
+                             * The entity should have been checked already,
+                             * but set the flag anyway to avoid recursion.
+                             */
+			    ent->flags |= XML_ENT_EXPANDING;
 			    ent->children = xmlStringGetNodeList(doc,
 				    (const xmlChar*)node->content);
 			    ent->owner = 1;
+			    ent->flags &= ~XML_ENT_EXPANDING;
                             ent->flags |= XML_ENT_PARSED;
 			    temp = ent->children;
 			    while (temp) {
@@ -4080,6 +4090,10 @@ xmlCopyNamespaceList(xmlNsPtr cur) {
 
     while (cur != NULL) {
         q = xmlCopyNamespace(cur);
+        if (q == NULL) {
+            xmlFreeNsList(ret);
+            return(NULL);
+        }
 	if (p == NULL) {
 	    ret = p = q;
 	} else {
@@ -4221,8 +4235,10 @@ xmlCopyPropList(xmlNodePtr target, xmlAttrPtr cur) {
         return(NULL);
     while (cur != NULL) {
         q = xmlCopyProp(target, cur);
-	if (q == NULL)
+	if (q == NULL) {
+            xmlFreePropList(ret);
 	    return(NULL);
+        }
 	if (p == NULL) {
 	    ret = p = q;
 	} else {
@@ -6022,7 +6038,7 @@ xmlGetNsList(const xmlDoc *doc ATTRIBUTE_UNUSED, const xmlNode *node)
     xmlNsPtr cur;
     xmlNsPtr *ret = NULL;
     int nbns = 0;
-    int maxns = 10;
+    int maxns = 0;
     int i;
 
     if ((node == NULL) || (node->type == XML_NAMESPACE_DECL))
@@ -6032,16 +6048,6 @@ xmlGetNsList(const xmlDoc *doc ATTRIBUTE_UNUSED, const xmlNode *node)
         if (node->type == XML_ELEMENT_NODE) {
             cur = node->nsDef;
             while (cur != NULL) {
-                if (ret == NULL) {
-                    ret =
-                        (xmlNsPtr *) xmlMalloc((maxns + 1) *
-                                               sizeof(xmlNsPtr));
-                    if (ret == NULL) {
-			xmlTreeErrMemory("getting namespace list");
-                        return (NULL);
-                    }
-                    ret[nbns] = NULL;
-                }
                 for (i = 0; i < nbns; i++) {
                     if ((cur->prefix == ret[i]->prefix) ||
                         (xmlStrEqual(cur->prefix, ret[i]->prefix)))
@@ -6049,15 +6055,18 @@ xmlGetNsList(const xmlDoc *doc ATTRIBUTE_UNUSED, const xmlNode *node)
                 }
                 if (i >= nbns) {
                     if (nbns >= maxns) {
-                        maxns *= 2;
-                        ret = (xmlNsPtr *) xmlRealloc(ret,
-                                                      (maxns +
-                                                       1) *
+                        xmlNsPtr *tmp;
+
+                        maxns = maxns ? maxns * 2 : 10;
+                        tmp = (xmlNsPtr *) xmlRealloc(ret,
+                                                      (maxns + 1) *
                                                       sizeof(xmlNsPtr));
-                        if (ret == NULL) {
+                        if (tmp == NULL) {
 			    xmlTreeErrMemory("getting namespace list");
+                            xmlFree(ret);
                             return (NULL);
                         }
+                        ret = tmp;
                     }
                     ret[nbns++] = cur;
                     ret[nbns] = NULL;
