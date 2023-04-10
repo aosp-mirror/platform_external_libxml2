@@ -157,7 +157,6 @@ cc_library {
     target: {
        android: {
            shared_libs: ["libandroidicu"],
-           export_shared_lib_headers: ["libandroidicu"],
        },
        host: {
            shared_libs: [
