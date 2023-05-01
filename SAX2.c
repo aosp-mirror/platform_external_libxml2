@@ -1632,12 +1632,15 @@ xmlSAX2StartElement(void *ctx, const xmlChar *fullname, const xmlChar **atts)
 	ctxt->validate = 0;
     }
 
-
-    /*
-     * Split the full name into a namespace prefix and the tag name
-     */
-    name = xmlSplitQName(ctxt, fullname, &prefix);
-
+    if (ctxt->html) {
+        prefix = NULL;
+        name = xmlStrdup(fullname);
+    } else {
+        /*
+         * Split the full name into a namespace prefix and the tag name
+         */
+        name = xmlSplitQName(ctxt, fullname, &prefix);
+    }
 
     /*
      * Note : the namespace resolution is deferred until the end of the
@@ -1827,13 +1830,6 @@ xmlSAX2EndElement(void *ctx, const xmlChar *name ATTRIBUTE_UNUSED)
 	xmlGenericError(xmlGenericErrorContext, "SAX.xmlSAX2EndElement(%s)\n", name);
 #endif
 
-    /* Capture end position and add node */
-    if (cur != NULL && ctxt->record_info) {
-      ctxt->nodeInfo->end_pos = ctxt->input->cur - ctxt->input->base;
-      ctxt->nodeInfo->end_line = ctxt->input->line;
-      ctxt->nodeInfo->node = cur;
-      xmlParserAddNodeInfo(ctxt, ctxt->nodeInfo);
-    }
     ctxt->nodemem = -1;
 
 #ifdef LIBXML_VALID_ENABLED
@@ -2476,24 +2472,15 @@ xmlSAX2EndElementNs(void *ctx,
 		    const xmlChar * URI ATTRIBUTE_UNUSED)
 {
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
-    xmlParserNodeInfo node_info;
-    xmlNodePtr cur;
 
     if (ctx == NULL) return;
-    cur = ctxt->node;
-    /* Capture end position and add node */
-    if ((ctxt->record_info) && (cur != NULL)) {
-        node_info.end_pos = ctxt->input->cur - ctxt->input->base;
-        node_info.end_line = ctxt->input->line;
-        node_info.node = cur;
-        xmlParserAddNodeInfo(ctxt, &node_info);
-    }
     ctxt->nodemem = -1;
 
 #ifdef LIBXML_VALID_ENABLED
     if (ctxt->validate && ctxt->wellFormed &&
         ctxt->myDoc && ctxt->myDoc->intSubset)
-        ctxt->valid &= xmlValidateOneElement(&ctxt->vctxt, ctxt->myDoc, cur);
+        ctxt->valid &= xmlValidateOneElement(&ctxt->vctxt, ctxt->myDoc,
+                                             ctxt->node);
 #endif /* LIBXML_VALID_ENABLED */
 
     /*
