@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.63])
 
 m4_define([MAJOR_VERSION], 2)
-m4_define([MINOR_VERSION], 11)
+m4_define([MINOR_VERSION], 12)
 m4_define([MICRO_VERSION], 0)
 
 AC_INIT([libxml2],[MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
@@ -455,7 +455,10 @@ if test "$lt_cv_prog_gnu_ld" = yes; then
     *-*-cygwin* | *-*-mingw* | *-*-msys* )
       ;;
     *)
-      VERSION_SCRIPT_FLAGS=-Wl,--version-script=
+      dnl lld 16 defaults to --no-undefined-version but the version script
+      dnl can contain symbols disabled by configuration options.
+      AX_APPEND_LINK_FLAGS([-Wl,--undefined-version], [VERSION_SCRIPT_FLAGS])
+      AX_APPEND_FLAG([-Wl,--version-script=], [VERSION_SCRIPT_FLAGS])
       ;;
   esac
 else
@@ -1141,4 +1144,10 @@ AC_CONFIG_FILES([python/setup.py], [chmod +x python/setup.py])
 AC_CONFIG_FILES([xml2-config], [chmod +x xml2-config])
 AC_OUTPUT
 
-echo Done configuring
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([_Thread_local int v;])], [], [
+    echo "================================================================"
+    echo "WARNING: Your C compiler doesn't support C11."
+    echo "Future versions of libxml2 will probably require a C11 compiler,"
+    echo "at least for features like multi-threading."
+    echo "================================================================"
+])
