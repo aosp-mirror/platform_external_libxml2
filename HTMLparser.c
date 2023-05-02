@@ -410,6 +410,11 @@ htmlCurrentChar(xmlParserCtxtPtr ctxt, int *len) {
 	*len = 0;
 	return(ctxt->token);
     }
+
+    if ((ctxt->input->end - ctxt->input->cur < INPUT_CHUNK) &&
+        (xmlParserGrow(ctxt) < 0))
+        return(0);
+
     if (ctxt->charset != XML_CHAR_ENCODING_UTF8) {
         xmlChar * guess;
         xmlCharEncodingHandlerPtr handler;
@@ -470,29 +475,21 @@ htmlCurrentChar(xmlParserCtxtPtr ctxt, int *len) {
     cur = ctxt->input->cur;
     c = *cur;
     if (c & 0x80) {
+        size_t avail;
+
         if ((c & 0x40) == 0)
             goto encoding_error;
-        if (cur[1] == 0) {
-            xmlParserGrow(ctxt);
-            cur = ctxt->input->cur;
-        }
-        if ((cur[1] & 0xc0) != 0x80)
+
+        avail = ctxt->input->end - ctxt->input->cur;
+
+        if ((avail < 2) || ((cur[1] & 0xc0) != 0x80))
             goto encoding_error;
         if ((c & 0xe0) == 0xe0) {
-
-            if (cur[2] == 0) {
-                xmlParserGrow(ctxt);
-                cur = ctxt->input->cur;
-            }
-            if ((cur[2] & 0xc0) != 0x80)
+            if ((avail < 3) || ((cur[2] & 0xc0) != 0x80))
                 goto encoding_error;
             if ((c & 0xf0) == 0xf0) {
-                if (cur[3] == 0) {
-                    xmlParserGrow(ctxt);
-                    cur = ctxt->input->cur;
-                }
                 if (((c & 0xf8) != 0xf0) ||
-                    ((cur[3] & 0xc0) != 0x80))
+                    (avail < 4) || ((cur[3] & 0xc0) != 0x80))
                     goto encoding_error;
                 /* 4-byte code */
                 *len = 4;
@@ -2670,7 +2667,6 @@ static const xmlChar *
 htmlParseNameComplex(xmlParserCtxtPtr ctxt) {
     int len = 0, l;
     int c;
-    int count = 0;
     int maxLength = (ctxt->options & XML_PARSE_HUGE) ?
                     XML_MAX_TEXT_LENGTH :
                     XML_MAX_NAME_LENGTH;
@@ -2679,7 +2675,6 @@ htmlParseNameComplex(xmlParserCtxtPtr ctxt) {
     /*
      * Handler for more complex cases
      */
-    GROW;
     c = CUR_CHAR(l);
     if ((c == ' ') || (c == '>') || (c == '/') || /* accelerators */
 	(!IS_LETTER(c) && (c != '_') &&
@@ -2693,10 +2688,6 @@ htmlParseNameComplex(xmlParserCtxtPtr ctxt) {
 	    (c == '_') || (c == ':') ||
 	    (IS_COMBINING(c)) ||
 	    (IS_EXTENDER(c)))) {
-	if (count++ > 100) {
-	    count = 0;
-	    GROW;
-	}
 	len += l;
         if (len > maxLength) {
             htmlParseErr(ctxt, XML_ERR_NAME_TOO_LONG, "name too long", NULL, NULL);
@@ -2712,6 +2703,8 @@ htmlParseNameComplex(xmlParserCtxtPtr ctxt) {
 	    return(htmlParseNameComplex(ctxt));
 	}
     }
+    if (ctxt->instate == XML_PARSER_EOF)
+        return(NULL);
 
     if (ctxt->input->cur - ctxt->input->base < len) {
         /* Sanity check */
@@ -2847,6 +2840,10 @@ htmlParseHTMLAttribute(htmlParserCtxtPtr ctxt, const xmlChar stop) {
 		out = &buffer[indx];
 	    }
 	    c = CUR_CHAR(l);
+            if (ctxt->instate == XML_PARSER_EOF) {
+                xmlFree(buffer);
+                return(NULL);
+            }
 	    if      (c <    0x80)
 		    { *out++  = c;                bits= -6; }
 	    else if (c <   0x800)
@@ -2859,7 +2856,7 @@ htmlParseHTMLAttribute(htmlParserCtxtPtr ctxt, const xmlChar stop) {
 	    for ( ; bits >= 0; bits-= 6) {
 		*out++  = ((c >> bits) & 0x3F) | 0x80;
 	    }
-	    NEXT;
+	    NEXTL(l);
 	}
         if (out - buffer > maxLength) {
             htmlParseErr(ctxt, XML_ERR_ATTRIBUTE_NOT_FINISHED,
@@ -3013,9 +3010,9 @@ htmlParseSystemLiteral(htmlParserCtxtPtr ctxt) {
         htmlParseErr(ctxt, XML_ERR_LITERAL_NOT_FINISHED,
                      "Unfinished SystemLiteral\n", NULL, NULL);
     } else {
-        NEXT;
         if (err == 0)
             ret = xmlStrndup((BASE_PTR+startPosition), len);
+        NEXT;
     }
 
     return(ret);
@@ -3068,9 +3065,9 @@ htmlParsePubidLiteral(htmlParserCtxtPtr ctxt) {
         htmlParseErr(ctxt, XML_ERR_LITERAL_NOT_FINISHED,
                      "Unfinished PubidLiteral\n", NULL, NULL);
     } else {
-        NEXT;
         if (err == 0)
             ret = xmlStrndup((BASE_PTR + startPosition), len);
+        NEXT;
     }
 
     return(ret);
@@ -3103,7 +3100,6 @@ htmlParseScript(htmlParserCtxtPtr ctxt) {
     int nbchar = 0;
     int cur,l;
 
-    SHRINK;
     cur = CUR_CHAR(l);
     while (cur != 0) {
 	if ((cur == '<') && (NXT(1) == '/')) {
@@ -3142,6 +3138,7 @@ htmlParseScript(htmlParserCtxtPtr ctxt) {
             htmlParseErrInt(ctxt, XML_ERR_INVALID_CHAR,
                             "Invalid char in CDATA 0x%X\n", cur);
         }
+	NEXTL(l);
 	if (nbchar >= HTML_PARSER_BIG_BUFFER_SIZE) {
             buf[nbchar] = 0;
 	    if (ctxt->sax->cdataBlock!= NULL) {
@@ -3153,11 +3150,13 @@ htmlParseScript(htmlParserCtxtPtr ctxt) {
 		ctxt->sax->characters(ctxt->userData, buf, nbchar);
 	    }
 	    nbchar = 0;
+            SHRINK;
 	}
-	GROW;
-	NEXTL(l);
 	cur = CUR_CHAR(l);
     }
+
+    if (ctxt->instate == XML_PARSER_EOF)
+        return;
 
     if ((nbchar != 0) && (ctxt->sax != NULL) && (!ctxt->disableSAX)) {
         buf[nbchar] = 0;
@@ -3189,12 +3188,10 @@ htmlParseCharDataInternal(htmlParserCtxtPtr ctxt, int readahead) {
     xmlChar buf[HTML_PARSER_BIG_BUFFER_SIZE + 6];
     int nbchar = 0;
     int cur, l;
-    int chunk = 0;
 
     if (readahead)
         buf[nbchar++] = readahead;
 
-    SHRINK;
     cur = CUR_CHAR(l);
     while (((cur != '<') || (ctxt->token == '<')) &&
            ((cur != '&') || (ctxt->token == '&')) &&
@@ -3205,6 +3202,7 @@ htmlParseCharDataInternal(htmlParserCtxtPtr ctxt, int readahead) {
 	} else {
 	    COPY_BUF(l,buf,nbchar,cur);
 	}
+	NEXTL(l);
 	if (nbchar >= HTML_PARSER_BIG_BUFFER_SIZE) {
             buf[nbchar] = 0;
 
@@ -3228,21 +3226,12 @@ htmlParseCharDataInternal(htmlParserCtxtPtr ctxt, int readahead) {
 		}
 	    }
 	    nbchar = 0;
-	}
-	NEXTL(l);
-        chunk++;
-        if (chunk > HTML_PARSER_BUFFER_SIZE) {
-            chunk = 0;
             SHRINK;
-            GROW;
-        }
-	cur = CUR_CHAR(l);
-	if (cur == 0) {
-	    SHRINK;
-	    GROW;
-	    cur = CUR_CHAR(l);
 	}
+	cur = CUR_CHAR(l);
     }
+    if (ctxt->instate == XML_PARSER_EOF)
+        return;
     if (nbchar != 0) {
         buf[nbchar] = 0;
 
@@ -3265,12 +3254,6 @@ htmlParseCharDataInternal(htmlParserCtxtPtr ctxt, int readahead) {
 		    ctxt->sax->characters(ctxt->userData, buf, nbchar);
 	    }
 	}
-    } else {
-	/*
-	 * Loop detection
-	 */
-	if (cur == 0)
-	    ctxt->instate = XML_PARSER_EOF;
     }
 }
 
@@ -3366,7 +3349,6 @@ htmlParsePI(htmlParserCtxtPtr ctxt) {
                     XML_MAX_TEXT_LENGTH;
     const xmlChar *target;
     xmlParserInputState state;
-    int count = 0;
 
     if ((RAW == '<') && (NXT(1) == '?')) {
 	state = ctxt->instate;
@@ -3375,7 +3357,6 @@ htmlParsePI(htmlParserCtxtPtr ctxt) {
 	 * this is a Processing Instruction.
 	 */
 	SKIP(2);
-	SHRINK;
 
 	/*
 	 * Parse the target name and check for special support like
@@ -3423,11 +3404,6 @@ htmlParsePI(htmlParserCtxtPtr ctxt) {
 		    }
 		    buf = tmp;
 		}
-		count++;
-		if (count > 50) {
-		    GROW;
-		    count = 0;
-		}
                 if (IS_CHAR(cur)) {
 		    COPY_BUF(l,buf,len,cur);
                 } else {
@@ -3444,13 +3420,12 @@ htmlParsePI(htmlParserCtxtPtr ctxt) {
                 }
 		NEXTL(l);
 		cur = CUR_CHAR(l);
-		if (cur == 0) {
-		    SHRINK;
-		    GROW;
-		    cur = CUR_CHAR(l);
-		}
 	    }
 	    buf[len] = 0;
+            if (ctxt->instate == XML_PARSER_EOF) {
+                xmlFree(buf);
+                return;
+            }
 	    if (cur != '>') {
 		htmlParseErr(ctxt, XML_ERR_PI_NOT_FINISHED,
 		      "ParsePI: PI %s never end ...\n", target, NULL);
@@ -3504,7 +3479,6 @@ htmlParseComment(htmlParserCtxtPtr ctxt) {
 
     state = ctxt->instate;
     ctxt->instate = XML_PARSER_COMMENT;
-    SHRINK;
     SKIP(4);
     buf = (xmlChar *) xmlMallocAtomic(size);
     if (buf == NULL) {
@@ -3538,11 +3512,6 @@ htmlParseComment(htmlParserCtxtPtr ctxt) {
 	    (r != '-') || (q != '-'))) {
 	NEXTL(l);
 	next = CUR_CHAR(nl);
-	if (next == 0) {
-	    SHRINK;
-	    GROW;
-	    next = CUR_CHAR(nl);
-	}
 
 	if ((q == '-') && (r == '-') && (cur == '!') && (next == '>')) {
 	  htmlParseErr(ctxt, XML_ERR_COMMENT_NOT_FINISHED,
@@ -3587,6 +3556,10 @@ htmlParseComment(htmlParserCtxtPtr ctxt) {
     }
 finished:
     buf[len] = 0;
+    if (ctxt->instate == XML_PARSER_EOF) {
+        xmlFree(buf);
+        return;
+    }
     if (cur == '>') {
         NEXT;
 	if ((ctxt->sax != NULL) && (ctxt->sax->comment != NULL) &&
@@ -3885,9 +3858,10 @@ htmlCheckEncodingDirect(htmlParserCtxtPtr ctxt, const xmlChar *encoding) {
 	    nbchars = xmlCharEncInput(ctxt->input->buf, 1);
             xmlBufResetInput(ctxt->input->buf->buffer, ctxt->input);
 	    if (nbchars < 0) {
-		htmlParseErr(ctxt, XML_ERR_INVALID_ENCODING,
+		htmlParseErr(ctxt, ctxt->input->buf->error,
 		             "htmlCheckEncoding: encoder error\n",
 			     NULL, NULL);
+                xmlHaltParser(ctxt);
 	    }
 	}
     }
@@ -4500,6 +4474,8 @@ htmlParseContent(htmlParserCtxtPtr ctxt) {
         else {
             htmlParseCharData(ctxt);
         }
+
+        SHRINK;
         GROW;
     }
     if (currentNode != NULL) xmlFree(currentNode);
@@ -4941,6 +4917,8 @@ htmlParseContentInternal(htmlParserCtxtPtr ctxt) {
         else {
             htmlParseCharData(ctxt);
         }
+
+        SHRINK;
         GROW;
     }
     if (currentNode != NULL) xmlFree(currentNode);
@@ -6000,8 +5978,14 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 			if (idx < 0)
 			    goto done;
 		        val = in->cur[idx + 2];
-			if (val == 0) /* bad cut of input */
+			if (val == 0) { /* bad cut of input */
+                            /*
+                             * FIXME: htmlParseScript checks for additional
+                             * characters after '</'.
+                             */
+                            ctxt->checkIndex = idx;
 			    goto done;
+                        }
 		    }
 		    htmlParseScript(ctxt);
 		    if ((cur == '<') && (next == '/')) {
@@ -6296,7 +6280,9 @@ htmlParseChunk(htmlParserCtxtPtr ctxt, const char *chunk, int size,
 	res = xmlParserInputBufferPush(ctxt->input->buf, size, chunk);
         xmlBufSetInputBaseCur(ctxt->input->buf->buffer, ctxt->input, base, cur);
 	if (res < 0) {
-            htmlErrMemory(ctxt, NULL);
+            htmlParseErr(ctxt, ctxt->input->buf->error,
+                         "xmlParserInputBufferPush failed", NULL, NULL);
+            xmlHaltParser(ctxt);
 	    return (ctxt->errNo);
 	}
 #ifdef DEBUG_PUSH
@@ -6319,8 +6305,9 @@ htmlParseChunk(htmlParserCtxtPtr ctxt, const char *chunk, int size,
 		nbchars = xmlCharEncInput(in, terminate);
 		xmlBufSetInputBaseCur(in->buffer, ctxt->input, base, current);
 		if (nbchars < 0) {
-		    htmlParseErr(ctxt, XML_ERR_INVALID_ENCODING,
+		    htmlParseErr(ctxt, in->error,
 			         "encoder error\n", NULL, NULL);
+                    xmlHaltParser(ctxt);
 		    return(XML_ERR_INVALID_ENCODING);
 		}
 	    }
@@ -6411,10 +6398,15 @@ htmlCreatePushParserCtxt(htmlSAXHandlerPtr sax, void *user_data,
         (ctxt->input->buf != NULL))  {
 	size_t base = xmlBufGetInputBase(ctxt->input->buf->buffer, ctxt->input);
 	size_t cur = ctxt->input->cur - ctxt->input->base;
+        int res;
 
-	xmlParserInputBufferPush(ctxt->input->buf, size, chunk);
-
+	res = xmlParserInputBufferPush(ctxt->input->buf, size, chunk);
         xmlBufSetInputBaseCur(ctxt->input->buf->buffer, ctxt->input, base, cur);
+        if (res < 0) {
+            htmlParseErr(ctxt, ctxt->input->buf->error,
+                         "xmlParserInputBufferPush failed\n", NULL, NULL);
+            xmlHaltParser(ctxt);
+        }
 #ifdef DEBUG_PUSH
 	xmlGenericError(xmlGenericErrorContext, "HPP: pushed %d\n", size);
 #endif

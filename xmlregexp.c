@@ -600,7 +600,7 @@ xmlRegEpxFromParse(xmlRegParserCtxtPtr ctxt) {
 
 	    for (j = 0;j < state->nbTrans;j++) {
 		trans = &(state->trans[j]);
-		if ((trans->to == -1) || (trans->atom == NULL))
+		if ((trans->to < 0) || (trans->atom == NULL))
 		    continue;
                 atomno = stringRemap[trans->atom->no];
 		if ((trans->atom->data != NULL) && (transdata == NULL)) {
@@ -1821,50 +1821,66 @@ xmlFAReduceEpsilonTransitions(xmlRegParserCtxtPtr ctxt, int fromnr,
 	from->type = XML_REGEXP_FINAL_STATE;
     }
     for (transnr = 0;transnr < to->nbTrans;transnr++) {
-        if (to->trans[transnr].to < 0)
+        xmlRegTransPtr t1 = &to->trans[transnr];
+        int tcounter;
+
+        if (t1->to < 0)
 	    continue;
-	if (to->trans[transnr].atom == NULL) {
+        if (t1->counter >= 0) {
+            /* assert(counter < 0); */
+            tcounter = t1->counter;
+        } else {
+            tcounter = counter;
+        }
+	if (t1->atom == NULL) {
 	    /*
 	     * Don't remove counted transitions
 	     * Don't loop either
 	     */
-	    if (to->trans[transnr].to != fromnr) {
-		if (to->trans[transnr].count >= 0) {
-		    int newto = to->trans[transnr].to;
-
-		    xmlRegStateAddTrans(ctxt, from, NULL,
-					ctxt->states[newto],
-					-1, to->trans[transnr].count);
+	    if (t1->to != fromnr) {
+		if (t1->count >= 0) {
+		    xmlRegStateAddTrans(ctxt, from, NULL, ctxt->states[t1->to],
+					-1, t1->count);
 		} else {
 #ifdef DEBUG_REGEXP_GRAPH
 		    printf("Found epsilon trans %d from %d to %d\n",
-			   transnr, tonr, to->trans[transnr].to);
+			   transnr, tonr, t1->to);
 #endif
-		    if (to->trans[transnr].counter >= 0) {
-			xmlFAReduceEpsilonTransitions(ctxt, fromnr,
-					      to->trans[transnr].to,
-					      to->trans[transnr].counter);
-		    } else {
-			xmlFAReduceEpsilonTransitions(ctxt, fromnr,
-					      to->trans[transnr].to,
-					      counter);
-		    }
+                    xmlFAReduceEpsilonTransitions(ctxt, fromnr, t1->to,
+                                                  tcounter);
 		}
 	    }
 	} else {
-	    int newto = to->trans[transnr].to;
-
-	    if (to->trans[transnr].counter >= 0) {
-		xmlRegStateAddTrans(ctxt, from, to->trans[transnr].atom,
-				    ctxt->states[newto],
-				    to->trans[transnr].counter, -1);
-	    } else {
-		xmlRegStateAddTrans(ctxt, from, to->trans[transnr].atom,
-				    ctxt->states[newto], counter, -1);
-	    }
+            xmlRegStateAddTrans(ctxt, from, t1->atom,
+                                ctxt->states[t1->to], tcounter, -1);
 	}
     }
+}
+
+/**
+ * xmlFAFinishReduceEpsilonTransitions:
+ * @ctxt:  a regexp parser context
+ * @fromnr:  the from state
+ * @tonr:  the to state
+ * @counter:  should that transition be associated to a counted
+ *
+ */
+static void
+xmlFAFinishReduceEpsilonTransitions(xmlRegParserCtxtPtr ctxt, int tonr) {
+    int transnr;
+    xmlRegStatePtr to;
+
+    to = ctxt->states[tonr];
+    if ((to->mark == XML_REGEXP_MARK_START) ||
+	(to->mark == XML_REGEXP_MARK_NORMAL))
+	return;
+
     to->mark = XML_REGEXP_MARK_NORMAL;
+    for (transnr = 0;transnr < to->nbTrans;transnr++) {
+	xmlRegTransPtr t1 = &to->trans[transnr];
+	if ((t1->to >= 0) && (t1->atom == NULL))
+            xmlFAFinishReduceEpsilonTransitions(ctxt, t1->to);
+    }
 }
 
 /**
@@ -2016,6 +2032,7 @@ xmlFAEliminateEpsilonTransitions(xmlRegParserCtxtPtr ctxt) {
 		    state->mark = XML_REGEXP_MARK_START;
 		    xmlFAReduceEpsilonTransitions(ctxt, statenr,
 				      newto, state->trans[transnr].counter);
+		    xmlFAFinishReduceEpsilonTransitions(ctxt, newto);
 		    state->mark = XML_REGEXP_MARK_NORMAL;
 #ifdef DEBUG_REGEXP_GRAPH
 		} else {
@@ -2623,7 +2640,7 @@ not_determinist:
  */
 static int
 xmlFARecurseDeterminism(xmlRegParserCtxtPtr ctxt, xmlRegStatePtr state,
-	                 int to, xmlRegAtomPtr atom) {
+	                int fromnr, int tonr, xmlRegAtomPtr atom) {
     int ret = 1;
     int res;
     int transnr, nbTrans;
@@ -2648,21 +2665,23 @@ xmlFARecurseDeterminism(xmlRegParserCtxtPtr ctxt, xmlRegStatePtr state,
 	/*
 	 * check transitions conflicting with the one looked at
 	 */
+        if ((t1->to < 0) || (t1->to == fromnr))
+            continue;
 	if (t1->atom == NULL) {
-	    if (t1->to < 0)
-		continue;
 	    state->markd = XML_REGEXP_MARK_VISITED;
 	    res = xmlFARecurseDeterminism(ctxt, ctxt->states[t1->to],
-		                           to, atom);
+		                          fromnr, tonr, atom);
 	    if (res == 0) {
 	        ret = 0;
 		/* t1->nd = 1; */
 	    }
 	    continue;
 	}
-	if (t1->to != to)
-	    continue;
 	if (xmlFACompareAtoms(t1->atom, atom, deep)) {
+            /* Treat equal transitions as deterministic. */
+            if ((t1->to != tonr) ||
+                (!xmlFAEqualAtoms(t1->atom, atom, deep)))
+                ret = 0;
 	    ret = 0;
 	    /* mark the transition as non-deterministic */
 	    t1->nd = 1;
@@ -2741,11 +2760,11 @@ xmlFAComputesDeterminism(xmlRegParserCtxtPtr ctxt) {
 		/* t1->nd = 1; */
 		continue;
 	    }
-	    if (t1->to == -1) /* eliminated */
+	    if (t1->to < 0) /* eliminated */
 		continue;
 	    for (i = 0;i < transnr;i++) {
 		t2 = &(state->trans[i]);
-		if (t2->to == -1) /* eliminated */
+		if (t2->to < 0) /* eliminated */
 		    continue;
 		if (t2->atom != NULL) {
 		    if (t1->to == t2->to) {
@@ -2783,11 +2802,11 @@ xmlFAComputesDeterminism(xmlRegParserCtxtPtr ctxt) {
 	    if (t1->atom == NULL) {
 		continue;
 	    }
-	    if (t1->to == -1) /* eliminated */
+	    if (t1->to < 0) /* eliminated */
 		continue;
 	    for (i = 0;i < transnr;i++) {
 		t2 = &(state->trans[i]);
-		if (t2->to == -1) /* eliminated */
+		if (t2->to < 0) /* eliminated */
 		    continue;
 		if (t2->atom != NULL) {
                     /*
@@ -2795,29 +2814,39 @@ xmlFAComputesDeterminism(xmlRegParserCtxtPtr ctxt) {
                      * find transitions which indicate a conflict
                      */
 		    if (xmlFACompareAtoms(t1->atom, t2->atom, 1)) {
-			ret = 0;
+                        /*
+                         * Treat equal counter transitions that couldn't be
+                         * eliminated as deterministic.
+                         */
+                        if ((t1->to != t2->to) ||
+                            (t1->counter == t2->counter) ||
+                            (!xmlFAEqualAtoms(t1->atom, t2->atom, deep)))
+                            ret = 0;
 			/* mark the transitions as non-deterministic ones */
 			t1->nd = 1;
 			t2->nd = 1;
 			last = t1;
 		    }
-		} else if (t1->to != -1) {
+		} else {
+                    int res;
+
 		    /*
 		     * do the closure in case of remaining specific
 		     * epsilon transitions like choices or all
 		     */
-		    ret = xmlFARecurseDeterminism(ctxt, ctxt->states[t1->to],
-						   t2->to, t2->atom);
-                    xmlFAFinishRecurseDeterminism(ctxt, ctxt->states[t1->to]);
+		    res = xmlFARecurseDeterminism(ctxt, ctxt->states[t2->to],
+						  statenr, t1->to, t1->atom);
+                    xmlFAFinishRecurseDeterminism(ctxt, ctxt->states[t2->to]);
 		    /* don't shortcut the computation so all non deterministic
 		       transition get marked down
 		    if (ret == 0)
 			return(0);
 		     */
-		    if (ret == 0) {
+		    if (res == 0) {
 			t1->nd = 1;
 			/* t2->nd = 1; */
 			last = t1;
+                        ret = 0;
 		    }
 		}
 	    }

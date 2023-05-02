@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
+#include <errno.h>
+#include <limits.h>
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -352,17 +354,14 @@ myMallocFunc(size_t size)
 static void *
 myReallocFunc(void *mem, size_t size)
 {
-    void *ret;
+    size_t oldsize = xmlMemSize(mem);
 
-    ret = xmlMemRealloc(mem, size);
-    if (ret != NULL) {
-        if (xmlMemUsed() > maxmem) {
-            OOM();
-            xmlMemFree(ret);
-            return (NULL);
-        }
+    if (xmlMemUsed() + size - oldsize > (size_t) maxmem) {
+        OOM();
+        return (NULL);
     }
-    return (ret);
+
+    return (xmlMemRealloc(mem, size));
 }
 static char *
 myStrdupFunc(const char *str)
@@ -1785,15 +1784,6 @@ static void streamFile(char *filename) {
 #endif
 	reader = xmlReaderForFile(filename, NULL, options);
 #ifdef LIBXML_PATTERN_ENABLED
-    if (pattern != NULL) {
-        patternc = xmlPatterncompile((const xmlChar *) pattern, NULL, 0, NULL);
-	if (patternc == NULL) {
-	    xmlGenericError(xmlGenericErrorContext,
-		    "Pattern %s failed to compile\n", pattern);
-            progresult = XMLLINT_ERR_SCHEMAPAT;
-	    pattern = NULL;
-	}
-    }
     if (patternc != NULL) {
         patstream = xmlPatternGetStreamCtxt(patternc);
 	if (patstream != NULL) {
@@ -3097,10 +3087,25 @@ main(int argc, char **argv) {
 
 	if ((!strcmp(argv[i], "-maxmem")) ||
 	    (!strcmp(argv[i], "--maxmem"))) {
-	     i++;
-	     if ((i >= argc) || (sscanf(argv[i], "%d", &maxmem) != 1)) {
-	         maxmem = 0;
-	     }
+            char *val_end;
+            long val;
+
+            i++;
+            if (i >= argc) {
+                fprintf(stderr, "maxmem: missing integer value\n");
+                return(XMLLINT_ERR_UNCLASS);
+            }
+            errno = 0;
+            val = strtol(argv[i], &val_end, 10);
+            if (errno == EINVAL || *val_end != 0) {
+                fprintf(stderr, "maxmem: invalid integer: %s\n", argv[i]);
+                return(XMLLINT_ERR_UNCLASS);
+            }
+            if (errno != 0 || val < 0 || val > INT_MAX) {
+                fprintf(stderr, "maxmem: integer out of range: %s\n", argv[i]);
+                return(XMLLINT_ERR_UNCLASS);
+            }
+            maxmem = val;
         }
     }
     if (maxmem != 0)
@@ -3748,7 +3753,6 @@ main(int argc, char **argv) {
 
 error:
     xmlCleanupParser();
-    xmlMemoryDump();
 
     return(progresult);
 }
