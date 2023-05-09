@@ -1871,6 +1871,8 @@ xmlFAFinishReduceEpsilonTransitions(xmlRegParserCtxtPtr ctxt, int tonr) {
     xmlRegStatePtr to;
 
     to = ctxt->states[tonr];
+    if (to == NULL)
+	return;
     if ((to->mark == XML_REGEXP_MARK_START) ||
 	(to->mark == XML_REGEXP_MARK_NORMAL))
 	return;
@@ -2682,7 +2684,6 @@ xmlFARecurseDeterminism(xmlRegParserCtxtPtr ctxt, xmlRegStatePtr state,
             if ((t1->to != tonr) ||
                 (!xmlFAEqualAtoms(t1->atom, atom, deep)))
                 ret = 0;
-	    ret = 0;
 	    /* mark the transition as non-deterministic */
 	    t1->nd = 1;
 	}
