@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.63])
 
 m4_define([MAJOR_VERSION], 2)
-m4_define([MINOR_VERSION], 11)
+m4_define([MINOR_VERSION], 12)
 m4_define([MICRO_VERSION], 0)
 
 AC_INIT([libxml2],[MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
@@ -455,7 +455,10 @@ if test "$lt_cv_prog_gnu_ld" = yes; then
     *-*-cygwin* | *-*-mingw* | *-*-msys* )
       ;;
     *)
-      VERSION_SCRIPT_FLAGS=-Wl,--version-script=
+      dnl lld 16 defaults to --no-undefined-version but the version script
+      dnl can contain symbols disabled by configuration options.
+      AX_APPEND_LINK_FLAGS([-Wl,--undefined-version], [VERSION_SCRIPT_FLAGS])
+      AX_APPEND_FLAG([-Wl,--version-script=], [VERSION_SCRIPT_FLAGS])
       ;;
   esac
 else
@@ -1033,7 +1036,7 @@ else
     if test "$with_iconv" != "yes" && test "$with_iconv" != "" ; then
 	ICONV_DIR=$with_iconv
 	CPPFLAGS="$CPPFLAGS -I$ICONV_DIR/include"
-        LIBS="$LIBS -L$ICONV_DIR/libs"
+	LIBS="$LIBS -L$ICONV_DIR/lib"
 	# Export this since our headers include iconv.h
 	XML_INCLUDEDIR="$XML_INCLUDEDIR -I$ICONV_DIR/include"
     fi
@@ -1049,12 +1052,13 @@ else
                 ICONV_LIBS="-liconv"])])])
     if test "$WITH_ICONV" = "1" && test "$ICONV_DIR" != ""; then
         ICONV_CFLAGS="-I$ICONV_DIR/include"
-        ICONV_LIBS="-L$ICONV_DIR/libs $ICONV_LIBS"
+        ICONV_LIBS="-L$ICONV_DIR/lib $ICONV_LIBS"
     fi
     CPPFLAGS=$_cppflags
     LIBS=$_libs
 fi
 AC_SUBST(WITH_ICONV)
+AC_SUBST(ICONV_CFLAGS)
 
 dnl
 dnl Checks for ICU library.
@@ -1097,7 +1101,7 @@ else
                     ICU_LIBS=-licucore
                     if test "$ICU_DIR" != ""; then
                         ICU_CFLAGS="-I$ICU_DIR/include"
-                        ICU_LIBS="-L$ICU_DIR/libs $ICU_LIBS"
+                        ICU_LIBS="-L$ICU_DIR/lib $ICU_LIBS"
                     fi])])
             CPPFLAGS=$_cppflags
             LIBS=$_libs
@@ -1141,4 +1145,10 @@ AC_CONFIG_FILES([python/setup.py], [chmod +x python/setup.py])
 AC_CONFIG_FILES([xml2-config], [chmod +x xml2-config])
 AC_OUTPUT
 
-echo Done configuring
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([_Thread_local int v;])], [], [
+    echo "================================================================"
+    echo "WARNING: Your C compiler doesn't support C11."
+    echo "Future versions of libxml2 will probably require a C11 compiler,"
+    echo "at least for features like multi-threading."
+    echo "================================================================"
+])
