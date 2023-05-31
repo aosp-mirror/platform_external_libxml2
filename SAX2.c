@@ -2174,15 +2174,11 @@ xmlSAX2AttributeNs(xmlParserCtxtPtr ctxt,
 	     *
 	     * Open issue: normalization of the value.
 	     */
-#if defined(LIBXML_SAX1_ENABLED) || defined(LIBXML_HTML_ENABLED) || defined(LIBXML_WRITER_ENABLED) || defined(LIBXML_LEGACY_ENABLED)
-#ifdef LIBXML_VALID_ENABLED
 	    if (xmlValidateNCName(content, 1) != 0) {
 	        xmlErrValid(ctxt, XML_DTD_XMLID_VALUE,
 		      "xml:id : attribute value %s is not an NCName\n",
 			    (const char *) content, NULL);
 	    }
-#endif
-#endif
 	    xmlAddID(&ctxt->vctxt, ctxt->myDoc, content, ret);
 	} else if (xmlIsID(ctxt->myDoc, ctxt->node, ret)) {
 	    xmlAddID(&ctxt->vctxt, ctxt->myDoc, content, ret);
@@ -2874,20 +2870,23 @@ xmlSAXVersion(xmlSAXHandler *hdlr, int version)
 {
     if (hdlr == NULL) return(-1);
     if (version == 2) {
-	hdlr->startElement = NULL;
-	hdlr->endElement = NULL;
 	hdlr->startElementNs = xmlSAX2StartElementNs;
 	hdlr->endElementNs = xmlSAX2EndElementNs;
 	hdlr->serror = NULL;
 	hdlr->initialized = XML_SAX2_MAGIC;
 #ifdef LIBXML_SAX1_ENABLED
     } else if (version == 1) {
-	hdlr->startElement = xmlSAX2StartElement;
-	hdlr->endElement = xmlSAX2EndElement;
 	hdlr->initialized = 1;
 #endif /* LIBXML_SAX1_ENABLED */
     } else
         return(-1);
+#ifdef LIBXML_SAX1_ENABLED
+    hdlr->startElement = xmlSAX2StartElement;
+    hdlr->endElement = xmlSAX2EndElement;
+#else
+    hdlr->startElement = NULL;
+    hdlr->endElement = NULL;
+#endif /* LIBXML_SAX1_ENABLED */
     hdlr->internalSubset = xmlSAX2InternalSubset;
     hdlr->externalSubset = xmlSAX2ExternalSubset;
     hdlr->isStandalone = xmlSAX2IsStandalone;
