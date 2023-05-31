@@ -264,19 +264,13 @@ xmlXIncludeNewRef(xmlXIncludeCtxtPtr ctxt, const xmlChar *URI,
     ret->elem = elem;
     ret->xml = 0;
     ret->inc = NULL;
-    if (ctxt->incMax == 0) {
-	ctxt->incMax = 4;
-        ctxt->incTab = (xmlXIncludeRefPtr *) xmlMalloc(ctxt->incMax *
-					      sizeof(ctxt->incTab[0]));
-        if (ctxt->incTab == NULL) {
-	    xmlXIncludeErrMemory(ctxt, elem, "growing XInclude context");
-	    xmlXIncludeFreeRef(ret);
-	    return(NULL);
-	}
-    }
     if (ctxt->incNr >= ctxt->incMax) {
         xmlXIncludeRefPtr *tmp;
-        size_t newSize = ctxt->incMax * 2;
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+        size_t newSize = ctxt->incMax ? ctxt->incMax * 2 : 1;
+#else
+        size_t newSize = ctxt->incMax ? ctxt->incMax * 2 : 4;
+#endif
 
         tmp = (xmlXIncludeRefPtr *) xmlRealloc(ctxt->incTab,
 	             newSize * sizeof(ctxt->incTab[0]));
@@ -286,7 +280,7 @@ xmlXIncludeNewRef(xmlXIncludeCtxtPtr ctxt, const xmlChar *URI,
 	    return(NULL);
 	}
         ctxt->incTab = tmp;
-        ctxt->incMax *= 2;
+        ctxt->incMax = newSize;
     }
     ctxt->incTab[ctxt->incNr++] = ret;
     return(ret);
@@ -1265,6 +1259,7 @@ xmlXIncludeLoadDoc(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
     xmlChar *fragment = NULL;
     int i = 0;
     int ret = -1;
+    int cacheNr;
 #ifdef LIBXML_XPTR_ENABLED
     int saveFlags;
 #endif
@@ -1353,7 +1348,11 @@ xmlXIncludeLoadDoc(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
     /* Also cache NULL docs */
     if (ctxt->urlNr >= ctxt->urlMax) {
         xmlXIncludeDoc *tmp;
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+        size_t newSize = ctxt->urlMax ? ctxt->urlMax * 2 : 1;
+#else
         size_t newSize = ctxt->urlMax ? ctxt->urlMax * 2 : 8;
+#endif
 
         tmp = xmlRealloc(ctxt->urlTab, sizeof(xmlXIncludeDoc) * newSize);
         if (tmp == NULL) {
@@ -1365,7 +1364,8 @@ xmlXIncludeLoadDoc(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
         ctxt->urlMax = newSize;
         ctxt->urlTab = tmp;
     }
-    cache = &ctxt->urlTab[ctxt->urlNr++];
+    cacheNr = ctxt->urlNr++;
+    cache = &ctxt->urlTab[cacheNr];
     cache->doc = doc;
     cache->url = xmlStrdup(URL);
     cache->expanding = 0;
@@ -1403,6 +1403,8 @@ xmlXIncludeLoadDoc(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
      */
     cache->expanding = 1;
     xmlXIncludeRecurseDoc(ctxt, doc, URL);
+    /* urlTab might be reallocated. */
+    cache = &ctxt->urlTab[cacheNr];
     cache->expanding = 0;
 
 loaded:
@@ -1758,7 +1760,11 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, const xmlChar *url,
 
     if (ctxt->txtNr >= ctxt->txtMax) {
         xmlXIncludeTxt *tmp;
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+        size_t newSize = ctxt->txtMax ? ctxt->txtMax * 2 : 1;
+#else
         size_t newSize = ctxt->txtMax ? ctxt->txtMax * 2 : 8;
+#endif
 
         tmp = xmlRealloc(ctxt->txtTab, sizeof(xmlXIncludeTxt) * newSize);
         if (tmp == NULL) {
