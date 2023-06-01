@@ -145,6 +145,114 @@
  * any use of the macros IS_ASCII_CHARACTER and IS_ASCII_DIGIT)
  */
 
+#if defined(LIBXML_XPATH_ENABLED) || defined(LIBXML_SCHEMAS_ENABLED)
+
+/************************************************************************
+ *									*
+ *			Floating point stuff				*
+ *									*
+ ************************************************************************/
+
+double xmlXPathNAN = 0.0;
+double xmlXPathPINF = 0.0;
+double xmlXPathNINF = 0.0;
+
+/**
+ * xmlXPathInit:
+ *
+ * DEPRECATED: Alias for xmlInitParser.
+ */
+void
+xmlXPathInit(void) {
+    xmlInitParser();
+}
+
+/**
+ * xmlInitXPathInternal:
+ *
+ * Initialize the XPath environment
+ */
+ATTRIBUTE_NO_SANITIZE("float-divide-by-zero")
+void
+xmlInitXPathInternal(void) {
+#if defined(NAN) && defined(INFINITY)
+    xmlXPathNAN = NAN;
+    xmlXPathPINF = INFINITY;
+    xmlXPathNINF = -INFINITY;
+#else
+    /* MSVC doesn't allow division by zero in constant expressions. */
+    double zero = 0.0;
+    xmlXPathNAN = 0.0 / zero;
+    xmlXPathPINF = 1.0 / zero;
+    xmlXPathNINF = -xmlXPathPINF;
+#endif
+}
+
+/**
+ * xmlXPathIsNaN:
+ * @val:  a double value
+ *
+ * Returns 1 if the value is a NaN, 0 otherwise
+ */
+int
+xmlXPathIsNaN(double val) {
+#ifdef isnan
+    return isnan(val);
+#else
+    return !(val == val);
+#endif
+}
+
+/**
+ * xmlXPathIsInf:
+ * @val:  a double value
+ *
+ * Returns 1 if the value is +Infinite, -1 if -Infinite, 0 otherwise
+ */
+int
+xmlXPathIsInf(double val) {
+#ifdef isinf
+    return isinf(val) ? (val > 0 ? 1 : -1) : 0;
+#else
+    if (val >= xmlXPathPINF)
+        return 1;
+    if (val <= -xmlXPathPINF)
+        return -1;
+    return 0;
+#endif
+}
+
+#endif /* SCHEMAS or XPATH */
+
+#ifdef LIBXML_XPATH_ENABLED
+
+/*
+ * TODO: when compatibility allows remove all "fake node libxslt" strings
+ *       the test should just be name[0] = ' '
+ */
+#ifdef DEBUG_XPATH_EXPRESSION
+#define DEBUG_STEP
+#define DEBUG_EXPR
+#define DEBUG_EVAL_COUNTS
+#endif
+
+static xmlNs xmlXPathXMLNamespaceStruct = {
+    NULL,
+    XML_NAMESPACE_DECL,
+    XML_XML_NAMESPACE,
+    BAD_CAST "xml",
+    NULL,
+    NULL
+};
+static xmlNsPtr xmlXPathXMLNamespace = &xmlXPathXMLNamespaceStruct;
+#ifndef LIBXML_THREAD_ENABLED
+/*
+ * Optimizer is disabled only when threaded apps are detected while
+ * the library ain't compiled for thread safety.
+ */
+static int xmlXPathDisableOptimizer = 0;
+#endif
+
 static void
 xmlXPathNodeSetClear(xmlNodeSetPtr set, int hasNsNodes);
 
@@ -474,114 +582,6 @@ int wrap_cmp( xmlNodePtr x, xmlNodePtr y );
 #define SORT_CMP(x, y)  (wrap_cmp(x, y))
 #include "timsort.h"
 #endif /* WITH_TIM_SORT */
-
-#if defined(LIBXML_XPATH_ENABLED) || defined(LIBXML_SCHEMAS_ENABLED)
-
-/************************************************************************
- *									*
- *			Floating point stuff				*
- *									*
- ************************************************************************/
-
-double xmlXPathNAN = 0.0;
-double xmlXPathPINF = 0.0;
-double xmlXPathNINF = 0.0;
-
-/**
- * xmlXPathInit:
- *
- * DEPRECATED: Alias for xmlInitParser.
- */
-void
-xmlXPathInit(void) {
-    xmlInitParser();
-}
-
-/**
- * xmlInitXPathInternal:
- *
- * Initialize the XPath environment
- */
-ATTRIBUTE_NO_SANITIZE("float-divide-by-zero")
-void
-xmlInitXPathInternal(void) {
-#if defined(NAN) && defined(INFINITY)
-    xmlXPathNAN = NAN;
-    xmlXPathPINF = INFINITY;
-    xmlXPathNINF = -INFINITY;
-#else
-    /* MSVC doesn't allow division by zero in constant expressions. */
-    double zero = 0.0;
-    xmlXPathNAN = 0.0 / zero;
-    xmlXPathPINF = 1.0 / zero;
-    xmlXPathNINF = -xmlXPathPINF;
-#endif
-}
-
-/**
- * xmlXPathIsNaN:
- * @val:  a double value
- *
- * Returns 1 if the value is a NaN, 0 otherwise
- */
-int
-xmlXPathIsNaN(double val) {
-#ifdef isnan
-    return isnan(val);
-#else
-    return !(val == val);
-#endif
-}
-
-/**
- * xmlXPathIsInf:
- * @val:  a double value
- *
- * Returns 1 if the value is +Infinite, -1 if -Infinite, 0 otherwise
- */
-int
-xmlXPathIsInf(double val) {
-#ifdef isinf
-    return isinf(val) ? (val > 0 ? 1 : -1) : 0;
-#else
-    if (val >= xmlXPathPINF)
-        return 1;
-    if (val <= -xmlXPathPINF)
-        return -1;
-    return 0;
-#endif
-}
-
-#endif /* SCHEMAS or XPATH */
-
-#ifdef LIBXML_XPATH_ENABLED
-
-/*
- * TODO: when compatibility allows remove all "fake node libxslt" strings
- *       the test should just be name[0] = ' '
- */
-#ifdef DEBUG_XPATH_EXPRESSION
-#define DEBUG_STEP
-#define DEBUG_EXPR
-#define DEBUG_EVAL_COUNTS
-#endif
-
-static xmlNs xmlXPathXMLNamespaceStruct = {
-    NULL,
-    XML_NAMESPACE_DECL,
-    XML_XML_NAMESPACE,
-    BAD_CAST "xml",
-    NULL,
-    NULL
-};
-static xmlNsPtr xmlXPathXMLNamespace = &xmlXPathXMLNamespaceStruct;
-#ifndef LIBXML_THREAD_ENABLED
-/*
- * Optimizer is disabled only when threaded apps are detected while
- * the library ain't compiled for thread safety.
- */
-static int xmlXPathDisableOptimizer = 0;
-#endif
 
 /************************************************************************
  *									*
@@ -2495,55 +2495,6 @@ xmlXPathCacheNewNodeSet(xmlXPathContextPtr ctxt, xmlNodePtr val)
 }
 
 /**
- * xmlXPathCacheNewCString:
- * @ctxt: the XPath context
- * @val:  the char * value
- *
- * This is the cached version of xmlXPathNewCString().
- * Acquire an xmlXPathObjectPtr of type string and of value @val
- *
- * Returns the created or reused object.
- */
-static xmlXPathObjectPtr
-xmlXPathCacheNewCString(xmlXPathContextPtr ctxt, const char *val)
-{
-    if ((ctxt != NULL) && (ctxt->cache)) {
-	xmlXPathContextCachePtr cache = (xmlXPathContextCachePtr) ctxt->cache;
-
-	if ((cache->stringObjs != NULL) &&
-	    (cache->stringObjs->number != 0))
-	{
-	    xmlXPathObjectPtr ret;
-
-	    ret = (xmlXPathObjectPtr)
-		cache->stringObjs->items[--cache->stringObjs->number];
-
-	    ret->type = XPATH_STRING;
-	    ret->stringval = xmlStrdup(BAD_CAST val);
-#ifdef XP_DEBUG_OBJ_USAGE
-	    xmlXPathDebugObjUsageRequested(ctxt, XPATH_STRING);
-#endif
-	    return(ret);
-	} else if ((cache->miscObjs != NULL) &&
-	    (cache->miscObjs->number != 0))
-	{
-	    xmlXPathObjectPtr ret;
-
-	    ret = (xmlXPathObjectPtr)
-		cache->miscObjs->items[--cache->miscObjs->number];
-
-	    ret->type = XPATH_STRING;
-	    ret->stringval = xmlStrdup(BAD_CAST val);
-#ifdef XP_DEBUG_OBJ_USAGE
-	    xmlXPathDebugObjUsageRequested(ctxt, XPATH_STRING);
-#endif
-	    return(ret);
-	}
-    }
-    return(xmlXPathNewCString(val));
-}
-
-/**
  * xmlXPathCacheNewString:
  * @ctxt: the XPath context
  * @val:  the xmlChar * value
@@ -2563,14 +2514,20 @@ xmlXPathCacheNewString(xmlXPathContextPtr ctxt, const xmlChar *val)
 	    (cache->stringObjs->number != 0))
 	{
 	    xmlXPathObjectPtr ret;
+            xmlChar *copy;
+
+            if (val == NULL)
+                val = BAD_CAST "";
+            copy = xmlStrdup(val);
+            if (copy == NULL) {
+                xmlXPathErrMemory(ctxt, NULL);
+                return(NULL);
+            }
 
 	    ret = (xmlXPathObjectPtr)
 		cache->stringObjs->items[--cache->stringObjs->number];
 	    ret->type = XPATH_STRING;
-	    if (val != NULL)
-		ret->stringval = xmlStrdup(val);
-	    else
-		ret->stringval = xmlStrdup((const xmlChar *)"");
+            ret->stringval = copy;
 #ifdef XP_DEBUG_OBJ_USAGE
 	    xmlXPathDebugObjUsageRequested(ctxt, XPATH_STRING);
 #endif
@@ -2579,15 +2536,21 @@ xmlXPathCacheNewString(xmlXPathContextPtr ctxt, const xmlChar *val)
 	    (cache->miscObjs->number != 0))
 	{
 	    xmlXPathObjectPtr ret;
+            xmlChar *copy;
+
+            if (val == NULL)
+                val = BAD_CAST "";
+            copy = xmlStrdup(val);
+            if (copy == NULL) {
+                xmlXPathErrMemory(ctxt, NULL);
+                return(NULL);
+            }
 
 	    ret = (xmlXPathObjectPtr)
 		cache->miscObjs->items[--cache->miscObjs->number];
 
 	    ret->type = XPATH_STRING;
-	    if (val != NULL)
-		ret->stringval = xmlStrdup(val);
-	    else
-		ret->stringval = xmlStrdup((const xmlChar *)"");
+            ret->stringval = copy;
 #ifdef XP_DEBUG_OBJ_USAGE
 	    xmlXPathDebugObjUsageRequested(ctxt, XPATH_STRING);
 #endif
@@ -2595,6 +2558,22 @@ xmlXPathCacheNewString(xmlXPathContextPtr ctxt, const xmlChar *val)
 	}
     }
     return(xmlXPathNewString(val));
+}
+
+/**
+ * xmlXPathCacheNewCString:
+ * @ctxt: the XPath context
+ * @val:  the char * value
+ *
+ * This is the cached version of xmlXPathNewCString().
+ * Acquire an xmlXPathObjectPtr of type string and of value @val
+ *
+ * Returns the created or reused object.
+ */
+static xmlXPathObjectPtr
+xmlXPathCacheNewCString(xmlXPathContextPtr ctxt, const char *val)
+{
+    return xmlXPathCacheNewString(ctxt, BAD_CAST val);
 }
 
 /**
@@ -5271,10 +5250,13 @@ xmlXPathNewString(const xmlChar *val) {
     }
     memset(ret, 0 , sizeof(xmlXPathObject));
     ret->type = XPATH_STRING;
-    if (val != NULL)
-	ret->stringval = xmlStrdup(val);
-    else
-	ret->stringval = xmlStrdup((const xmlChar *)"");
+    if (val == NULL)
+        val = BAD_CAST "";
+    ret->stringval = xmlStrdup(val);
+    if (ret->stringval == NULL) {
+        xmlFree(ret);
+        return(NULL);
+    }
 #ifdef XP_DEBUG_OBJ_USAGE
     xmlXPathDebugObjUsageRequested(NULL, XPATH_STRING);
 #endif
@@ -5320,20 +5302,7 @@ xmlXPathWrapString (xmlChar *val) {
  */
 xmlXPathObjectPtr
 xmlXPathNewCString(const char *val) {
-    xmlXPathObjectPtr ret;
-
-    ret = (xmlXPathObjectPtr) xmlMalloc(sizeof(xmlXPathObject));
-    if (ret == NULL) {
-        xmlXPathErrMemory(NULL, "creating string object\n");
-	return(NULL);
-    }
-    memset(ret, 0 , sizeof(xmlXPathObject));
-    ret->type = XPATH_STRING;
-    ret->stringval = xmlStrdup(BAD_CAST val);
-#ifdef XP_DEBUG_OBJ_USAGE
-    xmlXPathDebugObjUsageRequested(NULL, XPATH_STRING);
-#endif
-    return(ret);
+    return(xmlXPathNewString(BAD_CAST val));
 }
 
 /**
@@ -5409,6 +5378,10 @@ xmlXPathObjectCopy(xmlXPathObjectPtr val) {
 	    break;
 	case XPATH_STRING:
 	    ret->stringval = xmlStrdup(val->stringval);
+            if (ret->stringval == NULL) {
+                xmlFree(ret);
+                return(NULL);
+            }
 	    break;
 	case XPATH_XSLT_TREE:
 #if 0
@@ -6409,11 +6382,12 @@ xmlXPathNodeValHash(xmlNodePtr node) {
 	/*
 	 * Skip to next node
 	 */
-	if ((tmp->children != NULL) && (tmp->type != XML_DTD_NODE)) {
-	    if (tmp->children->type != XML_ENTITY_DECL) {
-		tmp = tmp->children;
-		continue;
-	    }
+        if ((tmp->children != NULL) &&
+            (tmp->type != XML_DTD_NODE) &&
+            (tmp->type != XML_ENTITY_REF_NODE) &&
+            (tmp->children->type != XML_ENTITY_DECL)) {
+            tmp = tmp->children;
+            continue;
 	}
 	if (tmp == node)
 	    break;
