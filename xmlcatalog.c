@@ -11,10 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
 
 #ifdef HAVE_LIBREADLINE
 #include <readline/readline.h>
@@ -43,7 +40,7 @@ static char *filename = NULL;
 
 
 #ifndef XML_SGML_DEFAULT_CATALOG
-#define XML_SGML_DEFAULT_CATALOG "/etc/sgml/catalog"
+#define XML_SGML_DEFAULT_CATALOG SYSCONFDIR "/sgml/catalog"
 #endif
 
 /************************************************************************
@@ -512,6 +509,9 @@ int main(int argc, char **argv) {
 		    xmlACatalogDump(catal, stdout);
 		}
 		i += 2;
+
+                xmlFreeCatalog(catal);
+                xmlFreeCatalog(super);
 	    } else {
 		if ((!strcmp(argv[i], "-add")) ||
 		    (!strcmp(argv[i], "--add"))) {
