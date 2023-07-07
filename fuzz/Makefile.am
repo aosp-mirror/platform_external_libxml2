@@ -1,12 +1,12 @@
 AUTOMAKE_OPTIONS = -Wno-syntax
-EXTRA_PROGRAMS = genSeed html regexp schema uri xml xpath
+EXTRA_PROGRAMS = genSeed html regexp schema uri valid xinclude xml xpath
 check_PROGRAMS = testFuzzer
 EXTRA_DIST = html.dict regexp.dict schema.dict xml.dict xpath.dict \
 	     static_seed/uri static_seed/regexp fuzz.h
 CLEANFILES = $(EXTRA_PROGRAMS)
 AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include
 DEPENDENCIES = $(top_builddir)/libxml2.la
-LDADD = $(top_builddir)/libxml2.la $(THREAD_LIBS) $(Z_LIBS) $(LZMA_LIBS) $(ICONV_LIBS) $(M_LIBS) $(WIN32_EXTRA_LIBADD)
+LDADD = $(top_builddir)/libxml2.la
 
 XML_MAX_LEN = 80000
 # Single quotes to avoid wildcard expansion by the shell
@@ -15,22 +15,22 @@ XML_SEED_CORPUS_SRC = \
     '$(top_srcdir)/test/errors/*.xml' \
     '$(top_srcdir)/test/errors10/*.xml' \
     '$(top_srcdir)/test/namespaces/*' \
+    '$(top_srcdir)/test/recurse/*.xml' \
+    '$(top_srcdir)/test/SVG/*.xml' \
     '$(top_srcdir)/test/valid/*.xml' \
     '$(top_srcdir)/test/VC/*' \
     '$(top_srcdir)/test/VCM/*' \
-    '$(top_srcdir)/test/XInclude/docs/*' \
     '$(top_srcdir)/test/xmlid/*'
 
 testFuzzer_SOURCES = testFuzzer.c fuzz.c
 
-.PHONY: tests corpus clean-corpus
+.PHONY: corpus clean-corpus
 
 corpus: seed/html.stamp seed/regexp.stamp seed/schema.stamp seed/uri.stamp \
-    seed/xml.stamp seed/xpath.stamp
+    seed/valid.stamp seed/xinclude.stamp seed/xml.stamp seed/xpath.stamp
 
-tests: testFuzzer$(EXEEXT) corpus
-	@echo "## Running fuzzer tests"
-	@./testFuzzer$(EXEEXT)
+check-local: corpus
+	./testFuzzer$(EXEEXT)
 
 clean-corpus:
 	rm -rf seed
@@ -49,7 +49,7 @@ seed/xml.stamp: genSeed$(EXEEXT)
 	@touch seed/xml.stamp
 
 xml_SOURCES = xml.c fuzz.c
-xml_LDFLAGS = -fsanitize=fuzzer
+xml_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
 
 fuzz-xml: xml$(EXEEXT) seed/xml.stamp
 	@mkdir -p corpus/xml
@@ -59,6 +59,44 @@ fuzz-xml: xml$(EXEEXT) seed/xml.stamp
 	    -timeout=20 \
 	    corpus/xml seed/xml
 
+# DTD validation fuzzer
+
+seed/valid.stamp: genSeed$(EXEEXT)
+	@mkdir -p seed/valid
+	./genSeed$(EXEEXT) valid $(XML_SEED_CORPUS_SRC)
+	@touch seed/valid.stamp
+
+valid_SOURCES = valid.c fuzz.c
+valid_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
+
+fuzz-valid: valid$(EXEEXT) seed/valid.stamp
+	@mkdir -p corpus/valid
+	./valid$(EXEEXT) \
+	    -dict=xml.dict \
+	    -max_len=$(XML_MAX_LEN) \
+	    -timeout=20 \
+	    corpus/valid seed/valid
+
+# XInclude fuzzer
+
+seed/xinclude.stamp: genSeed$(EXEEXT)
+	@mkdir -p seed/xinclude
+	./genSeed$(EXEEXT) xinclude \
+	    '$(top_srcdir)/test/XInclude/docs/*' \
+	    '$(top_srcdir)/test/XInclude/without-reader/*'
+	@touch seed/xinclude.stamp
+
+xinclude_SOURCES = xinclude.c fuzz.c
+xinclude_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
+
+fuzz-xinclude: xinclude$(EXEEXT) seed/xinclude.stamp
+	@mkdir -p corpus/xinclude
+	./xinclude$(EXEEXT) \
+	    -dict=xml.dict \
+	    -max_len=$(XML_MAX_LEN) \
+	    -timeout=20 \
+	    corpus/xinclude seed/xinclude
+
 # HTML fuzzer
 
 seed/html.stamp: genSeed$(EXEEXT)
@@ -67,7 +105,7 @@ seed/html.stamp: genSeed$(EXEEXT)
 	@touch seed/html.stamp
 
 html_SOURCES = html.c fuzz.c
-html_LDFLAGS = -fsanitize=fuzzer
+html_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
 
 fuzz-html: html$(EXEEXT) seed/html.stamp
 	@mkdir -p corpus/html
@@ -85,9 +123,9 @@ seed/regexp.stamp:
 	@touch seed/regexp.stamp
 
 regexp_SOURCES = regexp.c fuzz.c
-regexp_LDFLAGS = -fsanitize=fuzzer
+regexp_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
 
-fuzz-regexp: regexp$(EXEEXT)
+fuzz-regexp: regexp$(EXEEXT) seed/regexp.stamp
 	@mkdir -p corpus/regexp
 	./regexp$(EXEEXT) \
 	    -dict=regexp.dict \
@@ -103,9 +141,9 @@ seed/uri.stamp:
 	@touch seed/uri.stamp
 
 uri_SOURCES = uri.c fuzz.c
-uri_LDFLAGS = -fsanitize=fuzzer
+uri_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
 
-fuzz-uri: uri$(EXEEXT)
+fuzz-uri: uri$(EXEEXT) seed/uri.stamp
 	@mkdir -p corpus/uri
 	./uri$(EXEEXT) \
 	    -max_len=10000 \
@@ -120,7 +158,7 @@ seed/schema.stamp: genSeed$(EXEEXT)
 	@touch seed/schema.stamp
 
 schema_SOURCES = schema.c fuzz.c
-schema_LDFLAGS = -fsanitize=fuzzer
+schema_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
 
 fuzz-schema: schema$(EXEEXT) seed/schema.stamp
 	@mkdir -p corpus/schema
@@ -138,7 +176,7 @@ seed/xpath.stamp: genSeed$(EXEEXT)
 	@touch seed/xpath.stamp
 
 xpath_SOURCES = xpath.c fuzz.c
-xpath_LDFLAGS = -fsanitize=fuzzer
+xpath_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
 
 fuzz-xpath: xpath$(EXEEXT) seed/xpath.stamp
 	@mkdir -p corpus/xpath
