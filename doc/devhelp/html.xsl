@@ -4,8 +4,6 @@
 		xmlns:str="http://exslt.org/strings"
 		extension-element-prefixes="exsl str"
 		exclude-result-prefixes="exsl str">
-  <xsl:output method="xml" encoding="UTF-8" indent="yes"/>
-
   <!-- This is convoluted but needed to force the current document to
        be the API one and not the result tree from the tokenize() result,
        because the keys are only defined on the main document -->
@@ -15,6 +13,20 @@
     <xsl:choose>
       <xsl:when test="$ref">
         <a href="libxml2-{$ref/@file}.html#{$ref/@name}"><xsl:value-of select="$token"/></a>
+      </xsl:when>
+      <!-- TODO: This hack only works for tokens followed by a period. -->
+      <xsl:when test="substring($token, string-length($token)) = '.'">
+        <xsl:variable name="token2" select="substring($token, 1, string-length($token) - 1)"/>
+        <xsl:variable name="ref2" select="key('symbols', $token2)"/>
+        <xsl:choose>
+          <xsl:when test="$ref2">
+            <a href="libxml2-{$ref2/@file}.html#{$ref2/@name}"><xsl:value-of select="$token2"/></a>
+            <xsl:text>.</xsl:text>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="$token"/>
+          </xsl:otherwise>
+        </xsl:choose>
       </xsl:when>
       <xsl:otherwise>
         <xsl:value-of select="$token"/>
@@ -497,7 +509,7 @@
 -->
   <xsl:template name="generate_general">
     <xsl:variable name="next" select="string(/api/files/file[position()=1]/@name)"/>
-    <xsl:document xmlns="" href="general.html" method="xml" indent="yes" encoding="UTF-8">
+    <xsl:document xmlns="" href="general.html" method="html" indent="yes" encoding="UTF-8">
       <html>
         <head>
 	  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -537,7 +549,7 @@
 
 -->
   <xsl:template name="generate_index">
-    <xsl:document xmlns="" href="index.html" method="xml" indent="yes" encoding="UTF-8">
+    <xsl:document xmlns="" href="index.html" method="html" indent="yes" encoding="UTF-8">
       <html>
         <head>
 	  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
