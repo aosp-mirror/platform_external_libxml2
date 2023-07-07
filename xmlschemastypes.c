@@ -18,6 +18,9 @@
 #ifdef LIBXML_SCHEMAS_ENABLED
 
 #include <string.h>
+#include <math.h>
+#include <float.h>
+
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
@@ -30,12 +33,7 @@
 #include <libxml/schemasInternals.h>
 #include <libxml/xmlschemastypes.h>
 
-#ifdef HAVE_MATH_H
-#include <math.h>
-#endif
-#ifdef HAVE_FLOAT_H
-#include <float.h>
-#endif
+#include "private/error.h"
 
 #define DEBUG
 
@@ -406,6 +404,10 @@ xmlSchemaInitTypes(void)
     xmlSchemaTypeAnyTypeDef = xmlSchemaInitBasicType("anyType",
                                                      XML_SCHEMAS_ANYTYPE,
 						     NULL);
+    if (xmlSchemaTypeAnyTypeDef == NULL) {
+	xmlSchemaTypeErrMemory(NULL, NULL);
+        return;
+    }
     xmlSchemaTypeAnyTypeDef->baseType = xmlSchemaTypeAnyTypeDef;
     xmlSchemaTypeAnyTypeDef->contentType = XML_SCHEMA_CONTENT_MIXED;
     /*
@@ -626,6 +628,11 @@ xmlSchemaFreeTypeEntry(void *type, const xmlChar *name ATTRIBUTE_UNUSED) {
 
 /**
  * xmlSchemaCleanupTypes:
+ *
+ * DEPRECATED: This function will be made private. Call xmlCleanupParser
+ * to free global state but see the warnings there. xmlCleanupParser
+ * should be only called once at program exit. In most cases, you don't
+ * have call cleanup functions at all.
  *
  * Cleanup the default XML Schemas type library
  */
@@ -3033,6 +3040,8 @@ xmlSchemaValAtomicType(xmlSchemaTypePtr type, const xmlChar * value,
 			    value = norm;
 		    }
 		    tmpval = xmlStrdup(value);
+                    if (tmpval == NULL)
+                        goto error;
 		    for (cur = tmpval; *cur; ++cur) {
 			if (*cur < 32 || *cur >= 127 || *cur == ' ' ||
 			    *cur == '<' || *cur == '>' || *cur == '"' ||
@@ -3219,8 +3228,7 @@ xmlSchemaValAtomicType(xmlSchemaTypePtr type, const xmlChar * value,
                     if (v == NULL)
                         goto error;
                     base =
-                        (xmlChar *) xmlMallocAtomic((i + pad + 1) *
-                                                    sizeof(xmlChar));
+                        (xmlChar *) xmlMallocAtomic(i + pad + 1);
                     if (base == NULL) {
 		        xmlSchemaTypeErrMemory(node, "allocating base64 data");
                         xmlFree(v);
@@ -3308,6 +3316,8 @@ xmlSchemaValAtomicType(xmlSchemaTypePtr type, const xmlChar * value,
 
                 if (cur == NULL)
                     goto return1;
+		if (normOnTheFly)
+		    while IS_WSP_BLANK_CH(*cur) cur++;
                 if (*cur == '-') {
                     sign = 1;
                     cur++;
@@ -3316,6 +3326,8 @@ xmlSchemaValAtomicType(xmlSchemaTypePtr type, const xmlChar * value,
                 ret = xmlSchemaParseUInt(&cur, &lo, &mi, &hi);
                 if (ret < 0)
                     goto return1;
+		if (normOnTheFly)
+		    while IS_WSP_BLANK_CH(*cur) cur++;
                 if (*cur != 0)
                     goto return1;
                 if (type->builtInType == XML_SCHEMAS_LONG) {
@@ -3380,9 +3392,13 @@ xmlSchemaValAtomicType(xmlSchemaTypePtr type, const xmlChar * value,
 
                 if (cur == NULL)
                     goto return1;
+		if (normOnTheFly)
+		    while IS_WSP_BLANK_CH(*cur) cur++;
                 ret = xmlSchemaParseUInt(&cur, &lo, &mi, &hi);
                 if (ret < 0)
                     goto return1;
+		if (normOnTheFly)
+		    while IS_WSP_BLANK_CH(*cur) cur++;
                 if (*cur != 0)
                     goto return1;
                 if (type->builtInType == XML_SCHEMAS_ULONG) {
@@ -4132,9 +4148,15 @@ xmlSchemaCompareDates (xmlSchemaValPtr x, xmlSchemaValPtr y)
 
         if (!y->value.date.tz_flag) {
             p1 = xmlSchemaDateNormalize(x, 0);
+            if (p1 == NULL)
+                return -2;
             p1d = _xmlSchemaDateCastYMToDays(p1) + p1->value.date.day;
             /* normalize y + 14:00 */
             q1 = xmlSchemaDateNormalize(y, (14 * SECS_PER_HOUR));
+            if (q1 == NULL) {
+		xmlSchemaFreeValue(p1);
+                return -2;
+            }
 
             q1d = _xmlSchemaDateCastYMToDays(q1) + q1->value.date.day;
             if (p1d < q1d) {
@@ -4153,6 +4175,11 @@ xmlSchemaCompareDates (xmlSchemaValPtr x, xmlSchemaValPtr y)
 		    int ret = 0;
                     /* normalize y - 14:00 */
                     q2 = xmlSchemaDateNormalize(y, -(14 * SECS_PER_HOUR));
+                    if (q2 == NULL) {
+                        xmlSchemaFreeValue(p1);
+                        xmlSchemaFreeValue(q1);
+                        return -2;
+                    }
                     q2d = _xmlSchemaDateCastYMToDays(q2) + q2->value.date.day;
                     if (p1d > q2d)
                         ret = 1;
@@ -4176,10 +4203,16 @@ xmlSchemaCompareDates (xmlSchemaValPtr x, xmlSchemaValPtr y)
         }
     } else if (y->value.date.tz_flag) {
         q1 = xmlSchemaDateNormalize(y, 0);
+        if (q1 == NULL)
+            return -2;
         q1d = _xmlSchemaDateCastYMToDays(q1) + q1->value.date.day;
 
         /* normalize x - 14:00 */
         p1 = xmlSchemaDateNormalize(x, -(14 * SECS_PER_HOUR));
+        if (p1 == NULL) {
+	    xmlSchemaFreeValue(q1);
+            return -2;
+        }
         p1d = _xmlSchemaDateCastYMToDays(p1) + p1->value.date.day;
 
         if (p1d < q1d) {
@@ -4198,6 +4231,11 @@ xmlSchemaCompareDates (xmlSchemaValPtr x, xmlSchemaValPtr y)
 	        int ret = 0;
                 /* normalize x + 14:00 */
                 p2 = xmlSchemaDateNormalize(x, (14 * SECS_PER_HOUR));
+                if (p2 == NULL) {
+                    xmlSchemaFreeValue(p1);
+                    xmlSchemaFreeValue(q1);
+                    return -2;
+                }
                 p2d = _xmlSchemaDateCastYMToDays(p2) + p2->value.date.day;
 
                 if (p2d > q1d) {
@@ -4227,9 +4265,15 @@ xmlSchemaCompareDates (xmlSchemaValPtr x, xmlSchemaValPtr y)
     if (x->type == y->type) {
         int ret = 0;
         q1 = xmlSchemaDateNormalize(y, 0);
+        if (q1 == NULL)
+            return -2;
         q1d = _xmlSchemaDateCastYMToDays(q1) + q1->value.date.day;
 
         p1 = xmlSchemaDateNormalize(x, 0);
+        if (p1 == NULL) {
+	    xmlSchemaFreeValue(q1);
+            return -2;
+        }
         p1d = _xmlSchemaDateCastYMToDays(p1) + p1->value.date.day;
 
         if (p1d < q1d) {
