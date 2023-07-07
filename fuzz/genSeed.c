@@ -43,6 +43,8 @@ static struct {
     char cwd[PATH_SIZE];
 } globalData;
 
+#if defined(HAVE_SCHEMA_FUZZER) || \
+    defined(HAVE_XML_FUZZER)
 /*
  * A custom entity loader that writes all external DTDs or entities to a
  * single file in the format expected by xmlFuzzEntityLoader.
@@ -80,7 +82,8 @@ fuzzEntityRecorder(const char *URL, const char *ID,
 
     xmlFreeInputStream(in);
 
-    xmlHashAddEntry(globalData.entities, (const xmlChar *) URL, NULL);
+    xmlHashAddEntry(globalData.entities, (const xmlChar *) URL,
+                    globalData.entities);
 
     return(xmlNoNetExternalEntityLoader(URL, ID, ctxt));
 }
@@ -94,13 +97,14 @@ fuzzRecorderInit(FILE *out) {
 }
 
 static void
-fuzzRecorderCleanup() {
+fuzzRecorderCleanup(void) {
     xmlSetExternalEntityLoader(globalData.oldLoader);
-    xmlHashFree(globalData.entities, xmlHashDefaultDeallocator);
+    xmlHashFree(globalData.entities, NULL);
     globalData.out = NULL;
     globalData.entities = NULL;
     globalData.oldLoader = NULL;
 }
+#endif
 
 #ifdef HAVE_XML_FUZZER
 static int
@@ -108,7 +112,10 @@ processXml(const char *docFile, FILE *out) {
     int opts = XML_PARSE_NOENT | XML_PARSE_DTDLOAD;
     xmlDocPtr doc;
 
-    fwrite(&opts, sizeof(opts), 1, out);
+    /* Parser options. */
+    xmlFuzzWriteInt(out, opts, 4);
+    /* Max allocations. */
+    xmlFuzzWriteInt(out, 0, 4);
 
     fuzzRecorderInit(out);
 
@@ -128,9 +135,11 @@ processHtml(const char *docFile, FILE *out) {
     char buf[SEED_BUF_SIZE];
     FILE *file;
     size_t size;
-    int opts = 0;
 
-    fwrite(&opts, sizeof(opts), 1, out);
+    /* Parser options. */
+    xmlFuzzWriteInt(out, 0, 4);
+    /* Max allocations. */
+    xmlFuzzWriteInt(out, 0, 4);
 
     /* Copy file */
     file = fopen(docFile, "rb");
@@ -155,6 +164,9 @@ processSchema(const char *docFile, FILE *out) {
     xmlSchemaPtr schema;
     xmlSchemaParserCtxtPtr pctxt;
 
+    /* Max allocations. */
+    xmlFuzzWriteInt(out, 0, 4);
+
     fuzzRecorderInit(out);
 
     pctxt = xmlSchemaNewParserCtxt(docFile);
@@ -169,11 +181,15 @@ processSchema(const char *docFile, FILE *out) {
 }
 #endif
 
+#if defined(HAVE_HTML_FUZZER) || \
+    defined(HAVE_SCHEMA_FUZZER) || \
+    defined(HAVE_XML_FUZZER)
 static int
 processPattern(const char *pattern) {
     glob_t globbuf;
     int ret = 0;
-    int res, i;
+    int res;
+    size_t i;
 
     res = glob(pattern, 0, NULL, &globbuf);
     if (res == GLOB_NOMATCH)
@@ -245,6 +261,7 @@ error:
     globfree(&globbuf);
     return(ret);
 }
+#endif
 
 #ifdef HAVE_XPATH_FUZZER
 static int
@@ -282,7 +299,7 @@ processXPath(const char *testDir, const char *prefix, const char *name,
             continue;
         }
 
-        while (fgets(expr, EXPR_SIZE, in) > 0) {
+        while (fgets(expr, EXPR_SIZE, in) != NULL) {
             char outPath[PATH_SIZE];
             FILE *out;
             int j;
@@ -303,6 +320,9 @@ processXPath(const char *testDir, const char *prefix, const char *name,
                 ret = -1;
                 continue;
             }
+
+            /* Max allocations. */
+            xmlFuzzWriteInt(out, 0, 4);
 
             if (xptr) {
                 xmlFuzzWriteString(out, expr);
@@ -328,7 +348,7 @@ processXPath(const char *testDir, const char *prefix, const char *name,
     return(ret);
 }
 
-int
+static int
 processXPathDir(const char *testDir) {
     char pattern[PATH_SIZE];
     glob_t globbuf;
@@ -362,6 +382,8 @@ processXPathDir(const char *testDir) {
             ret = -1;
         if (processXPath(testDir, docFile, docFile, data, "xptr", 1) != 0)
             ret = -1;
+        if (processXPath(testDir, docFile, docFile, data, "xptr-xp1", 1) != 0)
+            ret = -1;
 
         xmlFree(data);
     }
@@ -377,7 +399,6 @@ main(int argc, const char **argv) {
     mainFunc processArg = NULL;
     const char *fuzzer;
     int ret = 0;
-    int xpath = 0;
     int i;
 
     if (argc < 3) {
@@ -397,6 +418,16 @@ main(int argc, const char **argv) {
 #ifdef HAVE_SCHEMA_FUZZER
         processArg = processPattern;
         globalData.processFile = processSchema;
+#endif
+    } else if (strcmp(fuzzer, "valid") == 0) {
+#ifdef HAVE_XINCLUDE_FUZZER
+        processArg = processPattern;
+        globalData.processFile = processXml;
+#endif
+    } else if (strcmp(fuzzer, "xinclude") == 0) {
+#ifdef HAVE_XINCLUDE_FUZZER
+        processArg = processPattern;
+        globalData.processFile = processXml;
 #endif
     } else if (strcmp(fuzzer, "xml") == 0) {
 #ifdef HAVE_XML_FUZZER
