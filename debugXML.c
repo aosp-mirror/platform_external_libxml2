@@ -12,12 +12,8 @@
 #ifdef LIBXML_DEBUG_ENABLED
 
 #include <string.h>
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
+
 #include <libxml/xmlmemory.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
@@ -33,6 +29,8 @@
 #ifdef LIBXML_SCHEMAS_ENABLED
 #include <libxml/relaxng.h>
 #endif
+
+#include "private/error.h"
 
 #define DUMP_TEXT_TYPE 1
 
@@ -409,9 +407,6 @@ xmlCtxtGenericNodeCheck(xmlDebugCtxtPtr ctxt, xmlNodePtr node) {
         case XML_NAMESPACE_DECL:
         case XML_XINCLUDE_START:
         case XML_XINCLUDE_END:
-#ifdef LIBXML_DOCB_ENABLED
-        case XML_DOCB_DOCUMENT_NODE:
-#endif
         case XML_DOCUMENT_NODE:
         case XML_HTML_DOCUMENT_NODE:
 	    break;
@@ -1615,9 +1610,6 @@ xmlLsCountNode(xmlNodePtr node) {
 	    break;
 	case XML_DOCUMENT_NODE:
 	case XML_HTML_DOCUMENT_NODE:
-#ifdef LIBXML_DOCB_ENABLED
-	case XML_DOCB_DOCUMENT_NODE:
-#endif
 	    list = ((xmlDocPtr) node)->children;
 	    break;
 	case XML_ATTRIBUTE_NODE:
@@ -1850,6 +1842,7 @@ xmlShellPrintXPathError(int errorType, const char *arg)
             xmlGenericError(xmlGenericErrorContext,
                             "%s is a string\n", arg);
             break;
+#ifdef LIBXML_XPTR_LOCS_ENABLED
         case XPATH_POINT:
             xmlGenericError(xmlGenericErrorContext,
                             "%s is a point\n", arg);
@@ -1862,6 +1855,7 @@ xmlShellPrintXPathError(int errorType, const char *arg)
             xmlGenericError(xmlGenericErrorContext,
                             "%s is a range\n", arg);
             break;
+#endif /* LIBXML_XPTR_LOCS_ENABLED */
         case XPATH_USERS:
             xmlGenericError(xmlGenericErrorContext,
                             "%s is user-defined\n", arg);
@@ -2641,7 +2635,7 @@ xmlShellValidate(xmlShellCtxtPtr ctxt, char *dtd,
     int res = -1;
 
     if ((ctxt == NULL) || (ctxt->doc == NULL)) return(-1);
-    vctxt.userData = NULL;
+    memset(&vctxt, 0, sizeof(vctxt));
     vctxt.error = xmlGenericError;
     vctxt.warning = xmlGenericError;
 
@@ -3008,6 +3002,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a string\n", arg);
                             break;
+#ifdef LIBXML_XPTR_LOCS_ENABLED
                         case XPATH_POINT:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a point\n", arg);
@@ -3020,6 +3015,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a range\n", arg);
                             break;
+#endif /* LIBXML_XPTR_LOCS_ENABLED */
                         case XPATH_USERS:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is user-defined\n", arg);
@@ -3125,6 +3121,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a string\n", arg);
                             break;
+#ifdef LIBXML_XPTR_LOCS_ENABLED
                         case XPATH_POINT:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a point\n", arg);
@@ -3137,6 +3134,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a range\n", arg);
                             break;
+#endif /* LIBXML_XPTR_LOCS_ENABLED */
                         case XPATH_USERS:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is user-defined\n", arg);
@@ -3202,6 +3200,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a string\n", arg);
                             break;
+#ifdef LIBXML_XPTR_LOCS_ENABLED
                         case XPATH_POINT:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a point\n", arg);
@@ -3214,6 +3213,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a range\n", arg);
                             break;
+#endif /* LIBXML_XPTR_LOCS_ENABLED */
                         case XPATH_USERS:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is user-defined\n", arg);
@@ -3287,6 +3287,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a string\n", arg);
                             break;
+#ifdef LIBXML_XPTR_LOCS_ENABLED
                         case XPATH_POINT:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a point\n", arg);
@@ -3299,6 +3300,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a range\n", arg);
                             break;
+#endif /* LIBXML_XPTR_LOCS_ENABLED */
                         case XPATH_USERS:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is user-defined\n", arg);
@@ -3365,6 +3367,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a string\n", arg);
                             break;
+#ifdef LIBXML_XPTR_LOCS_ENABLED
                         case XPATH_POINT:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a point\n", arg);
@@ -3377,6 +3380,7 @@ xmlShell(xmlDocPtr doc, char *filename, xmlShellReadlineFunc input,
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is a range\n", arg);
                             break;
+#endif /* LIBXML_XPTR_LOCS_ENABLED */
                         case XPATH_USERS:
                             xmlGenericError(xmlGenericErrorContext,
                                             "%s is user-defined\n", arg);

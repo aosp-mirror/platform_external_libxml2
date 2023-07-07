@@ -25,7 +25,7 @@ main(void)
      * Create the document.
      */
     doc = xmlNewDoc(BAD_CAST "1.0");
-    n = xmlNewNode(NULL, BAD_CAST "root");
+    n = xmlNewDocNode(doc, NULL, BAD_CAST "root", NULL);
     xmlNodeSetContent(n, BAD_CAST "content");
     xmlDocSetRootElement(doc, n);
 
@@ -53,6 +53,6 @@ main(void)
 {
     fprintf(stderr,
             "library not configured with tree and output support\n");
-    return (1);
+    return (0);
 }
 #endif
