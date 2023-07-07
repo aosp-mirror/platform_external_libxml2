@@ -8,13 +8,13 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <libxml/xmlerror.h>
-#include <libxml/xinclude.h>
 #include <libxml/xmlreader.h>
 #include "fuzz.h"
 
 int
 LLVMFuzzerInitialize(int *argc ATTRIBUTE_UNUSED,
                      char ***argv ATTRIBUTE_UNUSED) {
+    xmlFuzzMemSetup();
     xmlInitParser();
 #ifdef LIBXML_CATALOG_ENABLED
     xmlInitializeCatalog();
@@ -33,16 +33,13 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
     xmlTextReaderPtr reader;
     xmlChar *out;
     const char *docBuffer, *docUrl;
-    size_t maxSize, docSize, consumed, chunkSize;
+    size_t maxAlloc, docSize, consumed, chunkSize;
     int opts, outSize;
 
     xmlFuzzDataInit(data, size);
-    opts = xmlFuzzReadInt();
-
-    /* Lower maximum size when processing entities for now. */
-    maxSize = opts & XML_PARSE_NOENT ? 50000 : 500000;
-    if (size > maxSize)
-        goto exit;
+    opts = (int) xmlFuzzReadInt(4);
+    opts &= ~XML_PARSE_XINCLUDE & ~XML_PARSE_DTDVALID;
+    maxAlloc = xmlFuzzReadInt(4) % (size + 1);
 
     xmlFuzzReadEntities();
     docBuffer = xmlFuzzMainEntity(&docSize);
@@ -52,9 +49,8 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
 
     /* Pull parser */
 
+    xmlFuzzMemSetLimit(maxAlloc);
     doc = xmlReadMemory(docBuffer, docSize, docUrl, NULL, opts);
-    if (opts & XML_PARSE_XINCLUDE)
-        xmlXIncludeProcessFlags(doc, opts);
     /* Also test the serializer. */
     xmlDocDumpMemory(doc, &out, &outSize);
     xmlFree(out);
@@ -62,6 +58,7 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
 
     /* Push parser */
 
+    xmlFuzzMemSetLimit(maxAlloc);
     ctxt = xmlCreatePushParserCtxt(NULL, NULL, NULL, 0, docUrl);
     if (ctxt == NULL)
         goto exit;
@@ -75,13 +72,12 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
     }
 
     xmlParseChunk(ctxt, NULL, 0, 1);
-    if (opts & XML_PARSE_XINCLUDE)
-        xmlXIncludeProcessFlags(ctxt->myDoc, opts);
     xmlFreeDoc(ctxt->myDoc);
     xmlFreeParserCtxt(ctxt);
 
     /* Reader */
 
+    xmlFuzzMemSetLimit(maxAlloc);
     reader = xmlReaderForMemory(docBuffer, docSize, NULL, NULL, opts);
     if (reader == NULL)
         goto exit;
@@ -97,6 +93,7 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
     xmlFreeTextReader(reader);
 
 exit:
+    xmlFuzzMemSetLimit(0);
     xmlFuzzDataCleanup();
     xmlResetLastError();
     return(0);
