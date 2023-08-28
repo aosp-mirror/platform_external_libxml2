@@ -384,8 +384,6 @@ xmlSAX2ExternalSubset(void *ctx, const xmlChar *name,
 	int oldinputMax;
 	xmlParserInputPtr *oldinputTab;
 	xmlParserInputPtr input = NULL;
-	xmlCharEncoding enc;
-	int oldcharset;
 	const xmlChar *oldencoding;
 	int oldprogressive;
         unsigned long consumed;
@@ -410,7 +408,6 @@ xmlSAX2ExternalSubset(void *ctx, const xmlChar *name,
 	oldinputNr = ctxt->inputNr;
 	oldinputMax = ctxt->inputMax;
 	oldinputTab = ctxt->inputTab;
-	oldcharset = ctxt->charset;
 	oldencoding = ctxt->encoding;
         oldprogressive = ctxt->progressive;
 	ctxt->encoding = NULL;
@@ -425,7 +422,6 @@ xmlSAX2ExternalSubset(void *ctx, const xmlChar *name,
 	    ctxt->inputNr = oldinputNr;
 	    ctxt->inputMax = oldinputMax;
 	    ctxt->inputTab = oldinputTab;
-	    ctxt->charset = oldcharset;
 	    ctxt->encoding = oldencoding;
             ctxt->progressive = oldprogressive;
 	    return;
@@ -434,14 +430,6 @@ xmlSAX2ExternalSubset(void *ctx, const xmlChar *name,
 	ctxt->inputMax = 5;
 	ctxt->input = NULL;
 	xmlPushInput(ctxt, input);
-
-	/*
-	 * On the fly encoding conversion if needed
-	 */
-	if (ctxt->input->length >= 4) {
-	    enc = xmlDetectCharEncoding(ctxt->input->cur, 4);
-	    xmlSwitchEncoding(ctxt, enc);
-	}
 
 	if (input->filename == NULL)
 	    input->filename = (char *) xmlCanonicPath(SystemID);
@@ -484,7 +472,6 @@ xmlSAX2ExternalSubset(void *ctx, const xmlChar *name,
 	ctxt->inputNr = oldinputNr;
 	ctxt->inputMax = oldinputMax;
 	ctxt->inputTab = oldinputTab;
-	ctxt->charset = oldcharset;
 	if ((ctxt->encoding != NULL) &&
 	    ((ctxt->dict == NULL) ||
 	     (!xmlDictOwns(ctxt->dict, ctxt->encoding))))
@@ -990,10 +977,6 @@ xmlSAX2StartDocument(void *ctx)
 	    if (ctxt->options & XML_PARSE_OLD10)
 	        doc->properties |= XML_DOC_OLD10;
 	    doc->parseFlags = ctxt->options;
-	    if (ctxt->encoding != NULL)
-		doc->encoding = xmlStrdup(ctxt->encoding);
-	    else
-		doc->encoding = NULL;
 	    doc->standalone = ctxt->standalone;
 	} else {
 	    xmlSAX2ErrMemory(ctxt, "xmlSAX2StartDocument");
@@ -1022,6 +1005,8 @@ void
 xmlSAX2EndDocument(void *ctx)
 {
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
+    xmlDocPtr doc;
+
 #ifdef DEBUG_SAX
     xmlGenericError(xmlGenericErrorContext,
 	    "SAX.xmlSAX2EndDocument()\n");
@@ -1033,23 +1018,25 @@ xmlSAX2EndDocument(void *ctx)
 	ctxt->valid &= xmlValidateDocumentFinal(&ctxt->vctxt, ctxt->myDoc);
 #endif /* LIBXML_VALID_ENABLED */
 
-    /*
-     * Grab the encoding if it was added on-the-fly
-     */
-    if ((ctxt->encoding != NULL) && (ctxt->myDoc != NULL) &&
-	(ctxt->myDoc->encoding == NULL)) {
-	ctxt->myDoc->encoding = ctxt->encoding;
-	ctxt->encoding = NULL;
-    }
-    if ((ctxt->inputTab != NULL) &&
-        (ctxt->inputNr > 0) && (ctxt->inputTab[0] != NULL) &&
-        (ctxt->inputTab[0]->encoding != NULL) && (ctxt->myDoc != NULL) &&
-	(ctxt->myDoc->encoding == NULL)) {
-	ctxt->myDoc->encoding = xmlStrdup(ctxt->inputTab[0]->encoding);
-    }
-    if ((ctxt->charset != XML_CHAR_ENCODING_NONE) && (ctxt->myDoc != NULL) &&
-	(ctxt->myDoc->charset == XML_CHAR_ENCODING_NONE)) {
-	ctxt->myDoc->charset = ctxt->charset;
+    doc = ctxt->myDoc;
+    if ((doc != NULL) && (doc->encoding == NULL)) {
+        const xmlChar *encoding = NULL;
+
+        if ((ctxt->input->flags & XML_INPUT_USES_ENC_DECL) ||
+            (ctxt->input->flags & XML_INPUT_AUTO_ENCODING)) {
+            /* Preserve encoding exactly */
+            encoding = ctxt->encoding;
+        } else if ((ctxt->input->buf) && (ctxt->input->buf->encoder)) {
+            encoding = BAD_CAST ctxt->input->buf->encoder->name;
+        } else if (ctxt->input->flags & XML_INPUT_HAS_ENCODING) {
+            encoding = BAD_CAST "UTF-8";
+        }
+
+        if (encoding != NULL) {
+            doc->encoding = xmlStrdup(encoding);
+            if (doc->encoding == NULL)
+                xmlSAX2ErrMemory(ctxt, "xmlSAX2EndDocument");
+        }
     }
 }
 
@@ -1612,7 +1599,6 @@ xmlSAX2StartElement(void *ctx, const xmlChar *fullname, const xmlChar **atts)
     int i;
 
     if ((ctx == NULL) || (fullname == NULL) || (ctxt->myDoc == NULL)) return;
-    parent = ctxt->node;
 #ifdef DEBUG_SAX
     xmlGenericError(xmlGenericErrorContext,
 	    "SAX.xmlSAX2StartElement(%s)\n", fullname);
@@ -1654,14 +1640,6 @@ xmlSAX2StartElement(void *ctx, const xmlChar *fullname, const xmlChar **atts)
 	xmlSAX2ErrMemory(ctxt, "xmlSAX2StartElement");
         return;
     }
-    if (ctxt->myDoc->children == NULL) {
-#ifdef DEBUG_SAX_TREE
-	xmlGenericError(xmlGenericErrorContext, "Setting %s as root\n", name);
-#endif
-        xmlAddChild((xmlNodePtr) ctxt->myDoc, (xmlNodePtr) ret);
-    } else if (parent == NULL) {
-        parent = ctxt->myDoc->children;
-    }
     ctxt->nodemem = -1;
     if (ctxt->linenumbers) {
 	if (ctxt->input != NULL) {
@@ -1671,6 +1649,11 @@ xmlSAX2StartElement(void *ctx, const xmlChar *fullname, const xmlChar **atts)
 	        ret->line = USHRT_MAX;
 	}
     }
+
+    /* Initialize parent before pushing node */
+    parent = ctxt->node;
+    if (parent == NULL)
+        parent = (xmlNodePtr) ctxt->myDoc;
 
     /*
      * We are parsing a new node.
@@ -1689,22 +1672,11 @@ xmlSAX2StartElement(void *ctx, const xmlChar *fullname, const xmlChar **atts)
     /*
      * Link the child element
      */
-    if (parent != NULL) {
-        if (parent->type == XML_ELEMENT_NODE) {
 #ifdef DEBUG_SAX_TREE
-	    xmlGenericError(xmlGenericErrorContext,
-		    "adding child %s to %s\n", name, parent->name);
+    xmlGenericError(xmlGenericErrorContext,
+            "adding child %s to %s\n", name, parent->name);
 #endif
-	    xmlAddChild(parent, ret);
-	} else {
-#ifdef DEBUG_SAX_TREE
-	    xmlGenericError(xmlGenericErrorContext,
-		    "adding sibling %s to ", name);
-	    xmlDebugDumpOneNode(stderr, parent, 0);
-#endif
-	    xmlAddSibling(parent, ret);
-	}
-    }
+    xmlAddChild(parent, ret);
 
     if (!ctxt->html) {
         /*
@@ -1920,18 +1892,6 @@ skip:
 	}
     } else
 	ret->content = (xmlChar *) intern;
-
-    if (ctxt->linenumbers) {
-	if (ctxt->input != NULL) {
-	    if ((unsigned) ctxt->input->line < (unsigned) USHRT_MAX)
-		ret->line = ctxt->input->line;
-	    else {
-	        ret->line = USHRT_MAX;
-		if (ctxt->options & XML_PARSE_BIG_LINES)
-		    ret->psvi = (void *) (ptrdiff_t) ctxt->input->line;
-	    }
-	}
-    }
 
     if ((__xmlRegisterCallbacks) && (xmlRegisterNodeDefaultValue))
 	xmlRegisterNodeDefaultValue(ret);
@@ -2227,7 +2187,6 @@ xmlSAX2StartElementNs(void *ctx,
     int i, j;
 
     if (ctx == NULL) return;
-    parent = ctxt->node;
     /*
      * First check on validity:
      */
@@ -2305,9 +2264,6 @@ xmlSAX2StartElementNs(void *ctx,
 	}
     }
 
-    if (parent == NULL) {
-        xmlAddChild((xmlNodePtr) ctxt->myDoc, (xmlNodePtr) ret);
-    }
     /*
      * Build the namespace list
      */
@@ -2342,6 +2298,11 @@ xmlSAX2StartElementNs(void *ctx,
     }
     ctxt->nodemem = -1;
 
+    /* Initialize parent before pushing node */
+    parent = ctxt->node;
+    if (parent == NULL)
+        parent = (xmlNodePtr) ctxt->myDoc;
+
     /*
      * We are parsing a new node.
      */
@@ -2354,13 +2315,7 @@ xmlSAX2StartElementNs(void *ctx,
     /*
      * Link the child element
      */
-    if (parent != NULL) {
-        if (parent->type == XML_ELEMENT_NODE) {
-	    xmlAddChild(parent, ret);
-	} else {
-	    xmlAddSibling(parent, ret);
-	}
-    }
+    xmlAddChild(parent, ret);
 
     /*
      * Insert the defaulted attributes from the DTD only if requested:
@@ -2503,10 +2458,7 @@ xmlSAX2Reference(void *ctx, const xmlChar *name)
     xmlGenericError(xmlGenericErrorContext,
 	    "SAX.xmlSAX2Reference(%s)\n", name);
 #endif
-    if (name[0] == '#')
-	ret = xmlNewCharRef(ctxt->myDoc, name);
-    else
-	ret = xmlNewReference(ctxt->myDoc, name);
+    ret = xmlNewReference(ctxt->myDoc, name);
 #ifdef DEBUG_SAX_TREE
     xmlGenericError(xmlGenericErrorContext,
 	    "add xmlSAX2Reference %s to %s \n", name, ctxt->node->name);
@@ -2651,6 +2603,19 @@ xmlSAX2Text(xmlParserCtxtPtr ctxt, const xmlChar *ch, int len,
 		}
 	    }
 	}
+    }
+
+    if ((lastChild != NULL) &&
+        (type == XML_TEXT_NODE) &&
+        (ctxt->linenumbers) &&
+        (ctxt->input != NULL)) {
+        if ((unsigned) ctxt->input->line < (unsigned) USHRT_MAX)
+            lastChild->line = ctxt->input->line;
+        else {
+            lastChild->line = USHRT_MAX;
+            if (ctxt->options & XML_PARSE_BIG_LINES)
+                lastChild->psvi = (void *) (ptrdiff_t) ctxt->input->line;
+        }
     }
 }
 
