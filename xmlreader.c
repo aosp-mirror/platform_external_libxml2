@@ -792,9 +792,7 @@ xmlTextReaderPushData(xmlTextReaderPtr reader) {
                                     "xmlParserInputBufferRead failed\n");
 		    reader->mode = XML_TEXTREADER_MODE_EOF;
 		    reader->state = oldstate;
-		    if ((oldstate != XML_TEXTREADER_START) ||
-			(reader->ctxt->myDoc != NULL))
-			return(val);
+		    return(val);
 		} else if (val == 0) {
 		    /* mark the end of the stream and process the remains */
 		    reader->mode = XML_TEXTREADER_MODE_EOF;
@@ -5235,6 +5233,19 @@ xmlTextReaderSetup(xmlTextReaderPtr reader,
     reader->doc = NULL;
 
     return (0);
+}
+
+/**
+ * xmlTextReaderSetMaxAmplification:
+ * @reader: an XML reader
+ * @maxAmpl:  maximum amplification factor
+ *
+ * Set the maximum amplification factor. See xmlCtxtSetMaxAmplification.
+ */
+void
+xmlTextReaderSetMaxAmplification(xmlTextReaderPtr reader, unsigned maxAmpl)
+{
+    xmlCtxtSetMaxAmplification(reader->ctxt, maxAmpl);
 }
 
 /**
