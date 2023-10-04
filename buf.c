@@ -1056,39 +1056,10 @@ xmlBufResetInput(xmlBufPtr buf, xmlParserInputPtr input) {
 }
 
 /**
- * xmlBufGetInputBase:
+ * xmlBufUpdateInput:
  * @buf: an xmlBufPtr
  * @input: an xmlParserInputPtr
- *
- * Get the base of the @input relative to the beginning of the buffer
- *
- * Returns the size_t corresponding to the displacement
- */
-size_t
-xmlBufGetInputBase(xmlBufPtr buf, xmlParserInputPtr input) {
-    size_t base;
-
-    if ((input == NULL) || (buf == NULL) || (buf->error))
-        return(0);
-    CHECK_COMPAT(buf)
-    base = input->base - buf->content;
-    /*
-     * We could do some pointer arithmetic checks but that's probably
-     * sufficient.
-     */
-    if (base > buf->size) {
-        xmlBufOverflowError(buf, "Input reference outside of the buffer");
-        base = 0;
-    }
-    return(base);
-}
-
-/**
- * xmlBufSetInputBaseCur:
- * @buf: an xmlBufPtr
- * @input: an xmlParserInputPtr
- * @base: the base value relative to the beginning of the buffer
- * @cur: the cur value relative to the beginning of the buffer
+ * @pos: the cur value relative to the beginning of the buffer
  *
  * Update the input to use the base and cur relative to the buffer
  * after a possible reallocation of its content
@@ -1096,17 +1067,20 @@ xmlBufGetInputBase(xmlBufPtr buf, xmlParserInputPtr input) {
  * Returns -1 in case of error, 0 otherwise
  */
 int
-xmlBufSetInputBaseCur(xmlBufPtr buf, xmlParserInputPtr input,
-                      size_t base, size_t cur) {
+xmlBufUpdateInput(xmlBufPtr buf, xmlParserInputPtr input, size_t pos) {
     if (input == NULL)
         return(-1);
+    /*
+     * TODO: It might be safer to keep using the buffer content if there
+     * was an error.
+     */
     if ((buf == NULL) || (buf->error)) {
         input->base = input->cur = input->end = BAD_CAST "";
         return(-1);
     }
     CHECK_COMPAT(buf)
-    input->base = &buf->content[base];
-    input->cur = input->base + cur;
+    input->base = buf->content;
+    input->cur = input->base + pos;
     input->end = &buf->content[buf->use];
     return(0);
 }
