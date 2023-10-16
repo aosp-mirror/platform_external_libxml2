@@ -177,6 +177,7 @@ cc_library {
     },
     apex_available: [
         "//apex_available:platform",
+        "com.android.nfcservices",
         "com.android.uwb",
         "com.android.virt",
     ],
