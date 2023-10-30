@@ -114,8 +114,6 @@ cc_defaults {
     stl: "none",
     export_include_dirs: ["include"],
     cflags: [
-        "-DLIBXML_THREAD_ENABLED=1",
-
         // Poison various things that should not be defined.
         "-DLIBXML_LEGACY_ENABLED=NO",
         "-DLIBXML_FTP_ENABLED=NO",
@@ -194,8 +192,6 @@ cc_binary_host {
     name: "xmllint",
     srcs: ["xmllint.c"],
     cflags: [
-        "-DLIBXML_THREAD_ENABLED=1",
-
         "-Wall",
         "-Werror",
     ],

@@ -49,4 +49,18 @@ xmlDetectEncoding(xmlParserCtxtPtr ctxt);
 XML_HIDDEN void
 xmlSetDeclaredEncoding(xmlParserCtxtPtr ctxt, xmlChar *encoding);
 
+XML_HIDDEN xmlParserNsData *
+xmlParserNsCreate(void);
+XML_HIDDEN void
+xmlParserNsFree(xmlParserNsData *nsdb);
+/*
+ * These functions allow SAX handlers to attach extra data to namespaces
+ * efficiently and should be made public.
+ */
+XML_HIDDEN int
+xmlParserNsUpdateSax(xmlParserCtxtPtr ctxt, const xmlChar *prefix,
+                     void *saxData);
+XML_HIDDEN void *
+xmlParserNsLookupSax(xmlParserCtxtPtr ctxt, const xmlChar *prefix);
+
 #endif /* XML_PARSER_H_PRIVATE__ */
