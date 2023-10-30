@@ -23,7 +23,6 @@
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
 #include <libxml/xmlerror.h>
-#include <libxml/globals.h>
 #include <libxml/dict.h>
 
 #include "private/entities.h"
@@ -114,7 +113,7 @@ xmlEntitiesWarn(xmlParserErrors code, const char *msg, const xmlChar *str1)
 /*
  * xmlFreeEntity : clean-up an entity record.
  */
-static void
+void
 xmlFreeEntity(xmlEntityPtr entity)
 {
     xmlDictPtr dict = NULL;

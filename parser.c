@@ -51,48 +51,68 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <libxml/xmlmemory.h>
-#include <libxml/threads.h>
-#include <libxml/globals.h>
-#include <libxml/tree.h>
 #include <libxml/parser.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/tree.h>
 #include <libxml/parserInternals.h>
-#include <libxml/HTMLparser.h>
 #include <libxml/valid.h>
 #include <libxml/entities.h>
 #include <libxml/xmlerror.h>
 #include <libxml/encoding.h>
 #include <libxml/xmlIO.h>
 #include <libxml/uri.h>
+#include <libxml/SAX2.h>
 #ifdef LIBXML_CATALOG_ENABLED
 #include <libxml/catalog.h>
-#endif
-#ifdef LIBXML_SCHEMAS_ENABLED
-#include <libxml/xmlschemastypes.h>
-#include <libxml/relaxng.h>
-#endif
-#if defined(LIBXML_XPATH_ENABLED) || defined(LIBXML_SCHEMAS_ENABLED)
-#include <libxml/xpath.h>
 #endif
 
 #include "private/buf.h"
 #include "private/dict.h"
-#include "private/enc.h"
 #include "private/entities.h"
 #include "private/error.h"
-#include "private/globals.h"
 #include "private/html.h"
 #include "private/io.h"
-#include "private/memory.h"
 #include "private/parser.h"
-#include "private/threads.h"
-#include "private/xpath.h"
+
+#define NS_INDEX_EMPTY  INT_MAX
+#define NS_INDEX_XML    (INT_MAX - 1)
+#define URI_HASH_EMPTY  0xD943A04E
+#define URI_HASH_XML    0xF0451F02
 
 struct _xmlStartTag {
     const xmlChar *prefix;
     const xmlChar *URI;
     int line;
     int nsNr;
+};
+
+typedef struct {
+    void *saxData;
+    unsigned prefixHashValue;
+    unsigned uriHashValue;
+    unsigned elementId;
+    int oldIndex;
+} xmlParserNsExtra;
+
+typedef struct {
+    unsigned hashValue;
+    int index;
+} xmlParserNsBucket;
+
+struct _xmlParserNsData {
+    xmlParserNsExtra *extra;
+
+    unsigned hashSize;
+    unsigned hashElems;
+    xmlParserNsBucket *hash;
+
+    unsigned elementId;
+    int defaultNsIndex;
+};
+
+struct _xmlAttrHashBucket {
+    unsigned hashValue;
+    int index;
 };
 
 static xmlParserCtxtPtr
@@ -144,7 +164,6 @@ unsigned int xmlParserMaxDepth = 256;
 
 
 
-#define SAX2 1
 #define XML_PARSER_BIG_BUFFER_SIZE 300
 #define XML_PARSER_BUFFER_SIZE 100
 #define SAX_COMPAT_MODE BAD_CAST "SAX compatibility mode document"
@@ -159,6 +178,14 @@ unsigned int xmlParserMaxDepth = 256;
  * are followed by 0, which should be provided by the I/O level
  */
 #define XML_PARSER_CHUNK_SIZE 100
+
+/**
+ * xmlParserVersion:
+ *
+ * Constant string describing the internal version of the library
+ */
+const char *const
+xmlParserVersion = LIBXML_VERSION_STRING LIBXML_VERSION_EXTRA;
 
 /*
  * List of XML prefixed PI allowed by W3C specs
@@ -852,6 +879,15 @@ xmlDetectSAX2(xmlParserCtxtPtr ctxt) {
     }
 }
 
+typedef struct {
+    xmlHashedString prefix;
+    xmlHashedString name;
+    xmlHashedString value;
+    const xmlChar *valueEnd;
+    int external;
+    int expandedSize;
+} xmlDefAttr;
+
 typedef struct _xmlDefAttrs xmlDefAttrs;
 typedef xmlDefAttrs *xmlDefAttrsPtr;
 struct _xmlDefAttrs {
@@ -859,9 +895,9 @@ struct _xmlDefAttrs {
     int maxAttrs;       /* the size of the array */
 #if __STDC_VERSION__ >= 199901L
     /* Using a C99 flexible array member avoids UBSan errors. */
-    const xmlChar *values[]; /* array of localname/prefix/values/external */
+    xmlDefAttr attrs[]; /* array of localname/prefix/values/external */
 #else
-    const xmlChar *values[5];
+    xmlDefAttr attrs[1];
 #endif
 };
 
@@ -978,9 +1014,12 @@ xmlAddDefAttrs(xmlParserCtxtPtr ctxt,
                const xmlChar *fullattr,
                const xmlChar *value) {
     xmlDefAttrsPtr defaults;
-    int len;
-    const xmlChar *name;
-    const xmlChar *prefix;
+    xmlDefAttr *attr;
+    int len, expandedSize;
+    xmlHashedString name;
+    xmlHashedString prefix;
+    xmlHashedString hvalue;
+    const xmlChar *localname;
 
     /*
      * Allows to detect attribute redefinitions
@@ -1000,41 +1039,38 @@ xmlAddDefAttrs(xmlParserCtxtPtr ctxt,
      * split the element name into prefix:localname , the string found
      * are within the DTD and then not associated to namespace names.
      */
-    name = xmlSplitQName3(fullname, &len);
-    if (name == NULL) {
-        name = xmlDictLookup(ctxt->dict, fullname, -1);
-	prefix = NULL;
+    localname = xmlSplitQName3(fullname, &len);
+    if (localname == NULL) {
+        name = xmlDictLookupHashed(ctxt->dict, fullname, -1);
+	prefix.name = NULL;
     } else {
-        name = xmlDictLookup(ctxt->dict, name, -1);
-	prefix = xmlDictLookup(ctxt->dict, fullname, len);
+        name = xmlDictLookupHashed(ctxt->dict, localname, -1);
+	prefix = xmlDictLookupHashed(ctxt->dict, fullname, len);
+        if (prefix.name == NULL)
+            goto mem_error;
     }
+    if (name.name == NULL)
+        goto mem_error;
 
     /*
      * make sure there is some storage
      */
-    defaults = xmlHashLookup2(ctxt->attsDefault, name, prefix);
-    if (defaults == NULL) {
-        defaults = (xmlDefAttrsPtr) xmlMalloc(sizeof(xmlDefAttrs) +
-	                   (4 * 5) * sizeof(const xmlChar *));
-	if (defaults == NULL)
-	    goto mem_error;
-	defaults->nbAttrs = 0;
-	defaults->maxAttrs = 4;
-	if (xmlHashUpdateEntry2(ctxt->attsDefault, name, prefix,
-	                        defaults, NULL) < 0) {
-	    xmlFree(defaults);
-	    goto mem_error;
-	}
-    } else if (defaults->nbAttrs >= defaults->maxAttrs) {
+    defaults = xmlHashLookup2(ctxt->attsDefault, name.name, prefix.name);
+    if ((defaults == NULL) ||
+        (defaults->nbAttrs >= defaults->maxAttrs)) {
         xmlDefAttrsPtr temp;
+        int newSize;
 
-        temp = (xmlDefAttrsPtr) xmlRealloc(defaults, sizeof(xmlDefAttrs) +
-		       (2 * defaults->maxAttrs * 5) * sizeof(const xmlChar *));
+        newSize = (defaults != NULL) ? 2 * defaults->maxAttrs : 4;
+        temp = xmlRealloc(defaults,
+                          sizeof(*defaults) + newSize * sizeof(xmlDefAttr));
 	if (temp == NULL)
 	    goto mem_error;
-	defaults = temp;
-	defaults->maxAttrs *= 2;
-	if (xmlHashUpdateEntry2(ctxt->attsDefault, name, prefix,
+        if (defaults == NULL)
+            temp->nbAttrs = 0;
+	temp->maxAttrs = newSize;
+        defaults = temp;
+	if (xmlHashUpdateEntry2(ctxt->attsDefault, name.name, prefix.name,
 	                        defaults, NULL) < 0) {
 	    xmlFree(defaults);
 	    goto mem_error;
@@ -1042,32 +1078,40 @@ xmlAddDefAttrs(xmlParserCtxtPtr ctxt,
     }
 
     /*
-     * Split the element name into prefix:localname , the string found
+     * Split the attribute name into prefix:localname , the string found
      * are within the DTD and hen not associated to namespace names.
      */
-    name = xmlSplitQName3(fullattr, &len);
-    if (name == NULL) {
-        name = xmlDictLookup(ctxt->dict, fullattr, -1);
-	prefix = NULL;
+    localname = xmlSplitQName3(fullattr, &len);
+    if (localname == NULL) {
+        name = xmlDictLookupHashed(ctxt->dict, fullattr, -1);
+	prefix.name = NULL;
     } else {
-        name = xmlDictLookup(ctxt->dict, name, -1);
-	prefix = xmlDictLookup(ctxt->dict, fullattr, len);
+        name = xmlDictLookupHashed(ctxt->dict, localname, -1);
+	prefix = xmlDictLookupHashed(ctxt->dict, fullattr, len);
+        if (prefix.name == NULL)
+            goto mem_error;
     }
-
-    defaults->values[5 * defaults->nbAttrs] = name;
-    defaults->values[5 * defaults->nbAttrs + 1] = prefix;
-    /* intern the string and precompute the end */
-    len = xmlStrlen(value);
-    value = xmlDictLookup(ctxt->dict, value, len);
-    if (value == NULL)
+    if (name.name == NULL)
         goto mem_error;
-    defaults->values[5 * defaults->nbAttrs + 2] = value;
-    defaults->values[5 * defaults->nbAttrs + 3] = value + len;
-    if (ctxt->external)
-        defaults->values[5 * defaults->nbAttrs + 4] = BAD_CAST "external";
-    else
-        defaults->values[5 * defaults->nbAttrs + 4] = NULL;
-    defaults->nbAttrs++;
+
+    /* intern the string and precompute the end */
+    len = strlen((const char *) value);
+    hvalue = xmlDictLookupHashed(ctxt->dict, value, len);
+    if (hvalue.name == NULL)
+        goto mem_error;
+
+    expandedSize = strlen((const char *) name.name);
+    if (prefix.name != NULL)
+        expandedSize += strlen((const char *) prefix.name);
+    expandedSize += len;
+
+    attr = &defaults->attrs[defaults->nbAttrs++];
+    attr->name = name;
+    attr->prefix = prefix;
+    attr->value = hvalue;
+    attr->valueEnd = hvalue.name + len;
+    attr->external = ctxt->external;
+    attr->expandedSize = expandedSize;
 
     return;
 
@@ -1353,93 +1397,463 @@ region_m49:
 static xmlEntityPtr xmlParseStringEntityRef(xmlParserCtxtPtr ctxt,
                                             const xmlChar ** str);
 
-#ifdef SAX2
 /**
- * nsPush:
- * @ctxt:  an XML parser context
- * @prefix:  the namespace prefix or NULL
- * @URL:  the namespace name
+ * xmlParserNsCreate:
  *
- * Pushes a new parser namespace on top of the ns stack
+ * Create a new namespace database.
  *
- * Returns -1 in case of error, -2 if the namespace should be discarded
- *	   and the index in the stack otherwise.
+ * Returns the new obejct.
+ */
+xmlParserNsData *
+xmlParserNsCreate(void) {
+    xmlParserNsData *nsdb = xmlMalloc(sizeof(*nsdb));
+
+    if (nsdb == NULL)
+        return(NULL);
+    memset(nsdb, 0, sizeof(*nsdb));
+    nsdb->defaultNsIndex = INT_MAX;
+
+    return(nsdb);
+}
+
+/**
+ * xmlParserNsFree:
+ * @nsdb: namespace database
+ *
+ * Free a namespace database.
+ */
+void
+xmlParserNsFree(xmlParserNsData *nsdb) {
+    if (nsdb == NULL)
+        return;
+
+    xmlFree(nsdb->extra);
+    xmlFree(nsdb->hash);
+    xmlFree(nsdb);
+}
+
+/**
+ * xmlParserNsReset:
+ * @nsdb: namespace database
+ *
+ * Reset a namespace database.
+ */
+static void
+xmlParserNsReset(xmlParserNsData *nsdb) {
+    if (nsdb == NULL)
+        return;
+
+    nsdb->hashElems = 0;
+    nsdb->elementId = 0;
+    nsdb->defaultNsIndex = INT_MAX;
+
+    if (nsdb->hash)
+        memset(nsdb->hash, 0, nsdb->hashSize * sizeof(nsdb->hash[0]));
+}
+
+/**
+ * xmlParserStartElement:
+ * @nsdb: namespace database
+ *
+ * Signal that a new element has started.
+ *
+ * Returns 0 on success, -1 if the element counter overflowed.
  */
 static int
-nsPush(xmlParserCtxtPtr ctxt, const xmlChar *prefix, const xmlChar *URL)
-{
-    if (ctxt->options & XML_PARSE_NSCLEAN) {
-        int i;
-	for (i = ctxt->nsNr - 2;i >= 0;i -= 2) {
-	    if (ctxt->nsTab[i] == prefix) {
-		/* in scope */
-	        if (ctxt->nsTab[i + 1] == URL)
-		    return(-2);
-		/* out of scope keep it */
-		break;
-	    }
-	}
-    }
-    if ((ctxt->nsMax == 0) || (ctxt->nsTab == NULL)) {
-	ctxt->nsMax = 10;
-	ctxt->nsNr = 0;
-	ctxt->nsTab = (const xmlChar **)
-	              xmlMalloc(ctxt->nsMax * sizeof(xmlChar *));
-	if (ctxt->nsTab == NULL) {
-	    xmlErrMemory(ctxt, NULL);
-	    ctxt->nsMax = 0;
-            return (-1);
-	}
-    } else if (ctxt->nsNr >= ctxt->nsMax) {
-        const xmlChar ** tmp;
-        ctxt->nsMax *= 2;
-        tmp = (const xmlChar **) xmlRealloc((char *) ctxt->nsTab,
-				    ctxt->nsMax * sizeof(ctxt->nsTab[0]));
-        if (tmp == NULL) {
-            xmlErrMemory(ctxt, NULL);
-	    ctxt->nsMax /= 2;
-            return (-1);
-        }
-	ctxt->nsTab = tmp;
-    }
-    ctxt->nsTab[ctxt->nsNr++] = prefix;
-    ctxt->nsTab[ctxt->nsNr++] = URL;
-    return (ctxt->nsNr);
+xmlParserNsStartElement(xmlParserNsData *nsdb) {
+    if (nsdb->elementId == UINT_MAX)
+        return(-1);
+    nsdb->elementId++;
+
+    return(0);
 }
+
 /**
- * nsPop:
+ * xmlParserNsLookup:
+ * @ctxt: parser context
+ * @prefix: namespace prefix
+ * @bucketPtr: optional bucket (return value)
+ *
+ * Lookup namespace with given prefix. If @bucketPtr is non-NULL, it will
+ * be set to the matching bucket, or the first empty bucket if no match
+ * was found.
+ *
+ * Returns the namespace index on success, INT_MAX if no namespace was
+ * found.
+ */
+static int
+xmlParserNsLookup(xmlParserCtxtPtr ctxt, const xmlHashedString *prefix,
+                  xmlParserNsBucket **bucketPtr) {
+    xmlParserNsBucket *bucket;
+    unsigned index, hashValue;
+
+    if (prefix->name == NULL)
+        return(ctxt->nsdb->defaultNsIndex);
+
+    if (ctxt->nsdb->hashSize == 0)
+        return(INT_MAX);
+
+    hashValue = prefix->hashValue;
+    index = hashValue & (ctxt->nsdb->hashSize - 1);
+    bucket = &ctxt->nsdb->hash[index];
+
+    while (bucket->hashValue) {
+        if ((bucket->hashValue == hashValue) &&
+            (bucket->index != INT_MAX)) {
+            if (ctxt->nsTab[bucket->index * 2] == prefix->name) {
+                if (bucketPtr != NULL)
+                    *bucketPtr = bucket;
+                return(bucket->index);
+            }
+        }
+
+        index++;
+        bucket++;
+        if (index == ctxt->nsdb->hashSize) {
+            index = 0;
+            bucket = ctxt->nsdb->hash;
+        }
+    }
+
+    if (bucketPtr != NULL)
+        *bucketPtr = bucket;
+    return(INT_MAX);
+}
+
+/**
+ * xmlParserNsLookupUri:
+ * @ctxt: parser context
+ * @prefix: namespace prefix
+ *
+ * Lookup namespace URI with given prefix.
+ *
+ * Returns the namespace URI on success, NULL if no namespace was found.
+ */
+static const xmlChar *
+xmlParserNsLookupUri(xmlParserCtxtPtr ctxt, const xmlHashedString *prefix) {
+    const xmlChar *ret;
+    int nsIndex;
+
+    if (prefix->name == ctxt->str_xml)
+        return(ctxt->str_xml_ns);
+
+    nsIndex = xmlParserNsLookup(ctxt, prefix, NULL);
+    if (nsIndex == INT_MAX)
+        return(NULL);
+
+    ret = ctxt->nsTab[nsIndex * 2 + 1];
+    if (ret[0] == 0)
+        ret = NULL;
+    return(ret);
+}
+
+/**
+ * xmlParserNsLookupSax:
+ * @ctxt: parser context
+ * @prefix: namespace prefix
+ *
+ * Lookup extra data for the given prefix. This returns data stored
+ * with xmlParserNsUdpateSax.
+ *
+ * Returns the data on success, NULL if no namespace was found.
+ */
+void *
+xmlParserNsLookupSax(xmlParserCtxtPtr ctxt, const xmlChar *prefix) {
+    xmlHashedString hprefix;
+    int nsIndex;
+
+    if (prefix == ctxt->str_xml)
+        return(NULL);
+
+    hprefix.name = prefix;
+    if (prefix != NULL)
+        hprefix.hashValue = xmlDictComputeHash(ctxt->dict, prefix);
+    else
+        hprefix.hashValue = 0;
+    nsIndex = xmlParserNsLookup(ctxt, &hprefix, NULL);
+    if (nsIndex == INT_MAX)
+        return(NULL);
+
+    return(ctxt->nsdb->extra[nsIndex].saxData);
+}
+
+/**
+ * xmlParserNsUpdateSax:
+ * @ctxt: parser context
+ * @prefix: namespace prefix
+ * @saxData: extra data for SAX handler
+ *
+ * Sets or updates extra data for the given prefix. This value will be
+ * returned by xmlParserNsLookupSax as long as the namespace with the
+ * given prefix is in scope.
+ *
+ * Returns the data on success, NULL if no namespace was found.
+ */
+int
+xmlParserNsUpdateSax(xmlParserCtxtPtr ctxt, const xmlChar *prefix,
+                     void *saxData) {
+    xmlHashedString hprefix;
+    int nsIndex;
+
+    if (prefix == ctxt->str_xml)
+        return(-1);
+
+    hprefix.name = prefix;
+    if (prefix != NULL)
+        hprefix.hashValue = xmlDictComputeHash(ctxt->dict, prefix);
+    else
+        hprefix.hashValue = 0;
+    nsIndex = xmlParserNsLookup(ctxt, &hprefix, NULL);
+    if (nsIndex == INT_MAX)
+        return(-1);
+
+    ctxt->nsdb->extra[nsIndex].saxData = saxData;
+    return(0);
+}
+
+/**
+ * xmlParserNsGrow:
+ * @ctxt: parser context
+ *
+ * Grows the namespace tables.
+ *
+ * Returns 0 on success, -1 if a memory allocation failed.
+ */
+static int
+xmlParserNsGrow(xmlParserCtxtPtr ctxt) {
+    const xmlChar **table;
+    xmlParserNsExtra *extra;
+    int newSize;
+
+    if (ctxt->nsMax > INT_MAX / 2)
+        goto error;
+    newSize = ctxt->nsMax ? ctxt->nsMax * 2 : 16;
+
+    table = xmlRealloc(ctxt->nsTab, 2 * newSize * sizeof(table[0]));
+    if (table == NULL)
+        goto error;
+    ctxt->nsTab = table;
+
+    extra = xmlRealloc(ctxt->nsdb->extra, newSize * sizeof(extra[0]));
+    if (extra == NULL)
+        goto error;
+    ctxt->nsdb->extra = extra;
+
+    ctxt->nsMax = newSize;
+    return(0);
+
+error:
+    xmlErrMemory(ctxt, NULL);
+    return(-1);
+}
+
+/**
+ * xmlParserNsPush:
+ * @ctxt: parser context
+ * @prefix: prefix with hash value
+ * @uri: uri with hash value
+ * @saxData: extra data for SAX handler
+ * @defAttr: whether the namespace comes from a default attribute
+ *
+ * Push a new namespace on the table.
+ *
+ * Returns 1 if the namespace was pushed, 0 if the namespace was ignored,
+ * -1 if a memory allocation failed.
+ */
+static int
+xmlParserNsPush(xmlParserCtxtPtr ctxt, const xmlHashedString *prefix,
+                const xmlHashedString *uri, void *saxData, int defAttr) {
+    xmlParserNsBucket *bucket = NULL;
+    xmlParserNsExtra *extra;
+    const xmlChar **ns;
+    unsigned hashValue, nsIndex, oldIndex;
+
+    if ((prefix != NULL) && (prefix->name == ctxt->str_xml))
+        return(0);
+
+    if ((ctxt->nsNr >= ctxt->nsMax) && (xmlParserNsGrow(ctxt) < 0)) {
+        xmlErrMemory(ctxt, NULL);
+        return(-1);
+    }
+
+    /*
+     * Default namespace and 'xml' namespace
+     */
+    if ((prefix == NULL) || (prefix->name == NULL)) {
+        oldIndex = ctxt->nsdb->defaultNsIndex;
+
+        if (oldIndex != INT_MAX) {
+            if (defAttr != 0)
+                return(0);
+
+            extra = &ctxt->nsdb->extra[oldIndex];
+
+            if (extra->elementId == ctxt->nsdb->elementId) {
+                xmlErrAttributeDup(ctxt, NULL, BAD_CAST "xmlns");
+                return(0);
+            }
+
+            if ((ctxt->options & XML_PARSE_NSCLEAN) &&
+                (uri->name == ctxt->nsTab[oldIndex * 2 + 1]))
+                return(0);
+        }
+
+        ctxt->nsdb->defaultNsIndex = ctxt->nsNr;
+        goto populate_entry;
+    }
+
+    /*
+     * Hash table lookup
+     */
+    oldIndex = xmlParserNsLookup(ctxt, prefix, &bucket);
+    if (oldIndex != INT_MAX) {
+        extra = &ctxt->nsdb->extra[oldIndex];
+
+        if (defAttr != 0)
+            return(0);
+
+        /*
+         * Check for duplicate definitions on the same element.
+         */
+        if (extra->elementId == ctxt->nsdb->elementId) {
+            xmlErrAttributeDup(ctxt, BAD_CAST "xmlns", prefix->name);
+            return(0);
+        }
+
+        if ((ctxt->options & XML_PARSE_NSCLEAN) &&
+            (uri->name == ctxt->nsTab[bucket->index * 2 + 1]))
+            return(0);
+
+        bucket->index = ctxt->nsNr;
+        goto populate_entry;
+    }
+
+    /*
+     * Insert new bucket
+     */
+
+    hashValue = prefix->hashValue;
+
+    /*
+     * Grow hash table, 50% fill factor
+     */
+    if (ctxt->nsdb->hashElems + 1 > ctxt->nsdb->hashSize / 2) {
+        xmlParserNsBucket *newHash;
+        unsigned newSize, i, index;
+
+        if (ctxt->nsdb->hashSize > UINT_MAX / 2) {
+            xmlErrMemory(ctxt, NULL);
+            return(-1);
+        }
+        newSize = ctxt->nsdb->hashSize ? ctxt->nsdb->hashSize * 2 : 16;
+        newHash = xmlMalloc(newSize * sizeof(newHash[0]));
+        if (newHash == NULL) {
+            xmlErrMemory(ctxt, NULL);
+            return(-1);
+        }
+        memset(newHash, 0, newSize * sizeof(newHash[0]));
+
+        for (i = 0; i < ctxt->nsdb->hashSize; i++) {
+            unsigned hv = ctxt->nsdb->hash[i].hashValue;
+            unsigned newIndex;
+
+            if (hv == 0)
+                continue;
+            newIndex = hv & (newSize - 1);
+
+            while (newHash[newIndex].hashValue != 0) {
+                newIndex++;
+                if (newIndex == newSize)
+                    newIndex = 0;
+            }
+
+            newHash[newIndex] = ctxt->nsdb->hash[i];
+        }
+
+        xmlFree(ctxt->nsdb->hash);
+        ctxt->nsdb->hash = newHash;
+        ctxt->nsdb->hashSize = newSize;
+
+        /*
+         * Relookup
+         */
+        index = hashValue & (newSize - 1);
+
+        while (newHash[index].hashValue != 0) {
+            index++;
+            if (index == newSize)
+                index = 0;
+        }
+
+        bucket = &newHash[index];
+    }
+
+    bucket->hashValue = hashValue;
+    bucket->index = ctxt->nsNr;
+    ctxt->nsdb->hashElems++;
+    oldIndex = INT_MAX;
+
+populate_entry:
+    nsIndex = ctxt->nsNr;
+
+    ns = &ctxt->nsTab[nsIndex * 2];
+    ns[0] = prefix ? prefix->name : NULL;
+    ns[1] = uri->name;
+
+    extra = &ctxt->nsdb->extra[nsIndex];
+    extra->saxData = saxData;
+    extra->prefixHashValue = prefix ? prefix->hashValue : 0;
+    extra->uriHashValue = uri->hashValue;
+    extra->elementId = ctxt->nsdb->elementId;
+    extra->oldIndex = oldIndex;
+
+    ctxt->nsNr++;
+
+    return(1);
+}
+
+/**
+ * xmlParserNsPop:
  * @ctxt: an XML parser context
  * @nr:  the number to pop
  *
- * Pops the top @nr parser prefix/namespace from the ns stack
+ * Pops the top @nr namespaces and restores the hash table.
  *
- * Returns the number of namespaces removed
+ * Returns the number of namespaces popped.
  */
 static int
-nsPop(xmlParserCtxtPtr ctxt, int nr)
+xmlParserNsPop(xmlParserCtxtPtr ctxt, int nr)
 {
     int i;
 
-    if (ctxt->nsTab == NULL) return(0);
-    if (ctxt->nsNr < nr) {
-        xmlGenericError(xmlGenericErrorContext, "Pbm popping %d NS\n", nr);
-        nr = ctxt->nsNr;
-    }
-    if (ctxt->nsNr <= 0)
-        return (0);
+    /* assert(nr <= ctxt->nsNr); */
 
-    for (i = 0;i < nr;i++) {
-         ctxt->nsNr--;
-	 ctxt->nsTab[ctxt->nsNr] = NULL;
+    for (i = ctxt->nsNr - 1; i >= ctxt->nsNr - nr; i--) {
+        const xmlChar *prefix = ctxt->nsTab[i * 2];
+        xmlParserNsExtra *extra = &ctxt->nsdb->extra[i];
+
+        if (prefix == NULL) {
+            ctxt->nsdb->defaultNsIndex = extra->oldIndex;
+        } else {
+            xmlHashedString hprefix;
+            xmlParserNsBucket *bucket = NULL;
+
+            hprefix.name = prefix;
+            hprefix.hashValue = extra->prefixHashValue;
+            xmlParserNsLookup(ctxt, &hprefix, &bucket);
+            /* assert(bucket && bucket->hashValue); */
+            bucket->index = extra->oldIndex;
+        }
     }
+
+    ctxt->nsNr -= nr;
     return(nr);
 }
-#endif
 
 static int
 xmlCtxtGrowAttrs(xmlParserCtxtPtr ctxt, int nr) {
     const xmlChar **atts;
-    int *attallocs;
+    unsigned *attallocs;
     int maxatts;
 
     if (nr + 5 > ctxt->maxatts) {
@@ -1447,8 +1861,8 @@ xmlCtxtGrowAttrs(xmlParserCtxtPtr ctxt, int nr) {
 	atts = (const xmlChar **) xmlMalloc(
 				     maxatts * sizeof(const xmlChar *));
 	if (atts == NULL) goto mem_error;
-	attallocs = (int *) xmlRealloc((void *) ctxt->attallocs,
-	                             (maxatts / 5) * sizeof(int));
+	attallocs = xmlRealloc(ctxt->attallocs,
+                               (maxatts / 5) * sizeof(attallocs[0]));
 	if (attallocs == NULL) {
             xmlFree(atts);
             goto mem_error;
@@ -1847,13 +2261,11 @@ static int spacePop(xmlParserCtxtPtr ctxt) {
         xmlParserGrow(ctxt);						\
   } while (0)
 
-#define SHRINK if ((ctxt->progressive == 0) &&				\
-		   (ctxt->input->cur - ctxt->input->base > 2 * INPUT_CHUNK) && \
+#define SHRINK if ((ctxt->input->cur - ctxt->input->base > 2 * INPUT_CHUNK) && \
 		   (ctxt->input->end - ctxt->input->cur < 2 * INPUT_CHUNK)) \
 	xmlParserShrink(ctxt);
 
-#define GROW if ((ctxt->progressive == 0) &&				\
-		 (ctxt->input->end - ctxt->input->cur < INPUT_CHUNK))	\
+#define GROW if (ctxt->input->end - ctxt->input->cur < INPUT_CHUNK)	\
 	xmlParserGrow(ctxt);
 
 #define SKIP_BLANKS xmlSkipBlankChars(ctxt)
@@ -2897,14 +3309,6 @@ xmlSplitQName(xmlParserCtxtPtr ctxt, const xmlChar *name, xmlChar **prefix) {
  *	Routines to parse Name, NCName and NmToken			*
  *									*
  ************************************************************************/
-#ifdef DEBUG
-static unsigned long nbParseName = 0;
-static unsigned long nbParseNmToken = 0;
-static unsigned long nbParseNCName = 0;
-static unsigned long nbParseNCNameComplex = 0;
-static unsigned long nbParseNameComplex = 0;
-static unsigned long nbParseStringName = 0;
-#endif
 
 /*
  * The two following functions are related to the change of accepted
@@ -2996,10 +3400,6 @@ xmlParseNameComplex(xmlParserCtxtPtr ctxt) {
     int maxLength = (ctxt->options & XML_PARSE_HUGE) ?
                     XML_MAX_TEXT_LENGTH :
                     XML_MAX_NAME_LENGTH;
-
-#ifdef DEBUG
-    nbParseNameComplex++;
-#endif
 
     /*
      * Handler for more complex cases
@@ -3131,10 +3531,6 @@ xmlParseName(xmlParserCtxtPtr ctxt) {
     if (ctxt->instate == XML_PARSER_EOF)
         return(NULL);
 
-#ifdef DEBUG
-    nbParseName++;
-#endif
-
     /*
      * Accelerator for simple ASCII names
      */
@@ -3167,8 +3563,9 @@ xmlParseName(xmlParserCtxtPtr ctxt) {
     return(xmlParseNameComplex(ctxt));
 }
 
-static const xmlChar *
+static xmlHashedString
 xmlParseNCNameComplex(xmlParserCtxtPtr ctxt) {
+    xmlHashedString ret;
     int len = 0, l;
     int c;
     int maxLength = (ctxt->options & XML_PARSE_HUGE) ?
@@ -3176,9 +3573,8 @@ xmlParseNCNameComplex(xmlParserCtxtPtr ctxt) {
                     XML_MAX_NAME_LENGTH;
     size_t startPosition = 0;
 
-#ifdef DEBUG
-    nbParseNCNameComplex++;
-#endif
+    ret.name = NULL;
+    ret.hashValue = 0;
 
     /*
      * Handler for more complex cases
@@ -3187,7 +3583,7 @@ xmlParseNCNameComplex(xmlParserCtxtPtr ctxt) {
     c = CUR_CHAR(l);
     if ((c == ' ') || (c == '>') || (c == '/') || /* accelerators */
 	(!xmlIsNameStartChar(ctxt, c) || (c == ':'))) {
-	return(NULL);
+	return(ret);
     }
 
     while ((c != ' ') && (c != '>') && (c != '/') && /* test bigname.xml */
@@ -3198,12 +3594,13 @@ xmlParseNCNameComplex(xmlParserCtxtPtr ctxt) {
 	c = CUR_CHAR(l);
     }
     if (ctxt->instate == XML_PARSER_EOF)
-        return(NULL);
+        return(ret);
     if (len > maxLength) {
         xmlFatalErr(ctxt, XML_ERR_NAME_TOO_LONG, "NCName");
-        return(NULL);
+        return(ret);
     }
-    return(xmlDictLookup(ctxt->dict, (BASE_PTR + startPosition), len));
+    ret = xmlDictLookupHashed(ctxt->dict, (BASE_PTR + startPosition), len);
+    return(ret);
 }
 
 /**
@@ -3221,18 +3618,16 @@ xmlParseNCNameComplex(xmlParserCtxtPtr ctxt) {
  * Returns the Name parsed or NULL
  */
 
-static const xmlChar *
+static xmlHashedString
 xmlParseNCName(xmlParserCtxtPtr ctxt) {
     const xmlChar *in, *e;
-    const xmlChar *ret;
+    xmlHashedString ret;
     size_t count = 0;
     size_t maxLength = (ctxt->options & XML_PARSE_HUGE) ?
                        XML_MAX_TEXT_LENGTH :
                        XML_MAX_NAME_LENGTH;
 
-#ifdef DEBUG
-    nbParseNCName++;
-#endif
+    ret.name = NULL;
 
     /*
      * Accelerator for simple ASCII names
@@ -3255,12 +3650,12 @@ xmlParseNCName(xmlParserCtxtPtr ctxt) {
 	    count = in - ctxt->input->cur;
             if (count > maxLength) {
                 xmlFatalErr(ctxt, XML_ERR_NAME_TOO_LONG, "NCName");
-                return(NULL);
+                return(ret);
             }
-	    ret = xmlDictLookup(ctxt->dict, ctxt->input->cur, count);
+	    ret = xmlDictLookupHashed(ctxt->dict, ctxt->input->cur, count);
 	    ctxt->input->cur = in;
 	    ctxt->input->col += count;
-	    if (ret == NULL) {
+	    if (ret.name == NULL) {
 	        xmlErrMemory(ctxt, NULL);
 	    }
 	    return(ret);
@@ -3338,10 +3733,6 @@ xmlParseStringName(xmlParserCtxtPtr ctxt, const xmlChar** str) {
     int maxLength = (ctxt->options & XML_PARSE_HUGE) ?
                     XML_MAX_TEXT_LENGTH :
                     XML_MAX_NAME_LENGTH;
-
-#ifdef DEBUG
-    nbParseStringName++;
-#endif
 
     c = CUR_SCHAR(cur, l);
     if (!xmlIsNameStartChar(ctxt, c)) {
@@ -3427,10 +3818,6 @@ xmlParseNmtoken(xmlParserCtxtPtr ctxt) {
     int maxLength = (ctxt->options & XML_PARSE_HUGE) ?
                     XML_MAX_TEXT_LENGTH :
                     XML_MAX_NAME_LENGTH;
-
-#ifdef DEBUG
-    nbParseNmToken++;
-#endif
 
     c = CUR_CHAR(l);
 
@@ -4195,6 +4582,7 @@ get_more_space:
                 ctxt->input->cur = in;
 
                 if ((ctxt->sax != NULL) &&
+                    (ctxt->disableSAX == 0) &&
                     (ctxt->sax->ignorableWhitespace !=
                      ctxt->sax->characters)) {
                     if (areBlanks(ctxt, tmp, nbchar, 1)) {
@@ -4209,6 +4597,7 @@ get_more_space:
                             *ctxt->space = -2;
                     }
                 } else if ((ctxt->sax != NULL) &&
+                           (ctxt->disableSAX == 0) &&
                            (ctxt->sax->characters != NULL)) {
                     ctxt->sax->characters(ctxt->userData,
                                           tmp, nbchar);
@@ -4245,6 +4634,7 @@ get_more:
         nbchar = in - ctxt->input->cur;
         if (nbchar > 0) {
             if ((ctxt->sax != NULL) &&
+                (ctxt->disableSAX == 0) &&
                 (ctxt->sax->ignorableWhitespace !=
                  ctxt->sax->characters) &&
                 (IS_BLANK_CH(*ctxt->input->cur))) {
@@ -4264,7 +4654,8 @@ get_more:
                 }
                 line = ctxt->input->line;
                 col = ctxt->input->col;
-            } else if (ctxt->sax != NULL) {
+            } else if ((ctxt->sax != NULL) &&
+                       (ctxt->disableSAX == 0)) {
                 if (ctxt->sax->characters != NULL)
                     ctxt->sax->characters(ctxt->userData,
                                           ctxt->input->cur, nbchar);
@@ -4693,36 +5084,33 @@ get_more:
 	 * save current set of data
 	 */
 	if (nbchar > 0) {
-	    if ((ctxt->sax != NULL) &&
-		(ctxt->sax->comment != NULL)) {
-		if (buf == NULL) {
-		    if ((*in == '-') && (in[1] == '-'))
-		        size = nbchar + 1;
-		    else
-		        size = XML_PARSER_BUFFER_SIZE + nbchar;
-		    buf = (xmlChar *) xmlMallocAtomic(size);
-		    if (buf == NULL) {
-		        xmlErrMemory(ctxt, NULL);
-			ctxt->instate = state;
-			return;
-		    }
-		    len = 0;
-		} else if (len + nbchar + 1 >= size) {
-		    xmlChar *new_buf;
-		    size  += len + nbchar + XML_PARSER_BUFFER_SIZE;
-		    new_buf = (xmlChar *) xmlRealloc(buf, size);
-		    if (new_buf == NULL) {
-		        xmlFree (buf);
-			xmlErrMemory(ctxt, NULL);
-			ctxt->instate = state;
-			return;
-		    }
-		    buf = new_buf;
-		}
-		memcpy(&buf[len], ctxt->input->cur, nbchar);
-		len += nbchar;
-		buf[len] = 0;
-	    }
+            if (buf == NULL) {
+                if ((*in == '-') && (in[1] == '-'))
+                    size = nbchar + 1;
+                else
+                    size = XML_PARSER_BUFFER_SIZE + nbchar;
+                buf = (xmlChar *) xmlMallocAtomic(size);
+                if (buf == NULL) {
+                    xmlErrMemory(ctxt, NULL);
+                    ctxt->instate = state;
+                    return;
+                }
+                len = 0;
+            } else if (len + nbchar + 1 >= size) {
+                xmlChar *new_buf;
+                size  += len + nbchar + XML_PARSER_BUFFER_SIZE;
+                new_buf = (xmlChar *) xmlRealloc(buf, size);
+                if (new_buf == NULL) {
+                    xmlFree (buf);
+                    xmlErrMemory(ctxt, NULL);
+                    ctxt->instate = state;
+                    return;
+                }
+                buf = new_buf;
+            }
+            memcpy(&buf[len], ctxt->input->cur, nbchar);
+            len += nbchar;
+            buf[len] = 0;
 	}
         if (len > maxLength) {
             xmlFatalErrMsgStr(ctxt, XML_ERR_COMMENT_NOT_FINISHED,
@@ -6743,6 +7131,8 @@ xmlParseTextDecl(xmlParserCtxtPtr ctxt) {
             if (c == '>')
                 break;
         }
+        if (ctxt->instate == XML_PARSER_EOF)
+            return;
     }
 
     ctxt->instate = oldstate;
@@ -6893,6 +7283,39 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
      * of validating, or substituting entities were given. Doing so is
      * far more secure as the parser will only process data coming from
      * the document entity by default.
+     *
+     * FIXME: This doesn't work correctly since entities can be
+     * expanded with different namespace declarations in scope.
+     * For example:
+     *
+     * <!DOCTYPE doc [
+     *   <!ENTITY ent "<ns:elem/>">
+     * ]>
+     * <doc>
+     *   <decl1 xmlns:ns="urn:ns1">
+     *     &ent;
+     *   </decl1>
+     *   <decl2 xmlns:ns="urn:ns2">
+     *     &ent;
+     *   </decl2>
+     * </doc>
+     *
+     * Proposed fix:
+     *
+     * - Remove the ent->owner optimization which tries to avoid the
+     *   initial copy of the entity. Always make entities own the
+     *   subtree.
+     * - Ignore current namespace declarations when parsing the
+     *   entity. If a prefix can't be resolved, don't report an error
+     *   but mark it as unresolved.
+     * - Try to resolve these prefixes when expanding the entity.
+     *   This will require a specialized version of xmlStaticCopyNode
+     *   which can also make use of the namespace hash table to avoid
+     *   quadratic behavior.
+     *
+     * Alternatively, we could simply reparse the entity on each
+     * expansion like we already do with custom SAX callbacks.
+     * External entity content should be cached in this case.
      */
     if (((ent->flags & XML_ENT_PARSED) == 0) &&
         ((ent->etype != XML_EXTERNAL_GENERAL_PARSED_ENTITY) ||
@@ -7332,6 +7755,7 @@ xmlParseEntityRef(xmlParserCtxtPtr ctxt) {
 		     "Entity '%s' not defined\n", name);
 	    if ((ctxt->inSubset == 0) &&
 		(ctxt->sax != NULL) &&
+                (ctxt->disableSAX == 0) &&
 		(ctxt->sax->reference != NULL)) {
 		ctxt->sax->reference(ctxt->userData, name);
 	    }
@@ -7770,9 +8194,12 @@ xmlParsePEReference(xmlParserCtxtPtr ctxt)
  */
 static int
 xmlLoadEntityContent(xmlParserCtxtPtr ctxt, xmlEntityPtr entity) {
-    xmlParserInputPtr input = NULL;
+    xmlParserInputPtr oldinput, input = NULL;
+    xmlParserInputPtr *oldinputTab;
+    const xmlChar *oldencoding;
     xmlChar *content = NULL;
     size_t length, i;
+    int oldinputNr, oldinputMax, oldprogressive;
     int ret = -1;
     int res;
 
@@ -7797,8 +8224,57 @@ xmlLoadEntityContent(xmlParserCtxtPtr ctxt, xmlEntityPtr entity) {
         return(-1);
     }
 
-    while ((res = xmlParserInputBufferGrow(input->buf, 16384)) > 0)
+    oldinput = ctxt->input;
+    oldinputNr = ctxt->inputNr;
+    oldinputMax = ctxt->inputMax;
+    oldinputTab = ctxt->inputTab;
+    oldencoding = ctxt->encoding;
+    oldprogressive = ctxt->progressive;
+
+    ctxt->input = NULL;
+    ctxt->inputNr = 0;
+    ctxt->inputMax = 1;
+    ctxt->encoding = NULL;
+    ctxt->progressive = 0;
+    ctxt->inputTab = xmlMalloc(sizeof(xmlParserInputPtr));
+    if (ctxt->inputTab == NULL) {
+        xmlErrMemory(ctxt, NULL);
+        xmlFreeInputStream(input);
+        goto error;
+    }
+
+    xmlBufResetInput(input->buf->buffer, input);
+
+    inputPush(ctxt, input);
+
+    xmlDetectEncoding(ctxt);
+
+    /*
+     * Parse a possible text declaration first
+     */
+    if ((CMP5(CUR_PTR, '<', '?', 'x', 'm', 'l')) && (IS_BLANK_CH(NXT(5)))) {
+	xmlParseTextDecl(ctxt);
+        /*
+         * An XML-1.0 document can't reference an entity not XML-1.0
+         */
+        if ((xmlStrEqual(ctxt->version, BAD_CAST "1.0")) &&
+            (!xmlStrEqual(ctxt->input->version, BAD_CAST "1.0"))) {
+            xmlFatalErrMsg(ctxt, XML_ERR_VERSION_MISMATCH,
+                           "Version mismatch between document and entity\n");
+        }
+    }
+
+    if (ctxt->instate == XML_PARSER_EOF)
+        goto error;
+
+    length = input->cur - input->base;
+    xmlBufShrink(input->buf->buffer, length);
+    xmlSaturatedAdd(&ctxt->sizeentities, length);
+
+    while ((res = xmlParserInputBufferGrow(input->buf, 4096)) > 0)
         ;
+
+    xmlBufResetInput(input->buf->buffer, input);
 
     if (res < 0) {
         xmlFatalErr(ctxt, input->buf->error, NULL);
@@ -7833,8 +8309,19 @@ xmlLoadEntityContent(xmlParserCtxtPtr ctxt, xmlEntityPtr entity) {
     ret = 0;
 
 error:
+    while (ctxt->inputNr > 0)
+        xmlFreeInputStream(inputPop(ctxt));
+    xmlFree(ctxt->inputTab);
+    xmlFree((xmlChar *) ctxt->encoding);
+
+    ctxt->input = oldinput;
+    ctxt->inputNr = oldinputNr;
+    ctxt->inputMax = oldinputMax;
+    ctxt->inputTab = oldinputTab;
+    ctxt->encoding = oldencoding;
+    ctxt->progressive = oldprogressive;
+
     xmlFree(content);
-    xmlFreeInputStream(input);
 
     return(ret);
 }
@@ -8437,28 +8924,61 @@ xmlParseEndTag(xmlParserCtxtPtr ctxt) {
  *									*
  ************************************************************************/
 
-/*
- * xmlGetNamespace:
+/**
+ * xmlParseQNameHashed:
  * @ctxt:  an XML parser context
- * @prefix:  the prefix to lookup
+ * @prefix:  pointer to store the prefix part
  *
- * Lookup the namespace name for the @prefix (which ca be NULL)
- * The prefix must come from the @ctxt->dict dictionary
+ * parse an XML Namespace QName
  *
- * Returns the namespace name or NULL if not bound
+ * [6]  QName  ::= (Prefix ':')? LocalPart
+ * [7]  Prefix  ::= NCName
+ * [8]  LocalPart  ::= NCName
+ *
+ * Returns the Name parsed or NULL
  */
-static const xmlChar *
-xmlGetNamespace(xmlParserCtxtPtr ctxt, const xmlChar *prefix) {
-    int i;
 
-    if (prefix == ctxt->str_xml) return(ctxt->str_xml_ns);
-    for (i = ctxt->nsNr - 2;i >= 0;i-=2)
-        if (ctxt->nsTab[i] == prefix) {
-	    if ((prefix == NULL) && (*ctxt->nsTab[i + 1] == 0))
-	        return(NULL);
-	    return(ctxt->nsTab[i + 1]);
-	}
-    return(NULL);
+static xmlHashedString
+xmlParseQNameHashed(xmlParserCtxtPtr ctxt, xmlHashedString *prefix) {
+    xmlHashedString l, p;
+    int start;
+
+    l.name = NULL;
+    p.name = NULL;
+
+    GROW;
+    if (ctxt->instate == XML_PARSER_EOF)
+        return(l);
+    start = CUR_PTR - BASE_PTR;
+
+    l = xmlParseNCName(ctxt);
+    if ((l.name != NULL) && (CUR == ':')) {
+        NEXT;
+	p = l;
+	l = xmlParseNCName(ctxt);
+    }
+    if ((l.name == NULL) || (CUR == ':')) {
+        xmlChar *tmp;
+
+        l.name = NULL;
+        p.name = NULL;
+        if (ctxt->instate == XML_PARSER_EOF)
+            return(l);
+        if ((CUR != ':') && (CUR_PTR <= BASE_PTR + start))
+            return(l);
+        tmp = xmlParseNmtoken(ctxt);
+        if (tmp != NULL)
+            xmlFree(tmp);
+        if (ctxt->instate == XML_PARSER_EOF)
+            return(l);
+        l = xmlDictLookupHashed(ctxt->dict, BASE_PTR + start,
+                                CUR_PTR - (BASE_PTR + start));
+        xmlNsErr(ctxt, XML_NS_ERR_QNAME,
+                 "Failed to parse QName '%s'\n", l.name, NULL, NULL);
+    }
+
+    *prefix = p;
+    return(l);
 }
 
 /**
@@ -8477,76 +8997,13 @@ xmlGetNamespace(xmlParserCtxtPtr ctxt, const xmlChar *prefix) {
 
 static const xmlChar *
 xmlParseQName(xmlParserCtxtPtr ctxt, const xmlChar **prefix) {
-    const xmlChar *l, *p;
+    xmlHashedString n, p;
 
-    GROW;
-    if (ctxt->instate == XML_PARSER_EOF)
+    n = xmlParseQNameHashed(ctxt, &p);
+    if (n.name == NULL)
         return(NULL);
-
-    l = xmlParseNCName(ctxt);
-    if (l == NULL) {
-        if (CUR == ':') {
-	    l = xmlParseName(ctxt);
-	    if (l != NULL) {
-	        xmlNsErr(ctxt, XML_NS_ERR_QNAME,
-		         "Failed to parse QName '%s'\n", l, NULL, NULL);
-		*prefix = NULL;
-		return(l);
-	    }
-	}
-        return(NULL);
-    }
-    if (CUR == ':') {
-        NEXT;
-	p = l;
-	l = xmlParseNCName(ctxt);
-	if (l == NULL) {
-	    xmlChar *tmp;
-
-            if (ctxt->instate == XML_PARSER_EOF)
-                return(NULL);
-            xmlNsErr(ctxt, XML_NS_ERR_QNAME,
-	             "Failed to parse QName '%s:'\n", p, NULL, NULL);
-	    l = xmlParseNmtoken(ctxt);
-	    if (l == NULL) {
-                if (ctxt->instate == XML_PARSER_EOF)
-                    return(NULL);
-		tmp = xmlBuildQName(BAD_CAST "", p, NULL, 0);
-            } else {
-		tmp = xmlBuildQName(l, p, NULL, 0);
-		xmlFree((char *)l);
-	    }
-	    p = xmlDictLookup(ctxt->dict, tmp, -1);
-	    if (tmp != NULL) xmlFree(tmp);
-	    *prefix = NULL;
-	    return(p);
-	}
-	if (CUR == ':') {
-	    xmlChar *tmp;
-
-            xmlNsErr(ctxt, XML_NS_ERR_QNAME,
-	             "Failed to parse QName '%s:%s:'\n", p, l, NULL);
-	    NEXT;
-	    tmp = (xmlChar *) xmlParseName(ctxt);
-	    if (tmp != NULL) {
-	        tmp = xmlBuildQName(tmp, l, NULL, 0);
-		l = xmlDictLookup(ctxt->dict, tmp, -1);
-		if (tmp != NULL) xmlFree(tmp);
-		*prefix = p;
-		return(l);
-	    }
-            if (ctxt->instate == XML_PARSER_EOF)
-                return(NULL);
-	    tmp = xmlBuildQName(BAD_CAST "", l, NULL, 0);
-	    l = xmlDictLookup(ctxt->dict, tmp, -1);
-	    if (tmp != NULL) xmlFree(tmp);
-	    *prefix = p;
-	    return(l);
-	}
-	*prefix = p;
-    } else
-        *prefix = NULL;
-    return(l);
+    *prefix = p.name;
+    return(n.name);
 }
 
 /**
@@ -8598,6 +9055,8 @@ xmlParseQNameAndCompare(xmlParserCtxtPtr ctxt, xmlChar const *name,
      * all strings coms from the dictionary, equality can be done directly
      */
     ret = xmlParseQName (ctxt, &prefix2);
+    if (ret == NULL)
+        return(NULL);
     if ((ret == name) && (prefix == prefix2))
 	return((const xmlChar*) 1);
     return ret;
@@ -8814,24 +9273,30 @@ need_complex:
  * Returns the attribute name, and the value in *value, .
  */
 
-static const xmlChar *
+static xmlHashedString
 xmlParseAttribute2(xmlParserCtxtPtr ctxt,
                    const xmlChar * pref, const xmlChar * elem,
-                   const xmlChar ** prefix, xmlChar ** value,
+                   xmlHashedString * hprefix, xmlChar ** value,
                    int *len, int *alloc)
 {
-    const xmlChar *name;
+    xmlHashedString hname;
+    const xmlChar *prefix, *name;
     xmlChar *val, *internal_val = NULL;
     int normalize = 0;
 
     *value = NULL;
     GROW;
-    name = xmlParseQName(ctxt, prefix);
-    if (name == NULL) {
+    hname = xmlParseQNameHashed(ctxt, hprefix);
+    if (hname.name == NULL) {
         xmlFatalErrMsg(ctxt, XML_ERR_NAME_REQUIRED,
                        "error parsing attribute name\n");
-        return (NULL);
+        return(hname);
     }
+    name = hname.name;
+    if (hprefix->name != NULL)
+        prefix = hprefix->name;
+    else
+        prefix = NULL;
 
     /*
      * get the type if needed
@@ -8840,7 +9305,8 @@ xmlParseAttribute2(xmlParserCtxtPtr ctxt,
         int type;
 
         type = (int) (ptrdiff_t) xmlHashQLookup2(ctxt->attsSpecial,
-                                                 pref, elem, *prefix, name);
+                                                 pref, elem,
+                                                 prefix, name);
         if (type != 0)
             normalize = 1;
     }
@@ -8853,8 +9319,10 @@ xmlParseAttribute2(xmlParserCtxtPtr ctxt,
         NEXT;
         SKIP_BLANKS;
         val = xmlParseAttValueInternal(ctxt, len, alloc, normalize);
-        if (val == NULL)
-            return (NULL);
+        if (val == NULL) {
+            hname.name = NULL;
+            return(hname);
+        }
 	if (normalize) {
 	    /*
 	     * Sometimes a second normalisation pass for spaces is needed
@@ -8877,10 +9345,10 @@ xmlParseAttribute2(xmlParserCtxtPtr ctxt,
         xmlFatalErrMsgStr(ctxt, XML_ERR_ATTRIBUTE_WITHOUT_VALUE,
                           "Specification mandates value for attribute %s\n",
                           name);
-        return (name);
+        return(hname);
     }
 
-    if (*prefix == ctxt->str_xml) {
+    if (prefix == ctxt->str_xml) {
         /*
          * Check that xml:lang conforms to the specification
          * No more registered as an error, just generate a warning now
@@ -8916,8 +9384,149 @@ xmlParseAttribute2(xmlParserCtxtPtr ctxt,
     }
 
     *value = val;
-    return (name);
+    return (hname);
 }
+
+ATTRIBUTE_NO_SANITIZE_INTEGER
+static unsigned
+xmlCombineHash(unsigned v1, unsigned v2) {
+    return(HASH_ROL(v1, 15) ^ v2);
+}
+
+/**
+ * xmlAttrHashInsert:
+ * @ctxt: parser context
+ * @aindex: attribute index (this is a multiple of 5)
+ * @sizePtr: size of the hash table (input/output value)
+ * @name: attribute name
+ * @uri: namespace uri
+ * @hashValue: combined hash value of name and uri
+ *
+ * Inserts a new attribute into the hash table.
+ *
+ * Returns INT_MAX if no existing attribute was found, the attribute
+ * index if an attribute was found, -1 if a memory allocation failed.
+ */
+static int
+xmlAttrHashInsert(xmlParserCtxtPtr ctxt, int aindex, unsigned *sizePtr,
+                  const xmlChar *name, const xmlChar *uri,
+                  unsigned hashValue) {
+    xmlAttrHashBucket *table = ctxt->attrHash;
+    xmlAttrHashBucket *bucket;
+    unsigned hindex;
+    unsigned size = *sizePtr;
+
+    if (size > 0) {
+        hindex = hashValue & (size - 1);
+        bucket = &table[hindex];
+
+        while (bucket->hashValue != 0) {
+            const xmlChar **atts = &ctxt->atts[bucket->index];
+
+            if (name == atts[0]) {
+                int nsIndex = (int) (ptrdiff_t) atts[2];
+
+                if ((nsIndex == NS_INDEX_EMPTY) ? (uri == NULL) :
+                    (nsIndex == NS_INDEX_XML) ? (uri == ctxt->str_xml) :
+                    (uri == ctxt->nsTab[nsIndex * 2 + 1]))
+                    return(bucket->index);
+            }
+
+            hindex++;
+            bucket++;
+            if (hindex >= size) {
+                hindex = 0;
+                bucket = table;
+            }
+        }
+    }
+
+    /*
+     * Grow hash table
+     */
+    if ((unsigned) aindex / 5 >= size / 2) {
+        xmlAttrHashBucket *newTable;
+        unsigned newSize, i, nindex;
+
+        newSize = size ? size * 2 : 8;
+
+        if (newSize > ctxt->attrHashMax) {
+            newTable = xmlRealloc(table, newSize * sizeof(newTable[0]));
+            if (newTable == NULL) {
+                xmlErrMemory(ctxt, NULL);
+                return(-1);
+            }
+
+            table = newTable;
+            ctxt->attrHash = newTable;
+            ctxt->attrHashMax = newSize;
+        }
+
+        memset(&table[size], 0, (newSize - size) * sizeof(table[0]));
+
+        if (size > 0) {
+            /*
+             * We must search for the start of a probe sequence to make
+             * in-place operation work.
+             */
+            hindex = 0;
+            bucket = table;
+            while (bucket->hashValue != 0) {
+                hindex++;
+                bucket++;
+            }
+
+            for (i = 0; i < size; i++) {
+                if (bucket->hashValue != 0) {
+                    nindex = bucket->hashValue & (newSize - 1);
+
+                    while (nindex != hindex) {
+                        if (table[nindex].hashValue == 0) {
+                            table[nindex] = *bucket;
+                            bucket->hashValue = 0;
+                            break;
+                        }
+
+                        nindex++;
+                        if (nindex >= newSize)
+                            nindex = 0;
+                    }
+                }
+
+                hindex++;
+                bucket++;
+                if (hindex >= size) {
+                    hindex = 0;
+                    bucket = table;
+                }
+            }
+        }
+
+        size = newSize;
+        *sizePtr = newSize;
+
+        /*
+         * Relookup
+         */
+        hindex = hashValue & (size - 1);
+        bucket = &table[hindex];
+
+        while (bucket->hashValue != 0) {
+            hindex++;
+            bucket++;
+            if (hindex >= size) {
+                hindex = 0;
+                bucket = table;
+            }
+        }
+    }
+
+    bucket->hashValue = hashValue;
+    bucket->index = aindex;
+
+    return(INT_MAX);
+}
+
 /**
  * xmlParseStartTag2:
  * @ctxt:  an XML parser context
@@ -8949,40 +9558,47 @@ xmlParseAttribute2(xmlParserCtxtPtr ctxt,
 
 static const xmlChar *
 xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
-                  const xmlChar **URI, int *tlen) {
+                  const xmlChar **URI, int *nbNsPtr) {
+    xmlHashedString hlocalname;
+    xmlHashedString hprefix;
+    xmlHashedString hattname;
+    xmlHashedString haprefix;
     const xmlChar *localname;
     const xmlChar *prefix;
     const xmlChar *attname;
     const xmlChar *aprefix;
-    const xmlChar *nsname;
-    xmlChar *attvalue;
+    const xmlChar *uri;
+    xmlChar *attvalue = NULL;
     const xmlChar **atts = ctxt->atts;
+    unsigned attrHashSize = 0;
     int maxatts = ctxt->maxatts;
     int nratts, nbatts, nbdef, inputid;
-    int i, j, nbNs, attval;
-    size_t cur;
-    int nsNr = ctxt->nsNr;
+    int i, j, nbNs, attval, nsIndex;
+    int alloc = 0;
 
     if (RAW != '<') return(NULL);
     NEXT1;
 
-    cur = ctxt->input->cur - ctxt->input->base;
     inputid = ctxt->input->id;
     nbatts = 0;
     nratts = 0;
     nbdef = 0;
     nbNs = 0;
     attval = 0;
-    /* Forget any namespaces added during an earlier parse of this element. */
-    ctxt->nsNr = nsNr;
 
-    localname = xmlParseQName(ctxt, &prefix);
-    if (localname == NULL) {
+    if (xmlParserNsStartElement(ctxt->nsdb) < 0) {
+        xmlErrMemory(ctxt, NULL);
+        return(NULL);
+    }
+
+    hlocalname = xmlParseQNameHashed(ctxt, &hprefix);
+    if (hlocalname.name == NULL) {
 	xmlFatalErrMsg(ctxt, XML_ERR_NAME_REQUIRED,
 		       "StartTag: invalid element name\n");
         return(NULL);
     }
-    *tlen = ctxt->input->cur - ctxt->input->base - cur;
+    localname = hlocalname.name;
+    prefix = hprefix.name;
 
     /*
      * Now parse the attributes, it ends up with the ending
@@ -8992,48 +9608,74 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
     SKIP_BLANKS;
     GROW;
 
+    /*
+     * The ctxt->atts array will be ultimately passed to the SAX callback
+     * containing five xmlChar pointers for each attribute:
+     *
+     * [0] attribute name
+     * [1] attribute prefix
+     * [2] namespace URI
+     * [3] attribute value
+     * [4] end of attribute value
+     *
+     * To save memory, we reuse this array temporarily and store integers
+     * in these pointer variables.
+     *
+     * [0] attribute name
+     * [1] attribute prefix
+     * [2] hash value of attribute prefix, and later namespace index
+     * [3] for non-allocated values: ptrdiff_t offset into input buffer
+     * [4] for non-allocated values: ptrdiff_t offset into input buffer
+     *
+     * The ctxt->attallocs array contains an additional unsigned int for
+     * each attribute, containing the hash value of the attribute name
+     * and the alloc flag in bit 31.
+     */
+
     while (((RAW != '>') &&
 	   ((RAW != '/') || (NXT(1) != '>')) &&
 	   (IS_BYTE_CHAR(RAW))) && (ctxt->instate != XML_PARSER_EOF)) {
-	int len = -1, alloc = 0;
+	int len = -1;
 
-	attname = xmlParseAttribute2(ctxt, prefix, localname,
-	                             &aprefix, &attvalue, &len, &alloc);
-        if (attname == NULL) {
+	hattname = xmlParseAttribute2(ctxt, prefix, localname,
+                                          &haprefix, &attvalue, &len,
+                                          &alloc);
+        if (hattname.name == NULL) {
 	    xmlFatalErr(ctxt, XML_ERR_INTERNAL_ERROR,
 	         "xmlParseStartTag: problem parsing attributes\n");
 	    break;
 	}
         if (attvalue == NULL)
             goto next_attr;
+        attname = hattname.name;
+        aprefix = haprefix.name;
 	if (len < 0) len = xmlStrlen(attvalue);
 
         if ((attname == ctxt->str_xmlns) && (aprefix == NULL)) {
-            const xmlChar *URL = xmlDictLookup(ctxt->dict, attvalue, len);
-            xmlURIPtr uri;
+            xmlHashedString huri;
+            xmlURIPtr parsedUri;
 
-            if (URL == NULL) {
-                xmlErrMemory(ctxt, "dictionary allocation failure");
-                if ((attvalue != NULL) && (alloc != 0))
-                    xmlFree(attvalue);
-                localname = NULL;
-                goto done;
+            huri = xmlDictLookupHashed(ctxt->dict, attvalue, len);
+            uri = huri.name;
+            if (uri == NULL) {
+                xmlErrMemory(ctxt, NULL);
+                goto next_attr;
             }
-            if (*URL != 0) {
-                uri = xmlParseURI((const char *) URL);
-                if (uri == NULL) {
+            if (*uri != 0) {
+                parsedUri = xmlParseURI((const char *) uri);
+                if (parsedUri == NULL) {
                     xmlNsErr(ctxt, XML_WAR_NS_URI,
                              "xmlns: '%s' is not a valid URI\n",
-                                       URL, NULL, NULL);
+                                       uri, NULL, NULL);
                 } else {
-                    if (uri->scheme == NULL) {
+                    if (parsedUri->scheme == NULL) {
                         xmlNsWarn(ctxt, XML_WAR_NS_URI_RELATIVE,
                                   "xmlns: URI %s is not absolute\n",
-                                  URL, NULL, NULL);
+                                  uri, NULL, NULL);
                     }
-                    xmlFreeURI(uri);
+                    xmlFreeURI(parsedUri);
                 }
-                if (URL == ctxt->str_xml_ns) {
+                if (uri == ctxt->str_xml_ns) {
                     if (attname != ctxt->str_xml) {
                         xmlNsErr(ctxt, XML_NS_ERR_XML_NAMESPACE,
                      "xml namespace URI cannot be the default namespace\n",
@@ -9042,7 +9684,7 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
                     goto next_attr;
                 }
                 if ((len == 29) &&
-                    (xmlStrEqual(URL,
+                    (xmlStrEqual(uri,
                              BAD_CAST "http://www.w3.org/2000/xmlns/"))) {
                     xmlNsErr(ctxt, XML_NS_ERR_XML_NAMESPACE,
                          "reuse of the xmlns namespace name is forbidden\n",
@@ -9050,23 +9692,22 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
                     goto next_attr;
                 }
             }
-            /*
-             * check that it's not a defined namespace
-             */
-            for (j = 1;j <= nbNs;j++)
-                if (ctxt->nsTab[ctxt->nsNr - 2 * j] == NULL)
-                    break;
-            if (j <= nbNs)
-                xmlErrAttributeDup(ctxt, NULL, attname);
-            else
-                if (nsPush(ctxt, NULL, URL) > 0) nbNs++;
 
+            if (xmlParserNsPush(ctxt, NULL, &huri, NULL, 0) > 0)
+                nbNs++;
         } else if (aprefix == ctxt->str_xmlns) {
-            const xmlChar *URL = xmlDictLookup(ctxt->dict, attvalue, len);
-            xmlURIPtr uri;
+            xmlHashedString huri;
+            xmlURIPtr parsedUri;
+
+            huri = xmlDictLookupHashed(ctxt->dict, attvalue, len);
+            uri = huri.name;
+            if (uri == NULL) {
+                xmlErrMemory(ctxt, NULL);
+                goto next_attr;
+            }
 
             if (attname == ctxt->str_xml) {
-                if (URL != ctxt->str_xml_ns) {
+                if (uri != ctxt->str_xml_ns) {
                     xmlNsErr(ctxt, XML_NS_ERR_XML_NAMESPACE,
                              "xml namespace prefix mapped to wrong URI\n",
                              NULL, NULL, NULL);
@@ -9076,7 +9717,7 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
                  */
                 goto next_attr;
             }
-            if (URL == ctxt->str_xml_ns) {
+            if (uri == ctxt->str_xml_ns) {
                 if (attname != ctxt->str_xml) {
                     xmlNsErr(ctxt, XML_NS_ERR_XML_NAMESPACE,
                              "xml namespace URI mapped to wrong prefix\n",
@@ -9091,48 +9732,40 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
                 goto next_attr;
             }
             if ((len == 29) &&
-                (xmlStrEqual(URL,
+                (xmlStrEqual(uri,
                              BAD_CAST "http://www.w3.org/2000/xmlns/"))) {
                 xmlNsErr(ctxt, XML_NS_ERR_XML_NAMESPACE,
                          "reuse of the xmlns namespace name is forbidden\n",
                          NULL, NULL, NULL);
                 goto next_attr;
             }
-            if ((URL == NULL) || (URL[0] == 0)) {
+            if ((uri == NULL) || (uri[0] == 0)) {
                 xmlNsErr(ctxt, XML_NS_ERR_XML_NAMESPACE,
                          "xmlns:%s: Empty XML namespace is not allowed\n",
                               attname, NULL, NULL);
                 goto next_attr;
             } else {
-                uri = xmlParseURI((const char *) URL);
-                if (uri == NULL) {
+                parsedUri = xmlParseURI((const char *) uri);
+                if (parsedUri == NULL) {
                     xmlNsErr(ctxt, XML_WAR_NS_URI,
                          "xmlns:%s: '%s' is not a valid URI\n",
-                                       attname, URL, NULL);
+                                       attname, uri, NULL);
                 } else {
-                    if ((ctxt->pedantic) && (uri->scheme == NULL)) {
+                    if ((ctxt->pedantic) && (parsedUri->scheme == NULL)) {
                         xmlNsWarn(ctxt, XML_WAR_NS_URI_RELATIVE,
                                   "xmlns:%s: URI %s is not absolute\n",
-                                  attname, URL, NULL);
+                                  attname, uri, NULL);
                     }
-                    xmlFreeURI(uri);
+                    xmlFreeURI(parsedUri);
                 }
             }
 
-            /*
-             * check that it's not a defined namespace
-             */
-            for (j = 1;j <= nbNs;j++)
-                if (ctxt->nsTab[ctxt->nsNr - 2 * j] == attname)
-                    break;
-            if (j <= nbNs)
-                xmlErrAttributeDup(ctxt, aprefix, attname);
-            else
-                if (nsPush(ctxt, attname, URL) > 0) nbNs++;
-
+            if (xmlParserNsPush(ctxt, &hattname, &huri, NULL, 0) > 0)
+                nbNs++;
         } else {
             /*
-             * Add the pair to atts
+             * Populate attributes array, see above for repurposing
+             * of xmlChar pointers.
              */
             if ((atts == NULL) || (nbatts + 5 > maxatts)) {
                 if (xmlCtxtGrowAttrs(ctxt, nbatts + 5) < 0) {
@@ -9141,22 +9774,25 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
                 maxatts = ctxt->maxatts;
                 atts = ctxt->atts;
             }
-            ctxt->attallocs[nratts++] = alloc;
+            ctxt->attallocs[nratts++] = (hattname.hashValue & 0x7FFFFFFF) |
+                                        ((unsigned) alloc << 31);
             atts[nbatts++] = attname;
             atts[nbatts++] = aprefix;
-            /*
-             * The namespace URI field is used temporarily to point at the
-             * base of the current input buffer for non-alloced attributes.
-             * When the input buffer is reallocated, all the pointers become
-             * invalid, but they can be reconstructed later.
-             */
-            if (alloc)
-                atts[nbatts++] = NULL;
-            else
-                atts[nbatts++] = ctxt->input->base;
-            atts[nbatts++] = attvalue;
-            attvalue += len;
-            atts[nbatts++] = attvalue;
+            atts[nbatts++] = (const xmlChar *) (size_t) haprefix.hashValue;
+            if (alloc) {
+                atts[nbatts++] = attvalue;
+                attvalue += len;
+                atts[nbatts++] = attvalue;
+            } else {
+                /*
+                 * attvalue points into the input buffer which can be
+                 * reallocated. Store differences to input->base instead.
+                 * The pointers will be reconstructed later.
+                 */
+                atts[nbatts++] = (void *) (attvalue - BASE_PTR);
+                attvalue += len;
+                atts[nbatts++] = (void *) (attvalue - BASE_PTR);
+            }
             /*
              * tag if some deallocation is needed
              */
@@ -9190,175 +9826,255 @@ next_attr:
         goto done;
     }
 
-    /* Reconstruct attribute value pointers. */
-    for (i = 0, j = 0; j < nratts; i += 5, j++) {
-        if (atts[i+2] != NULL) {
-            /*
-             * Arithmetic on dangling pointers is technically undefined
-             * behavior, but well...
-             */
-            const xmlChar *old = atts[i+2];
-            atts[i+2]  = NULL;    /* Reset repurposed namespace URI */
-            atts[i+3] = ctxt->input->base + (atts[i+3] - old);  /* value */
-            atts[i+4] = ctxt->input->base + (atts[i+4] - old);  /* valuend */
-        }
-    }
-
     /*
-     * The attributes defaulting
+     * Namespaces from default attributes
      */
     if (ctxt->attsDefault != NULL) {
         xmlDefAttrsPtr defaults;
 
 	defaults = xmlHashLookup2(ctxt->attsDefault, localname, prefix);
 	if (defaults != NULL) {
-	    for (i = 0;i < defaults->nbAttrs;i++) {
-	        attname = defaults->values[5 * i];
-		aprefix = defaults->values[5 * i + 1];
+	    for (i = 0; i < defaults->nbAttrs; i++) {
+                xmlDefAttr *attr = &defaults->attrs[i];
 
-                /*
-		 * special work for namespaces defaulted defs
-		 */
+	        attname = attr->name.name;
+		aprefix = attr->prefix.name;
+
 		if ((attname == ctxt->str_xmlns) && (aprefix == NULL)) {
-		    /*
-		     * check that it's not a defined namespace
-		     */
-		    for (j = 1;j <= nbNs;j++)
-		        if (ctxt->nsTab[ctxt->nsNr - 2 * j] == NULL)
-			    break;
-	            if (j <= nbNs) continue;
+                    xmlParserEntityCheck(ctxt, attr->expandedSize);
 
-		    nsname = xmlGetNamespace(ctxt, NULL);
-		    if (nsname != defaults->values[5 * i + 2]) {
-			if (nsPush(ctxt, NULL,
-			           defaults->values[5 * i + 2]) > 0)
-			    nbNs++;
-		    }
+                    if (xmlParserNsPush(ctxt, NULL, &attr->value, NULL, 1) > 0)
+                        nbNs++;
 		} else if (aprefix == ctxt->str_xmlns) {
-		    /*
-		     * check that it's not a defined namespace
-		     */
-		    for (j = 1;j <= nbNs;j++)
-		        if (ctxt->nsTab[ctxt->nsNr - 2 * j] == attname)
-			    break;
-	            if (j <= nbNs) continue;
+                    xmlParserEntityCheck(ctxt, attr->expandedSize);
 
-		    nsname = xmlGetNamespace(ctxt, attname);
-		    if (nsname != defaults->values[5 * i + 2]) {
-			if (nsPush(ctxt, attname,
-			           defaults->values[5 * i + 2]) > 0)
-			    nbNs++;
-		    }
-		} else {
-		    /*
-		     * check that it's not a defined attribute
-		     */
-		    for (j = 0;j < nbatts;j+=5) {
-			if ((attname == atts[j]) && (aprefix == atts[j+1]))
-			    break;
-		    }
-		    if (j < nbatts) continue;
-
-		    if ((atts == NULL) || (nbatts + 5 > maxatts)) {
-			if (xmlCtxtGrowAttrs(ctxt, nbatts + 5) < 0) {
-                            localname = NULL;
-                            goto done;
-			}
-			maxatts = ctxt->maxatts;
-			atts = ctxt->atts;
-		    }
-		    atts[nbatts++] = attname;
-		    atts[nbatts++] = aprefix;
-		    if (aprefix == NULL)
-			atts[nbatts++] = NULL;
-		    else
-		        atts[nbatts++] = xmlGetNamespace(ctxt, aprefix);
-		    atts[nbatts++] = defaults->values[5 * i + 2];
-		    atts[nbatts++] = defaults->values[5 * i + 3];
-		    if ((ctxt->standalone == 1) &&
-		        (defaults->values[5 * i + 4] != NULL)) {
-			xmlValidityError(ctxt, XML_DTD_STANDALONE_DEFAULTED,
-	  "standalone: attribute %s on %s defaulted from external subset\n",
-	                                 attname, localname);
-		    }
-		    nbdef++;
+                    if (xmlParserNsPush(ctxt, &attr->name, &attr->value,
+                                      NULL, 1) > 0)
+                        nbNs++;
 		}
 	    }
 	}
     }
 
     /*
-     * The attributes checkings
+     * Resolve attribute namespaces
      */
-    for (i = 0; i < nbatts;i += 5) {
+    for (i = 0; i < nbatts; i += 5) {
+        attname = atts[i];
+        aprefix = atts[i+1];
+
         /*
 	* The default namespace does not apply to attribute names.
 	*/
-	if (atts[i + 1] != NULL) {
-	    nsname = xmlGetNamespace(ctxt, atts[i + 1]);
-	    if (nsname == NULL) {
-		xmlNsErr(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
+	if (aprefix == NULL) {
+            nsIndex = NS_INDEX_EMPTY;
+        } else if (aprefix == ctxt->str_xml) {
+            nsIndex = NS_INDEX_XML;
+        } else {
+            haprefix.name = aprefix;
+            haprefix.hashValue = (size_t) atts[i+2];
+            nsIndex = xmlParserNsLookup(ctxt, &haprefix, NULL);
+	    if (nsIndex == INT_MAX) {
+                xmlNsErr(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
 		    "Namespace prefix %s for %s on %s is not defined\n",
-		    atts[i + 1], atts[i], localname);
-	    }
-	    atts[i + 2] = nsname;
-	} else
-	    nsname = NULL;
+		    aprefix, attname, localname);
+                nsIndex = NS_INDEX_EMPTY;
+            }
+        }
+
+        atts[i+2] = (const xmlChar *) (ptrdiff_t) nsIndex;
+    }
+
+    /*
+     * Verify that attribute names are unique.
+     */
+    for (i = 0, j = 0; j < nratts; i += 5, j++) {
+        const xmlChar *nsuri;
+        unsigned hashValue, nameHashValue, uriHashValue;
+        int res;
+
+        attname = atts[i];
+        aprefix = atts[i+1];
+        nsIndex = (ptrdiff_t) atts[i+2];
+        /* Hash values always have bit 31 set, see dict.c */
+        nameHashValue = ctxt->attallocs[j] | 0x80000000;
+
+        if (nsIndex == NS_INDEX_EMPTY) {
+            nsuri = NULL;
+            uriHashValue = URI_HASH_EMPTY;
+        } else if (nsIndex == NS_INDEX_XML) {
+            nsuri = ctxt->str_xml_ns;
+            uriHashValue = URI_HASH_XML;
+        } else {
+            nsuri = ctxt->nsTab[nsIndex * 2 + 1];
+            uriHashValue = ctxt->nsdb->extra[nsIndex].uriHashValue;
+        }
+
+        hashValue = xmlCombineHash(nameHashValue, uriHashValue);
+        res = xmlAttrHashInsert(ctxt, i, &attrHashSize, attname, nsuri,
+                                hashValue);
+        if (res < 0)
+            continue;
+
 	/*
 	 * [ WFC: Unique Att Spec ]
 	 * No attribute name may appear more than once in the same
 	 * start-tag or empty-element tag.
 	 * As extended by the Namespace in XML REC.
 	 */
-        for (j = 0; j < i;j += 5) {
-	    if (atts[i] == atts[j]) {
-	        if (atts[i+1] == atts[j+1]) {
-		    xmlErrAttributeDup(ctxt, atts[i+1], atts[i]);
-		    break;
-		}
-		if ((nsname != NULL) && (atts[j + 2] == nsname)) {
-		    xmlNsErr(ctxt, XML_NS_ERR_ATTRIBUTE_REDEFINED,
-			     "Namespaced Attribute %s in '%s' redefined\n",
-			     atts[i], nsname, NULL);
-		    break;
-		}
+        if (res < INT_MAX) {
+            if (aprefix == atts[res+1]) {
+                xmlErrAttributeDup(ctxt, aprefix, attname);
+            } else {
+                xmlNsErr(ctxt, XML_NS_ERR_ATTRIBUTE_REDEFINED,
+                         "Namespaced Attribute %s in '%s' redefined\n",
+                         attname, nsuri, NULL);
+            }
+	}
+    }
+
+    /*
+     * Default attributes
+     */
+    if (ctxt->attsDefault != NULL) {
+        xmlDefAttrsPtr defaults;
+
+	defaults = xmlHashLookup2(ctxt->attsDefault, localname, prefix);
+	if (defaults != NULL) {
+	    for (i = 0; i < defaults->nbAttrs; i++) {
+                xmlDefAttr *attr = &defaults->attrs[i];
+                const xmlChar *nsuri;
+                unsigned hashValue, uriHashValue;
+                int res;
+
+	        attname = attr->name.name;
+		aprefix = attr->prefix.name;
+
+		if ((attname == ctxt->str_xmlns) && (aprefix == NULL))
+                    continue;
+		if (aprefix == ctxt->str_xmlns)
+                    continue;
+
+                if (aprefix == NULL) {
+                    nsIndex = NS_INDEX_EMPTY;
+                    nsuri = NULL;
+                    uriHashValue = URI_HASH_EMPTY;
+                } if (aprefix == ctxt->str_xml) {
+                    nsIndex = NS_INDEX_XML;
+                    nsuri = ctxt->str_xml_ns;
+                    uriHashValue = URI_HASH_XML;
+                } else if (aprefix != NULL) {
+                    nsIndex = xmlParserNsLookup(ctxt, &attr->prefix, NULL);
+                    if (nsIndex == INT_MAX) {
+                        xmlNsErr(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
+                                 "Namespace prefix %s for %s on %s is not "
+                                 "defined\n",
+                                 aprefix, attname, localname);
+                        nsIndex = NS_INDEX_EMPTY;
+                        nsuri = NULL;
+                        uriHashValue = URI_HASH_EMPTY;
+                    } else {
+                        nsuri = ctxt->nsTab[nsIndex * 2 + 1];
+                        uriHashValue = ctxt->nsdb->extra[nsIndex].uriHashValue;
+                    }
+                }
+
+                /*
+                 * Check whether the attribute exists
+                 */
+                hashValue = xmlCombineHash(attr->name.hashValue, uriHashValue);
+                res = xmlAttrHashInsert(ctxt, nbatts, &attrHashSize, attname,
+                                        nsuri, hashValue);
+                if (res < 0)
+                    continue;
+                if (res < INT_MAX) {
+                    if (aprefix == atts[res+1])
+                        continue;
+                    xmlNsErr(ctxt, XML_NS_ERR_ATTRIBUTE_REDEFINED,
+                             "Namespaced Attribute %s in '%s' redefined\n",
+                             attname, nsuri, NULL);
+                }
+
+                xmlParserEntityCheck(ctxt, attr->expandedSize);
+
+                if ((atts == NULL) || (nbatts + 5 > maxatts)) {
+                    if (xmlCtxtGrowAttrs(ctxt, nbatts + 5) < 0) {
+                        localname = NULL;
+                        goto done;
+                    }
+                    maxatts = ctxt->maxatts;
+                    atts = ctxt->atts;
+                }
+
+                atts[nbatts++] = attname;
+                atts[nbatts++] = aprefix;
+                atts[nbatts++] = (const xmlChar *) (ptrdiff_t) nsIndex;
+                atts[nbatts++] = attr->value.name;
+                atts[nbatts++] = attr->valueEnd;
+                if ((ctxt->standalone == 1) && (attr->external != 0)) {
+                    xmlValidityError(ctxt, XML_DTD_STANDALONE_DEFAULTED,
+                            "standalone: attribute %s on %s defaulted "
+                            "from external subset\n",
+                            attname, localname);
+                }
+                nbdef++;
 	    }
 	}
     }
 
-    nsname = xmlGetNamespace(ctxt, prefix);
-    if ((prefix != NULL) && (nsname == NULL)) {
+    /*
+     * Reconstruct attribute pointers
+     */
+    for (i = 0, j = 0; i < nbatts; i += 5, j++) {
+        /* namespace URI */
+        nsIndex = (ptrdiff_t) atts[i+2];
+        if (nsIndex == INT_MAX)
+            atts[i+2] = NULL;
+        else if (nsIndex == INT_MAX - 1)
+            atts[i+2] = ctxt->str_xml_ns;
+        else
+            atts[i+2] = ctxt->nsTab[nsIndex * 2 + 1];
+
+        if ((j < nratts) && (ctxt->attallocs[j] & 0x80000000) == 0) {
+            atts[i+3] = BASE_PTR + (ptrdiff_t) atts[i+3];  /* value */
+            atts[i+4] = BASE_PTR + (ptrdiff_t) atts[i+4];  /* valuend */
+        }
+    }
+
+    uri = xmlParserNsLookupUri(ctxt, &hprefix);
+    if ((prefix != NULL) && (uri == NULL)) {
 	xmlNsErr(ctxt, XML_NS_ERR_UNDEFINED_NAMESPACE,
 	         "Namespace prefix %s on %s is not defined\n",
 		 prefix, localname, NULL);
     }
     *pref = prefix;
-    *URI = nsname;
+    *URI = uri;
 
     /*
-     * SAX: Start of Element !
+     * SAX callback
      */
     if ((ctxt->sax != NULL) && (ctxt->sax->startElementNs != NULL) &&
 	(!ctxt->disableSAX)) {
 	if (nbNs > 0)
-	    ctxt->sax->startElementNs(ctxt->userData, localname, prefix,
-			  nsname, nbNs, &ctxt->nsTab[ctxt->nsNr - 2 * nbNs],
+	    ctxt->sax->startElementNs(ctxt->userData, localname, prefix, uri,
+                          nbNs, ctxt->nsTab + 2 * (ctxt->nsNr - nbNs),
 			  nbatts / 5, nbdef, atts);
 	else
-	    ctxt->sax->startElementNs(ctxt->userData, localname, prefix,
-	                  nsname, 0, NULL, nbatts / 5, nbdef, atts);
+	    ctxt->sax->startElementNs(ctxt->userData, localname, prefix, uri,
+                          0, NULL, nbatts / 5, nbdef, atts);
     }
 
 done:
     /*
-     * Free up attribute allocated strings if needed
+     * Free allocated attribute values
      */
     if (attval != 0) {
-	for (i = 3,j = 0; j < nratts;i += 5,j++)
-	    if ((ctxt->attallocs[j] != 0) && (atts[i] != NULL))
-	        xmlFree((xmlChar *) atts[i]);
+	for (i = 0, j = 0; j < nratts; i += 5, j++)
+	    if (ctxt->attallocs[j] & 0x80000000)
+	        xmlFree((xmlChar *) atts[i+3]);
     }
 
+    *nbNsPtr = nbNs;
     return(localname);
 }
 
@@ -9428,7 +10144,7 @@ xmlParseEndTag2(xmlParserCtxtPtr ctxt, const xmlStartTag *tag) {
 
     spacePop(ctxt);
     if (tag->nsNr != 0)
-	nsPop(ctxt, tag->nsNr);
+	xmlParserNsPop(ctxt, tag->nsNr);
 }
 
 /**
@@ -9553,7 +10269,7 @@ xmlParseContentInternal(xmlParserCtxtPtr ctxt) {
     int nameNr = ctxt->nameNr;
 
     GROW;
-    while ((RAW != 0) &&
+    while ((ctxt->input->cur < ctxt->input->end) &&
 	   (ctxt->instate != XML_PARSER_EOF)) {
 	const xmlChar *cur = ctxt->input->cur;
 
@@ -9630,7 +10346,9 @@ xmlParseContent(xmlParserCtxtPtr ctxt) {
 
     xmlParseContentInternal(ctxt);
 
-    if ((ctxt->instate != XML_PARSER_EOF) && (ctxt->nameNr > nameNr)) {
+    if ((ctxt->instate != XML_PARSER_EOF) &&
+        (ctxt->errNo == XML_ERR_OK) &&
+        (ctxt->nameNr > nameNr)) {
         const xmlChar *name = ctxt->nameTab[ctxt->nameNr - 1];
         int line = ctxt->pushTab[ctxt->nameNr - 1].line;
         xmlFatalErrMsgStrIntStr(ctxt, XML_ERR_TAG_NOT_FINISHED,
@@ -9664,12 +10382,14 @@ xmlParseElement(xmlParserCtxtPtr ctxt) {
     if (ctxt->instate == XML_PARSER_EOF)
 	return;
 
-    if (CUR == 0) {
-        const xmlChar *name = ctxt->nameTab[ctxt->nameNr - 1];
-        int line = ctxt->pushTab[ctxt->nameNr - 1].line;
-        xmlFatalErrMsgStrIntStr(ctxt, XML_ERR_TAG_NOT_FINISHED,
-                "Premature end of data in tag %s line %d\n",
-		name, line, NULL);
+    if (ctxt->input->cur >= ctxt->input->end) {
+        if (ctxt->errNo == XML_ERR_OK) {
+            const xmlChar *name = ctxt->nameTab[ctxt->nameNr - 1];
+            int line = ctxt->pushTab[ctxt->nameNr - 1].line;
+            xmlFatalErrMsgStrIntStr(ctxt, XML_ERR_TAG_NOT_FINISHED,
+                    "Premature end of data in tag %s line %d\n",
+                    name, line, NULL);
+        }
         return;
     }
 
@@ -9691,9 +10411,9 @@ xmlParseElementStart(xmlParserCtxtPtr ctxt) {
     const xmlChar *prefix = NULL;
     const xmlChar *URI = NULL;
     xmlParserNodeInfo node_info;
-    int line, tlen = 0;
+    int line;
     xmlNodePtr cur;
-    int nsNr = ctxt->nsNr;
+    int nbNs = 0;
 
     if (((unsigned int) ctxt->nameNr > xmlParserMaxDepth) &&
         ((ctxt->options & XML_PARSE_HUGE) == 0)) {
@@ -9722,7 +10442,7 @@ xmlParseElementStart(xmlParserCtxtPtr ctxt) {
 #ifdef LIBXML_SAX1_ENABLED
     if (ctxt->sax2)
 #endif /* LIBXML_SAX1_ENABLED */
-        name = xmlParseStartTag2(ctxt, &prefix, &URI, &tlen);
+        name = xmlParseStartTag2(ctxt, &prefix, &URI, &nbNs);
 #ifdef LIBXML_SAX1_ENABLED
     else
 	name = xmlParseStartTag(ctxt);
@@ -9733,7 +10453,7 @@ xmlParseElementStart(xmlParserCtxtPtr ctxt) {
 	spacePop(ctxt);
         return(-1);
     }
-    nameNsPush(ctxt, name, prefix, URI, line, ctxt->nsNr - nsNr);
+    nameNsPush(ctxt, name, prefix, URI, line, nbNs);
     cur = ctxt->node;
 
 #ifdef LIBXML_VALID_ENABLED
@@ -9765,8 +10485,8 @@ xmlParseElementStart(xmlParserCtxtPtr ctxt) {
 	}
 	namePop(ctxt);
 	spacePop(ctxt);
-	if (nsNr != ctxt->nsNr)
-	    nsPop(ctxt, ctxt->nsNr - nsNr);
+	if (nbNs > 0)
+	    xmlParserNsPop(ctxt, nbNs);
 	if (cur != NULL && ctxt->record_info) {
             node_info.node = cur;
             node_info.end_pos = ctxt->input->consumed +
@@ -9795,8 +10515,8 @@ xmlParseElementStart(xmlParserCtxtPtr ctxt) {
 	nodePop(ctxt);
 	namePop(ctxt);
 	spacePop(ctxt);
-	if (nsNr != ctxt->nsNr)
-	    nsPop(ctxt, ctxt->nsNr - nsNr);
+	if (nbNs > 0)
+	    xmlParserNsPop(ctxt, nbNs);
 	return(-1);
     }
 
@@ -10448,8 +11168,9 @@ xmlParseDocument(xmlParserCtxtPtr ctxt) {
 	 */
 	xmlParseMisc(ctxt);
 
-	if (RAW != 0) {
-	    xmlFatalErr(ctxt, XML_ERR_DOCUMENT_END, NULL);
+        if (ctxt->input->cur < ctxt->input->end) {
+            if (ctxt->errNo == XML_ERR_OK)
+	        xmlFatalErr(ctxt, XML_ERR_DOCUMENT_END, NULL);
         } else if ((ctxt->input->buf != NULL) &&
                    (ctxt->input->buf->encoder != NULL) &&
                    (!xmlBufIsEmpty(ctxt->input->buf->raw))) {
@@ -10921,68 +11642,11 @@ xmlCheckCdataPush(const xmlChar *utf, int len, int complete) {
 static int
 xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
     int ret = 0;
-    int tlen;
     size_t avail;
     xmlChar cur, next;
 
     if (ctxt->input == NULL)
         return(0);
-
-#ifdef DEBUG_PUSH
-    switch (ctxt->instate) {
-	case XML_PARSER_EOF:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try EOF\n"); break;
-	case XML_PARSER_START:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try START\n"); break;
-	case XML_PARSER_XML_DECL:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try XML_DECL\n"); break;
-	case XML_PARSER_MISC:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try MISC\n");break;
-	case XML_PARSER_COMMENT:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try COMMENT\n");break;
-	case XML_PARSER_PROLOG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try PROLOG\n");break;
-	case XML_PARSER_START_TAG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try START_TAG\n");break;
-	case XML_PARSER_CONTENT:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try CONTENT\n");break;
-	case XML_PARSER_CDATA_SECTION:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try CDATA_SECTION\n");break;
-	case XML_PARSER_END_TAG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try END_TAG\n");break;
-	case XML_PARSER_ENTITY_DECL:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try ENTITY_DECL\n");break;
-	case XML_PARSER_ENTITY_VALUE:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try ENTITY_VALUE\n");break;
-	case XML_PARSER_ATTRIBUTE_VALUE:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try ATTRIBUTE_VALUE\n");break;
-	case XML_PARSER_DTD:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try DTD\n");break;
-	case XML_PARSER_EPILOG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try EPILOG\n");break;
-	case XML_PARSER_PI:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "PP: try PI\n");break;
-        case XML_PARSER_IGNORE:
-            xmlGenericError(xmlGenericErrorContext,
-		    "PP: try IGNORE\n");break;
-    }
-#endif
 
     if ((ctxt->input != NULL) &&
         (ctxt->input->cur - ctxt->input->base > 4096)) {
@@ -11006,7 +11670,7 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
                 /*
                  * Very first chars read from the document flow.
                  */
-                if (avail < 4)
+                if ((!terminate) && (avail < 4))
                     goto done;
 
                 /*
@@ -11024,27 +11688,12 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 		break;
 
             case XML_PARSER_XML_DECL:
-		if (avail < 2)
+		if ((!terminate) && (avail < 2))
 		    goto done;
 		cur = ctxt->input->cur[0];
 		next = ctxt->input->cur[1];
-		if (cur == 0) {
-		    if ((ctxt->sax) && (ctxt->sax->setDocumentLocator))
-			ctxt->sax->setDocumentLocator(ctxt->userData,
-						      &xmlDefaultSAXLocator);
-		    xmlFatalErr(ctxt, XML_ERR_DOCUMENT_EMPTY, NULL);
-		    xmlHaltParser(ctxt);
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "PP: entering EOF\n");
-#endif
-		    if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
-			ctxt->sax->endDocument(ctxt->userData);
-		    goto done;
-		}
 	        if ((cur == '<') && (next == '?')) {
 		    /* PI or XML decl */
-		    if (avail < 5) goto done;
 		    if ((!terminate) &&
                         (!xmlParseLookupString(ctxt, 2, "?>", 2)))
 			goto done;
@@ -11053,10 +11702,6 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 			(ctxt->input->cur[4] == 'l') &&
 			(IS_BLANK_CH(ctxt->input->cur[5]))) {
 			ret += 5;
-#ifdef DEBUG_PUSH
-			xmlGenericError(xmlGenericErrorContext,
-				"PP: Parsing XML Decl\n");
-#endif
 			xmlParseXMLDecl(ctxt);
 			if (ctxt->errNo == XML_ERR_UNSUPPORTED_ENCODING) {
 			    /*
@@ -11085,23 +11730,20 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
                 if (ctxt->instate == XML_PARSER_EOF)
                     goto done;
                 ctxt->instate = XML_PARSER_MISC;
-#ifdef DEBUG_PUSH
-                xmlGenericError(xmlGenericErrorContext,
-                        "PP: entering MISC\n");
-#endif
 		break;
             case XML_PARSER_START_TAG: {
 	        const xmlChar *name;
 		const xmlChar *prefix = NULL;
 		const xmlChar *URI = NULL;
                 int line = ctxt->input->line;
-		int nsNr = ctxt->nsNr;
+		int nbNs = 0;
 
-		if ((avail < 2) && (ctxt->inputNr == 1))
+		if ((!terminate) && (avail < 2))
 		    goto done;
 		cur = ctxt->input->cur[0];
 	        if (cur != '<') {
-		    xmlFatalErr(ctxt, XML_ERR_DOCUMENT_EMPTY, NULL);
+		    xmlFatalErrMsg(ctxt, XML_ERR_DOCUMENT_EMPTY,
+                                   "Start tag expected, '<' not found");
 		    xmlHaltParser(ctxt);
 		    if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
 			ctxt->sax->endDocument(ctxt->userData);
@@ -11118,7 +11760,7 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 #ifdef LIBXML_SAX1_ENABLED
 		if (ctxt->sax2)
 #endif /* LIBXML_SAX1_ENABLED */
-		    name = xmlParseStartTag2(ctxt, &prefix, &URI, &tlen);
+		    name = xmlParseStartTag2(ctxt, &prefix, &URI, &nbNs);
 #ifdef LIBXML_SAX1_ENABLED
 		else
 		    name = xmlParseStartTag(ctxt);
@@ -11155,8 +11797,8 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 			    (!ctxt->disableSAX))
 			    ctxt->sax->endElementNs(ctxt->userData, name,
 			                            prefix, URI);
-			if (ctxt->nsNr - nsNr > 0)
-			    nsPop(ctxt, ctxt->nsNr - nsNr);
+			if (nbNs > 0)
+			    xmlParserNsPop(ctxt, nbNs);
 #ifdef LIBXML_SAX1_ENABLED
 		    } else {
 			if ((ctxt->sax != NULL) &&
@@ -11165,84 +11807,87 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 			    ctxt->sax->endElement(ctxt->userData, name);
 #endif /* LIBXML_SAX1_ENABLED */
 		    }
-		    if (ctxt->instate == XML_PARSER_EOF)
-			goto done;
 		    spacePop(ctxt);
-		    if (ctxt->nameNr == 0) {
-			ctxt->instate = XML_PARSER_EPILOG;
-		    } else {
-			ctxt->instate = XML_PARSER_CONTENT;
-		    }
-		    break;
-		}
-		if (RAW == '>') {
+		} else if (RAW == '>') {
 		    NEXT;
+                    nameNsPush(ctxt, name, prefix, URI, line, nbNs);
 		} else {
 		    xmlFatalErrMsgStr(ctxt, XML_ERR_GT_REQUIRED,
 					 "Couldn't find end of Start Tag %s\n",
 					 name);
 		    nodePop(ctxt);
 		    spacePop(ctxt);
+                    if (nbNs > 0)
+                        xmlParserNsPop(ctxt, nbNs);
 		}
-                nameNsPush(ctxt, name, prefix, URI, line, ctxt->nsNr - nsNr);
 
                 if (ctxt->instate == XML_PARSER_EOF)
                     goto done;
-		ctxt->instate = XML_PARSER_CONTENT;
+                if (ctxt->nameNr == 0)
+                    ctxt->instate = XML_PARSER_EPILOG;
+                else
+                    ctxt->instate = XML_PARSER_CONTENT;
                 break;
 	    }
             case XML_PARSER_CONTENT: {
-		if ((avail < 2) && (ctxt->inputNr == 1))
-		    goto done;
 		cur = ctxt->input->cur[0];
-		next = ctxt->input->cur[1];
 
-		if ((cur == '<') && (next == '/')) {
-		    ctxt->instate = XML_PARSER_END_TAG;
-		    break;
-	        } else if ((cur == '<') && (next == '?')) {
-		    if ((!terminate) &&
-		        (!xmlParseLookupString(ctxt, 2, "?>", 2)))
-			goto done;
-		    xmlParsePI(ctxt);
-                    if (ctxt->instate == XML_PARSER_EOF)
+		if (cur == '<') {
+                    if ((!terminate) && (avail < 2))
                         goto done;
-		    ctxt->instate = XML_PARSER_CONTENT;
-		} else if ((cur == '<') && (next != '!')) {
-		    ctxt->instate = XML_PARSER_START_TAG;
-		    break;
-		} else if ((cur == '<') && (next == '!') &&
-		           (ctxt->input->cur[2] == '-') &&
-			   (ctxt->input->cur[3] == '-')) {
-		    if ((!terminate) &&
-		        (!xmlParseLookupString(ctxt, 4, "-->", 3)))
-			goto done;
-		    xmlParseComment(ctxt);
-                    if (ctxt->instate == XML_PARSER_EOF)
-                        goto done;
-		    ctxt->instate = XML_PARSER_CONTENT;
-		} else if ((cur == '<') && (ctxt->input->cur[1] == '!') &&
-		    (ctxt->input->cur[2] == '[') &&
-		    (ctxt->input->cur[3] == 'C') &&
-		    (ctxt->input->cur[4] == 'D') &&
-		    (ctxt->input->cur[5] == 'A') &&
-		    (ctxt->input->cur[6] == 'T') &&
-		    (ctxt->input->cur[7] == 'A') &&
-		    (ctxt->input->cur[8] == '[')) {
-		    SKIP(9);
-		    ctxt->instate = XML_PARSER_CDATA_SECTION;
-		    break;
-		} else if ((cur == '<') && (next == '!') &&
-		           (avail < 9)) {
-		    goto done;
-		} else if (cur == '<') {
-		    xmlFatalErr(ctxt, XML_ERR_INTERNAL_ERROR,
-		                "detected an error in element content\n");
-                    SKIP(1);
+		    next = ctxt->input->cur[1];
+
+                    if (next == '/') {
+                        ctxt->instate = XML_PARSER_END_TAG;
+                        break;
+                    } else if (next == '?') {
+                        if ((!terminate) &&
+                            (!xmlParseLookupString(ctxt, 2, "?>", 2)))
+                            goto done;
+                        xmlParsePI(ctxt);
+                        if (ctxt->instate == XML_PARSER_EOF)
+                            goto done;
+                        ctxt->instate = XML_PARSER_CONTENT;
+                        break;
+                    } else if (next == '!') {
+                        if ((!terminate) && (avail < 3))
+                            goto done;
+                        next = ctxt->input->cur[2];
+
+                        if (next == '-') {
+                            if ((!terminate) && (avail < 4))
+                                goto done;
+                            if (ctxt->input->cur[3] == '-') {
+                                if ((!terminate) &&
+                                    (!xmlParseLookupString(ctxt, 4, "-->", 3)))
+                                    goto done;
+                                xmlParseComment(ctxt);
+                                if (ctxt->instate == XML_PARSER_EOF)
+                                    goto done;
+                                ctxt->instate = XML_PARSER_CONTENT;
+                                break;
+                            }
+                        } else if (next == '[') {
+                            if ((!terminate) && (avail < 9))
+                                goto done;
+                            if ((ctxt->input->cur[2] == '[') &&
+                                (ctxt->input->cur[3] == 'C') &&
+                                (ctxt->input->cur[4] == 'D') &&
+                                (ctxt->input->cur[5] == 'A') &&
+                                (ctxt->input->cur[6] == 'T') &&
+                                (ctxt->input->cur[7] == 'A') &&
+                                (ctxt->input->cur[8] == '[')) {
+                                SKIP(9);
+                                ctxt->instate = XML_PARSER_CDATA_SECTION;
+                                break;
+                            }
+                        }
+                    }
 		} else if (cur == '&') {
 		    if ((!terminate) && (!xmlParseLookupChar(ctxt, ';')))
 			goto done;
 		    xmlParseReference(ctxt);
+                    break;
 		} else {
 		    /* TODO Avoid the extra copy, handle directly !!! */
 		    /*
@@ -11256,19 +11901,19 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 		     *    callbacks between the push and pull versions
 		     *    of the parser.
 		     */
-		    if ((ctxt->inputNr == 1) &&
-		        (avail < XML_PARSER_BIG_BUFFER_SIZE)) {
+		    if (avail < XML_PARSER_BIG_BUFFER_SIZE) {
 			if ((!terminate) && (!xmlParseLookupCharData(ctxt)))
 			    goto done;
                     }
                     ctxt->checkIndex = 0;
 		    xmlParseCharDataInternal(ctxt, !terminate);
+                    break;
 		}
+
+                ctxt->instate = XML_PARSER_START_TAG;
 		break;
 	    }
             case XML_PARSER_END_TAG:
-		if (avail < 2)
-		    goto done;
 		if ((!terminate) && (!xmlParseLookupChar(ctxt, '>')))
 		    goto done;
 		if (ctxt->sax2) {
@@ -11371,10 +12016,6 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 			goto done;
 		    SKIPL(base + 3);
 		    ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "PP: entering CONTENT\n");
-#endif
 		}
 		break;
 	    }
@@ -11383,99 +12024,87 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
             case XML_PARSER_EPILOG:
 		SKIP_BLANKS;
                 avail = ctxt->input->end - ctxt->input->cur;
-		if (avail < 2)
+		if (avail < 1)
 		    goto done;
-		cur = ctxt->input->cur[0];
-		next = ctxt->input->cur[1];
-	        if ((cur == '<') && (next == '?')) {
-		    if ((!terminate) &&
-                        (!xmlParseLookupString(ctxt, 2, "?>", 2)))
-			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "PP: Parsing PI\n");
-#endif
-		    xmlParsePI(ctxt);
-		    if (ctxt->instate == XML_PARSER_EOF)
-			goto done;
-		} else if ((cur == '<') && (next == '!') &&
-		    (ctxt->input->cur[2] == '-') &&
-		    (ctxt->input->cur[3] == '-')) {
-		    if ((!terminate) &&
-                        (!xmlParseLookupString(ctxt, 4, "-->", 3)))
-			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "PP: Parsing Comment\n");
-#endif
-		    xmlParseComment(ctxt);
-		    if (ctxt->instate == XML_PARSER_EOF)
-			goto done;
-		} else if ((ctxt->instate == XML_PARSER_MISC) &&
-                    (cur == '<') && (next == '!') &&
-		    (ctxt->input->cur[2] == 'D') &&
-		    (ctxt->input->cur[3] == 'O') &&
-		    (ctxt->input->cur[4] == 'C') &&
-		    (ctxt->input->cur[5] == 'T') &&
-		    (ctxt->input->cur[6] == 'Y') &&
-		    (ctxt->input->cur[7] == 'P') &&
-		    (ctxt->input->cur[8] == 'E')) {
-		    if ((!terminate) && (!xmlParseLookupGt(ctxt)))
+		if (ctxt->input->cur[0] == '<') {
+                    if ((!terminate) && (avail < 2))
                         goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "PP: Parsing internal subset\n");
-#endif
-		    ctxt->inSubset = 1;
-		    xmlParseDocTypeDecl(ctxt);
-		    if (ctxt->instate == XML_PARSER_EOF)
-			goto done;
-		    if (RAW == '[') {
-			ctxt->instate = XML_PARSER_DTD;
-#ifdef DEBUG_PUSH
-			xmlGenericError(xmlGenericErrorContext,
-				"PP: entering DTD\n");
-#endif
-		    } else {
-			/*
-			 * Create and update the external subset.
-			 */
-			ctxt->inSubset = 2;
-			if ((ctxt->sax != NULL) && (!ctxt->disableSAX) &&
-			    (ctxt->sax->externalSubset != NULL))
-			    ctxt->sax->externalSubset(ctxt->userData,
-				    ctxt->intSubName, ctxt->extSubSystem,
-				    ctxt->extSubURI);
-			ctxt->inSubset = 0;
-			xmlCleanSpecialAttr(ctxt);
+                    next = ctxt->input->cur[1];
+                    if (next == '?') {
+                        if ((!terminate) &&
+                            (!xmlParseLookupString(ctxt, 2, "?>", 2)))
+                            goto done;
+                        xmlParsePI(ctxt);
                         if (ctxt->instate == XML_PARSER_EOF)
                             goto done;
-			ctxt->instate = XML_PARSER_PROLOG;
-#ifdef DEBUG_PUSH
-			xmlGenericError(xmlGenericErrorContext,
-				"PP: entering PROLOG\n");
-#endif
-		    }
-		} else if ((cur == '<') && (next == '!') &&
-		           (avail <
-                            (ctxt->instate == XML_PARSER_MISC ? 9 : 4))) {
-		    goto done;
-		} else if (ctxt->instate == XML_PARSER_EPILOG) {
-		    xmlFatalErr(ctxt, XML_ERR_DOCUMENT_END, NULL);
-		    xmlHaltParser(ctxt);
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "PP: entering EOF\n");
-#endif
-		    if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
-			ctxt->sax->endDocument(ctxt->userData);
-		    goto done;
+                        break;
+                    } else if (next == '!') {
+                        if ((!terminate) && (avail < 3))
+                            goto done;
+
+                        if (ctxt->input->cur[2] == '-') {
+                            if ((!terminate) && (avail < 4))
+                                goto done;
+                            if (ctxt->input->cur[3] == '-') {
+                                if ((!terminate) &&
+                                    (!xmlParseLookupString(ctxt, 4, "-->", 3)))
+                                    goto done;
+                                xmlParseComment(ctxt);
+                                if (ctxt->instate == XML_PARSER_EOF)
+                                    goto done;
+                                break;
+                            }
+                        } else if (ctxt->instate == XML_PARSER_MISC) {
+                            if ((!terminate) && (avail < 9))
+                                goto done;
+                            if ((ctxt->input->cur[2] == 'D') &&
+                                (ctxt->input->cur[3] == 'O') &&
+                                (ctxt->input->cur[4] == 'C') &&
+                                (ctxt->input->cur[5] == 'T') &&
+                                (ctxt->input->cur[6] == 'Y') &&
+                                (ctxt->input->cur[7] == 'P') &&
+                                (ctxt->input->cur[8] == 'E')) {
+                                if ((!terminate) && (!xmlParseLookupGt(ctxt)))
+                                    goto done;
+                                ctxt->inSubset = 1;
+                                xmlParseDocTypeDecl(ctxt);
+                                if (ctxt->instate == XML_PARSER_EOF)
+                                    goto done;
+                                if (RAW == '[') {
+                                    ctxt->instate = XML_PARSER_DTD;
+                                } else {
+                                    /*
+                                     * Create and update the external subset.
+                                     */
+                                    ctxt->inSubset = 2;
+                                    if ((ctxt->sax != NULL) &&
+                                        (!ctxt->disableSAX) &&
+                                        (ctxt->sax->externalSubset != NULL))
+                                        ctxt->sax->externalSubset(
+                                                ctxt->userData,
+                                                ctxt->intSubName,
+                                                ctxt->extSubSystem,
+                                                ctxt->extSubURI);
+                                    ctxt->inSubset = 0;
+                                    xmlCleanSpecialAttr(ctxt);
+                                    if (ctxt->instate == XML_PARSER_EOF)
+                                        goto done;
+                                    ctxt->instate = XML_PARSER_PROLOG;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (ctxt->instate == XML_PARSER_EPILOG) {
+                    if (ctxt->errNo == XML_ERR_OK)
+                        xmlFatalErr(ctxt, XML_ERR_DOCUMENT_END, NULL);
+		    ctxt->instate = XML_PARSER_EOF;
+                    if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
+                        ctxt->sax->endDocument(ctxt->userData);
                 } else {
 		    ctxt->instate = XML_PARSER_START_TAG;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "PP: entering START_TAG\n");
-#endif
 		}
 		break;
             case XML_PARSER_DTD: {
@@ -11494,90 +12123,16 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 		if (ctxt->instate == XML_PARSER_EOF)
 		    goto done;
 		ctxt->instate = XML_PARSER_PROLOG;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering PROLOG\n");
-#endif
                 break;
 	    }
-            case XML_PARSER_COMMENT:
+            default:
 		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == COMMENT\n");
-		ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering CONTENT\n");
-#endif
-		break;
-            case XML_PARSER_IGNORE:
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == IGNORE");
-	        ctxt->instate = XML_PARSER_DTD;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering DTD\n");
-#endif
-	        break;
-            case XML_PARSER_PI:
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == PI\n");
-		ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering CONTENT\n");
-#endif
-		break;
-            case XML_PARSER_ENTITY_DECL:
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == ENTITY_DECL\n");
-		ctxt->instate = XML_PARSER_DTD;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering DTD\n");
-#endif
-		break;
-            case XML_PARSER_ENTITY_VALUE:
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == ENTITY_VALUE\n");
-		ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering DTD\n");
-#endif
-		break;
-            case XML_PARSER_ATTRIBUTE_VALUE:
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == ATTRIBUTE_VALUE\n");
-		ctxt->instate = XML_PARSER_START_TAG;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering START_TAG\n");
-#endif
-		break;
-            case XML_PARSER_SYSTEM_LITERAL:
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == SYSTEM_LITERAL\n");
-		ctxt->instate = XML_PARSER_START_TAG;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering START_TAG\n");
-#endif
-		break;
-            case XML_PARSER_PUBLIC_LITERAL:
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: internal error, state == PUBLIC_LITERAL\n");
-		ctxt->instate = XML_PARSER_START_TAG;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"PP: entering START_TAG\n");
-#endif
+			"PP: internal error\n");
+		ctxt->instate = XML_PARSER_EOF;
 		break;
 	}
     }
 done:
-#ifdef DEBUG_PUSH
-    xmlGenericError(xmlGenericErrorContext, "PP: done %d\n", ret);
-#endif
     return(ret);
 encoding_error:
     if (ctxt->input->end - ctxt->input->cur < 4) {
@@ -11643,9 +12198,6 @@ xmlParseChunk(xmlParserCtxtPtr ctxt, const char *chunk, int size,
 	    xmlHaltParser(ctxt);
 	    return(ctxt->errNo);
 	}
-#ifdef DEBUG_PUSH
-	xmlGenericError(xmlGenericErrorContext, "PP: pushed %d\n", size);
-#endif
     }
 
     xmlParseTryOrFinish(ctxt, terminate);
@@ -11679,13 +12231,20 @@ xmlParseChunk(xmlParserCtxtPtr ctxt, const char *chunk, int size,
 	/*
 	 * Check for termination
 	 */
-	if ((ctxt->instate != XML_PARSER_EOF) &&
-	    (ctxt->instate != XML_PARSER_EPILOG)) {
-	    xmlFatalErr(ctxt, XML_ERR_DOCUMENT_END, NULL);
-	}
-	if ((ctxt->instate == XML_PARSER_EPILOG) &&
-            (ctxt->input->cur < ctxt->input->end)) {
-	    xmlFatalErr(ctxt, XML_ERR_DOCUMENT_END, NULL);
+        if ((ctxt->instate != XML_PARSER_EOF) &&
+            (ctxt->instate != XML_PARSER_EPILOG)) {
+            if (ctxt->nameNr > 0) {
+                const xmlChar *name = ctxt->nameTab[ctxt->nameNr - 1];
+                int line = ctxt->pushTab[ctxt->nameNr - 1].line;
+                xmlFatalErrMsgStrIntStr(ctxt, XML_ERR_TAG_NOT_FINISHED,
+                        "Premature end of data in tag %s line %d\n",
+                        name, line, NULL);
+            } else if (ctxt->instate == XML_PARSER_START) {
+                xmlFatalErr(ctxt, XML_ERR_DOCUMENT_EMPTY, NULL);
+            } else {
+                xmlFatalErrMsg(ctxt, XML_ERR_DOCUMENT_EMPTY,
+                               "Start tag expected, '<' not found\n");
+            }
         } else if ((ctxt->input->buf != NULL) &&
                    (ctxt->input->buf->encoder != NULL) &&
                    (!xmlBufIsEmpty(ctxt->input->buf->raw))) {
@@ -11786,9 +12345,6 @@ xmlCreatePushParserCtxt(xmlSAXHandlerPtr sax, void *user_data,
             xmlFatalErr(ctxt, ctxt->input->buf->error, NULL);
             xmlHaltParser(ctxt);
         }
-#ifdef DEBUG_PUSH
-	xmlGenericError(xmlGenericErrorContext, "PP: pushed %d\n", size);
-#endif
     }
 
     return(ctxt);
@@ -12435,8 +12991,8 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
     xmlNodePtr content = NULL;
     xmlNodePtr last = NULL;
     xmlParserErrors ret = XML_ERR_OK;
-#ifdef SAX2
-    int i;
+#if 0
+    unsigned i;
 #endif
 
     if (((oldctxt->depth > 40) && ((oldctxt->options & XML_PARSE_HUGE) == 0)) ||
@@ -12467,10 +13023,36 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
     ctxt->str_xmlns = xmlDictLookup(ctxt->dict, BAD_CAST "xmlns", 5);
     ctxt->str_xml_ns = xmlDictLookup(ctxt->dict, XML_XML_NAMESPACE, 36);
 
-#ifdef SAX2
-    /* propagate namespaces down the entity */
-    for (i = 0;i < oldctxt->nsNr;i += 2) {
-        nsPush(ctxt, oldctxt->nsTab[i], oldctxt->nsTab[i+1]);
+    /*
+     * Propagate namespaces down the entity
+     *
+     * This is disabled for now. The pre-2.12 code was already broken
+     * since the SAX handler was using xmlSearchNs which didn't see the
+     * namespaces added here.
+     *
+     * Making entities and namespaces work correctly requires additional
+     * changes, see xmlParseReference.
+     */
+#if 0
+    for (i = 0; i < oldctxt->nsdb->hashSize; i++) {
+        xmlParserNsBucket *bucket = &oldctxt->nsdb->hash[i];
+        xmlHashedString hprefix, huri;
+        const xmlChar **ns;
+        xmlParserNsExtra *extra;
+        unsigned nsIndex;
+
+        if ((bucket->hashValue != 0) &&
+            (bucket->index != INT_MAX)) {
+            nsIndex = bucket->index;
+            ns = &oldctxt->nsTab[nsIndex * 2];
+            extra = &oldctxt->nsdb->extra[nsIndex];
+
+            hprefix.name = ns[0];
+            hprefix.hashValue = bucket->hashValue;
+            huri.name = ns[1];
+            huri.hashValue = extra->uriHashValue;
+            xmlParserNsPush(ctxt, &hprefix, &huri, extra->saxData, 0);
+        }
     }
 #endif
 
@@ -12484,10 +13066,8 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
     if (oldctxt->myDoc == NULL) {
 	newDoc = xmlNewDoc(BAD_CAST "1.0");
 	if (newDoc == NULL) {
-	    ctxt->sax = oldsax;
-	    ctxt->dict = NULL;
-	    xmlFreeParserCtxt(ctxt);
-	    return(XML_ERR_INTERNAL_ERROR);
+            ret = XML_ERR_INTERNAL_ERROR;
+            goto error;
 	}
 	newDoc->properties = XML_DOC_INTERNAL;
 	newDoc->dict = ctxt->dict;
@@ -12500,13 +13080,8 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
     }
     newRoot = xmlNewDocNode(ctxt->myDoc, NULL, BAD_CAST "pseudoroot", NULL);
     if (newRoot == NULL) {
-	ctxt->sax = oldsax;
-	ctxt->dict = NULL;
-	xmlFreeParserCtxt(ctxt);
-	if (newDoc != NULL) {
-	    xmlFreeDoc(newDoc);
-	}
-	return(XML_ERR_INTERNAL_ERROR);
+        ret = XML_ERR_INTERNAL_ERROR;
+        goto error;
     }
     ctxt->myDoc->children = NULL;
     ctxt->myDoc->last = NULL;
@@ -12589,6 +13164,8 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
 
     oldctxt->nbErrors = ctxt->nbErrors;
     oldctxt->nbWarnings = ctxt->nbWarnings;
+
+error:
     ctxt->sax = oldsax;
     ctxt->dict = NULL;
     ctxt->attsDefault = NULL;
@@ -12623,7 +13200,6 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
 xmlParserErrors
 xmlParseInNodeContext(xmlNodePtr node, const char *data, int datalen,
                       int options, xmlNodePtr *lst) {
-#ifdef SAX2
     xmlParserCtxtPtr ctxt;
     xmlDocPtr doc = NULL;
     xmlNodePtr fake, cur;
@@ -12731,21 +13307,13 @@ xmlParseInNodeContext(xmlNodePtr node, const char *data, int datalen,
 	cur = node;
 	while ((cur != NULL) && (cur->type == XML_ELEMENT_NODE)) {
 	    xmlNsPtr ns = cur->nsDef;
-	    const xmlChar *iprefix, *ihref;
+            xmlHashedString hprefix, huri;
 
 	    while (ns != NULL) {
-		if (ctxt->dict) {
-		    iprefix = xmlDictLookup(ctxt->dict, ns->prefix, -1);
-		    ihref = xmlDictLookup(ctxt->dict, ns->href, -1);
-		} else {
-		    iprefix = ns->prefix;
-		    ihref = ns->href;
-		}
-
-	        if (xmlGetNamespace(ctxt, iprefix) == NULL) {
-		    nsPush(ctxt, iprefix, ihref);
-		    nsnr++;
-		}
+                hprefix = xmlDictLookupHashed(ctxt->dict, ns->prefix, -1);
+                huri = xmlDictLookupHashed(ctxt->dict, ns->href, -1);
+                if (xmlParserNsPush(ctxt, &hprefix, &huri, ns, 1) > 0)
+                    nsnr++;
 		ns = ns->next;
 	    }
 	    cur = cur->parent;
@@ -12766,7 +13334,7 @@ xmlParseInNodeContext(xmlNodePtr node, const char *data, int datalen,
 #endif
 	xmlParseContent(ctxt);
 
-    nsPop(ctxt, nsnr);
+    xmlParserNsPop(ctxt, nsnr);
     if ((RAW == '<') && (NXT(1) == '/')) {
 	xmlFatalErr(ctxt, XML_ERR_NOT_WELL_BALANCED, NULL);
     } else if (RAW != 0) {
@@ -12820,9 +13388,6 @@ xmlParseInNodeContext(xmlNodePtr node, const char *data, int datalen,
     xmlFreeParserCtxt(ctxt);
 
     return(ret);
-#else /* !SAX2 */
-    return(XML_ERR_INTERNAL_ERROR);
-#endif
 }
 
 #ifdef LIBXML_SAX1_ENABLED
@@ -13674,7 +14239,7 @@ int xmlSAXUserParseMemory(xmlSAXHandlerPtr sax, void *user_data,
 
 /**
  * xmlCreateDocParserCtxt:
- * @cur:  a pointer to an array of xmlChar
+ * @str:  a pointer to an array of xmlChar
  *
  * Creates a parser context for an XML in-memory document.
  *
@@ -13823,118 +14388,6 @@ xmlSetEntityReferenceFunc(xmlEntityReferenceFunc func)
 
 /************************************************************************
  *									*
- *				Miscellaneous				*
- *									*
- ************************************************************************/
-
-static int xmlParserInitialized = 0;
-
-/**
- * xmlInitParser:
- *
- * Initialization function for the XML parser.
- * This is not reentrant. Call once before processing in case of
- * use in multithreaded programs.
- */
-
-void
-xmlInitParser(void) {
-    /*
-     * Note that the initialization code must not make memory allocations.
-     */
-    if (xmlParserInitialized != 0)
-	return;
-
-#ifdef LIBXML_THREAD_ENABLED
-    __xmlGlobalInitMutexLock();
-    if (xmlParserInitialized == 0) {
-#endif
-#if defined(_WIN32) && (!defined(LIBXML_STATIC) || defined(LIBXML_STATIC_FOR_DLL))
-        if (xmlFree == free)
-            atexit(xmlCleanupParser);
-#endif
-
-	xmlInitThreadsInternal();
-	xmlInitGlobalsInternal();
-	xmlInitMemoryInternal();
-        __xmlInitializeDict();
-	xmlInitEncodingInternal();
-	xmlRegisterDefaultInputCallbacks();
-#ifdef LIBXML_OUTPUT_ENABLED
-	xmlRegisterDefaultOutputCallbacks();
-#endif /* LIBXML_OUTPUT_ENABLED */
-#if defined(LIBXML_XPATH_ENABLED) || defined(LIBXML_SCHEMAS_ENABLED)
-	xmlInitXPathInternal();
-#endif
-	xmlParserInitialized = 1;
-#ifdef LIBXML_THREAD_ENABLED
-    }
-    __xmlGlobalInitMutexUnlock();
-#endif
-}
-
-/**
- * xmlCleanupParser:
- *
- * This function name is somewhat misleading. It does not clean up
- * parser state, it cleans up memory allocated by the library itself.
- * It is a cleanup function for the XML library. It tries to reclaim all
- * related global memory allocated for the library processing.
- * It doesn't deallocate any document related memory. One should
- * call xmlCleanupParser() only when the process has finished using
- * the library and all XML/HTML documents built with it.
- * See also xmlInitParser() which has the opposite function of preparing
- * the library for operations.
- *
- * WARNING: if your application is multithreaded or has plugin support
- *          calling this may crash the application if another thread or
- *          a plugin is still using libxml2. It's sometimes very hard to
- *          guess if libxml2 is in use in the application, some libraries
- *          or plugins may use it without notice. In case of doubt abstain
- *          from calling this function or do it just before calling exit()
- *          to avoid leak reports from valgrind !
- */
-
-void
-xmlCleanupParser(void) {
-    if (!xmlParserInitialized)
-	return;
-
-    xmlCleanupCharEncodingHandlers();
-#ifdef LIBXML_CATALOG_ENABLED
-    xmlCatalogCleanup();
-#endif
-    xmlCleanupDictInternal();
-    xmlCleanupInputCallbacks();
-#ifdef LIBXML_OUTPUT_ENABLED
-    xmlCleanupOutputCallbacks();
-#endif
-#ifdef LIBXML_SCHEMAS_ENABLED
-    xmlSchemaCleanupTypes();
-    xmlRelaxNGCleanupTypes();
-#endif
-    xmlCleanupGlobalsInternal();
-    xmlCleanupThreadsInternal();
-    xmlCleanupMemoryInternal();
-    xmlParserInitialized = 0;
-}
-
-#if defined(HAVE_ATTRIBUTE_DESTRUCTOR) && !defined(LIBXML_STATIC) && \
-    !defined(_WIN32)
-static void
-ATTRIBUTE_DESTRUCTOR
-xmlDestructor(void) {
-    /*
-     * Calling custom deallocation functions in a destructor can cause
-     * problems, for example with Nokogiri.
-     */
-    if (xmlFree == free)
-        xmlCleanupParser();
-}
-#endif
-
-/************************************************************************
- *									*
  *	New set (2.6.0) of simpler and more flexible APIs		*
  *									*
  ************************************************************************/
@@ -13990,6 +14443,7 @@ xmlCtxtReset(xmlParserCtxtPtr ctxt)
     ctxt->name = NULL;
 
     ctxt->nsNr = 0;
+    xmlParserNsReset(ctxt->nsdb);
 
     DICT_FREE(ctxt->version);
     ctxt->version = NULL;
@@ -14119,9 +14573,6 @@ xmlCtxtResetPush(xmlParserCtxtPtr ctxt, const char *chunk,
             xmlHaltParser(ctxt);
             return(1);
         }
-#ifdef DEBUG_PUSH
-        xmlGenericError(xmlGenericErrorContext, "PP: pushed %d\n", size);
-#endif
     }
 
     if (encoding != NULL) {
@@ -14532,7 +14983,7 @@ xmlReadIO(xmlInputReadCallback ioread, xmlInputCloseCallback ioclose,
 /**
  * xmlCtxtReadDoc:
  * @ctxt:  an XML parser context
- * @cur:  a pointer to a zero terminated string
+ * @str:  a pointer to a zero terminated string
  * @URL:  the base URL to use for the document
  * @encoding:  the document encoding, or NULL
  * @options:  a combination of xmlParserOption

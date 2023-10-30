@@ -8,6 +8,7 @@
  */
 #include "libxml_wrap.h"
 #include <libxml/xpathInternals.h>
+#include <string.h>
 
 #if PY_MAJOR_VERSION >= 3
 #define PY_IMPORT_STRING_SIZE PyUnicode_FromStringAndSize
@@ -229,9 +230,6 @@ libxml_intWrap(int val)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_intWrap: val = %d\n", val);
-#endif
     ret = PY_IMPORT_INT((long) val);
     return (ret);
 }
@@ -241,9 +239,6 @@ libxml_longWrap(long val)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_longWrap: val = %ld\n", val);
-#endif
     ret = PyLong_FromLong(val);
     return (ret);
 }
@@ -253,9 +248,6 @@ libxml_doubleWrap(double val)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_doubleWrap: val = %f\n", val);
-#endif
     ret = PyFloat_FromDouble((double) val);
     return (ret);
 }
@@ -265,9 +257,6 @@ libxml_charPtrWrap(char *str)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlcharPtrWrap: str = %s\n", str);
-#endif
     if (str == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -282,9 +271,6 @@ libxml_charPtrConstWrap(const char *str)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlcharPtrWrap: str = %s\n", str);
-#endif
     if (str == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -298,9 +284,6 @@ libxml_xmlCharPtrWrap(xmlChar * str)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlCharPtrWrap: str = %s\n", str);
-#endif
     if (str == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -315,9 +298,6 @@ libxml_xmlCharPtrConstWrap(const xmlChar * str)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlCharPtrWrap: str = %s\n", str);
-#endif
     if (str == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -331,9 +311,6 @@ libxml_constcharPtrWrap(const char *str)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlcharPtrWrap: str = %s\n", str);
-#endif
     if (str == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -347,9 +324,6 @@ libxml_constxmlCharPtrWrap(const xmlChar * str)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlCharPtrWrap: str = %s\n", str);
-#endif
     if (str == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -363,9 +337,6 @@ libxml_xmlDocPtrWrap(xmlDocPtr doc)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlDocPtrWrap: doc = %p\n", doc);
-#endif
     if (doc == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -380,9 +351,6 @@ libxml_xmlNodePtrWrap(xmlNodePtr node)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlNodePtrWrap: node = %p\n", node);
-#endif
     if (node == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -396,9 +364,6 @@ libxml_xmlURIPtrWrap(xmlURIPtr uri)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlURIPtrWrap: uri = %p\n", uri);
-#endif
     if (uri == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -412,9 +377,6 @@ libxml_xmlNsPtrWrap(xmlNsPtr ns)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlNsPtrWrap: node = %p\n", ns);
-#endif
     if (ns == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -428,9 +390,6 @@ libxml_xmlAttrPtrWrap(xmlAttrPtr attr)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlAttrNodePtrWrap: attr = %p\n", attr);
-#endif
     if (attr == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -444,9 +403,6 @@ libxml_xmlAttributePtrWrap(xmlAttributePtr attr)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlAttributePtrWrap: attr = %p\n", attr);
-#endif
     if (attr == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -460,9 +416,6 @@ libxml_xmlElementPtrWrap(xmlElementPtr elem)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlElementNodePtrWrap: elem = %p\n", elem);
-#endif
     if (elem == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -476,9 +429,6 @@ libxml_xmlXPathContextPtrWrap(xmlXPathContextPtr ctxt)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlXPathContextPtrWrap: ctxt = %p\n", ctxt);
-#endif
     if (ctxt == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -492,9 +442,6 @@ libxml_xmlXPathParserContextPtrWrap(xmlXPathParserContextPtr ctxt)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlXPathParserContextPtrWrap: ctxt = %p\n", ctxt);
-#endif
     if (ctxt == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -508,9 +455,6 @@ libxml_xmlParserCtxtPtrWrap(xmlParserCtxtPtr ctxt)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlParserCtxtPtrWrap: ctxt = %p\n", ctxt);
-#endif
     if (ctxt == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -537,9 +481,6 @@ static void
 libxml_xmlXPathDestructNsNode(PyObject *cap)
 #endif
 {
-#ifdef DEBUG
-    fprintf(stderr, "libxml_xmlXPathDestructNsNode called %p\n", cap);
-#endif
 #if PY_VERSION_HEX < 0x02070000
     xmlXPathNodeSetFreeNs((xmlNsPtr) cap);
 #else
@@ -552,9 +493,6 @@ libxml_xmlXPathObjectPtrWrap(xmlXPathObjectPtr obj)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlXPathObjectPtrWrap: ctxt = %p\n", obj);
-#endif
     if (obj == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -723,9 +661,6 @@ libxml_xmlXPathObjectPtrWrap(xmlXPathObjectPtr obj)
         }
 #endif /* LIBXML_XPTR_LOCS_ENABLED */
         default:
-#ifdef DEBUG
-            printf("Unable to convert XPath object type %d\n", obj->type);
-#endif
             Py_INCREF(Py_None);
             ret = Py_None;
     }
@@ -738,9 +673,6 @@ libxml_xmlXPathObjectPtrConvert(PyObject *obj)
 {
     xmlXPathObjectPtr ret = NULL;
 
-#ifdef DEBUG
-    printf("libxml_xmlXPathObjectPtrConvert: obj = %p\n", obj);
-#endif
     if (obj == NULL) {
         return (NULL);
     }
@@ -807,9 +739,6 @@ libxml_xmlXPathObjectPtrConvert(PyObject *obj)
 
             cur = NULL;
             if (PyCapsule_CheckExact(node)) {
-#ifdef DEBUG
-                printf("Got a Capsule\n");
-#endif
                 cur = PyxmlNode_Get(node);
             } else if ((PyObject_HasAttrString(node, (char *) "_o")) &&
 	               (PyObject_HasAttrString(node, (char *) "get_doc"))) {
@@ -819,9 +748,6 @@ libxml_xmlXPathObjectPtrConvert(PyObject *obj)
 		if (wrapper != NULL)
 		    cur = PyxmlNode_Get(wrapper);
             } else {
-#ifdef DEBUG
-                printf("Unknown object in Python return list\n");
-#endif
             }
             if (cur != NULL) {
                 xmlXPathNodeSetAdd(set, cur);
@@ -829,9 +755,6 @@ libxml_xmlXPathObjectPtrConvert(PyObject *obj)
         }
         ret = xmlXPathWrapNodeSet(set);
     } else {
-#ifdef DEBUG
-        printf("Unable to convert Python Object to XPath");
-#endif
     }
     return (ret);
 }
@@ -841,9 +764,6 @@ libxml_xmlValidCtxtPtrWrap(xmlValidCtxtPtr valid)
 {
 	PyObject *ret;
 
-#ifdef DEBUG
-	printf("libxml_xmlValidCtxtPtrWrap: valid = %p\n", valid);
-#endif
 	if (valid == NULL) {
 		Py_INCREF(Py_None);
 		return (Py_None);
@@ -861,9 +781,6 @@ libxml_xmlCatalogPtrWrap(xmlCatalogPtr catal)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlNodePtrWrap: catal = %p\n", catal);
-#endif
     if (catal == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -879,9 +796,6 @@ libxml_xmlOutputBufferPtrWrap(xmlOutputBufferPtr buffer)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlOutputBufferPtrWrap: buffer = %p\n", buffer);
-#endif
     if (buffer == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -897,9 +811,6 @@ libxml_xmlParserInputBufferPtrWrap(xmlParserInputBufferPtr buffer)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlParserInputBufferPtrWrap: buffer = %p\n", buffer);
-#endif
     if (buffer == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -916,9 +827,6 @@ libxml_xmlRegexpPtrWrap(xmlRegexpPtr regexp)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlRegexpPtrWrap: regexp = %p\n", regexp);
-#endif
     if (regexp == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -936,9 +844,6 @@ libxml_xmlTextReaderPtrWrap(xmlTextReaderPtr reader)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlTextReaderPtrWrap: reader = %p\n", reader);
-#endif
     if (reader == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -954,9 +859,6 @@ libxml_xmlTextReaderLocatorPtrWrap(xmlTextReaderLocatorPtr locator)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlTextReaderLocatorPtrWrap: locator = %p\n", locator);
-#endif
     if (locator == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -974,9 +876,6 @@ libxml_xmlRelaxNGPtrWrap(xmlRelaxNGPtr ctxt)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlRelaxNGPtrWrap: ctxt = %p\n", ctxt);
-#endif
     if (ctxt == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -992,9 +891,6 @@ libxml_xmlRelaxNGParserCtxtPtrWrap(xmlRelaxNGParserCtxtPtr ctxt)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlRelaxNGParserCtxtPtrWrap: ctxt = %p\n", ctxt);
-#endif
     if (ctxt == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -1009,9 +905,6 @@ libxml_xmlRelaxNGValidCtxtPtrWrap(xmlRelaxNGValidCtxtPtr valid)
 {
     PyObject *ret;
 
-#ifdef DEBUG
-    printf("libxml_xmlRelaxNGValidCtxtPtrWrap: valid = %p\n", valid);
-#endif
     if (valid == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
@@ -1027,9 +920,6 @@ libxml_xmlSchemaPtrWrap(xmlSchemaPtr ctxt)
 {
 	PyObject *ret;
 
-#ifdef DEBUG
-	printf("libxml_xmlSchemaPtrWrap: ctxt = %p\n", ctxt);
-#endif
 	if (ctxt == NULL) {
 		Py_INCREF(Py_None);
 		return (Py_None);
@@ -1045,9 +935,6 @@ libxml_xmlSchemaParserCtxtPtrWrap(xmlSchemaParserCtxtPtr ctxt)
 {
 	PyObject *ret;
 
-#ifdef DEBUG
-	printf("libxml_xmlSchemaParserCtxtPtrWrap: ctxt = %p\n", ctxt);
-#endif
 	if (ctxt == NULL) {
 		Py_INCREF(Py_None);
 		return (Py_None);
@@ -1064,9 +951,6 @@ libxml_xmlSchemaValidCtxtPtrWrap(xmlSchemaValidCtxtPtr valid)
 {
 	PyObject *ret;
 	
-#ifdef DEBUG
-	printf("libxml_xmlSchemaValidCtxtPtrWrap: valid = %p\n", valid);
-#endif
 	if (valid == NULL) {
 		Py_INCREF(Py_None);
 		return (Py_None);
@@ -1080,18 +964,30 @@ libxml_xmlSchemaValidCtxtPtrWrap(xmlSchemaValidCtxtPtr valid)
 }
 #endif /* LIBXML_SCHEMAS_ENABLED */
 
+static void
+libxml_xmlDestructError(PyObject *cap) {
+    xmlErrorPtr err = (xmlErrorPtr) PyCapsule_GetPointer(cap, "xmlErrorPtr");
+    xmlResetError(err);
+    xmlFree(err);
+}
+
 PyObject *
-libxml_xmlErrorPtrWrap(xmlErrorPtr error)
+libxml_xmlErrorPtrWrap(const xmlError *error)
 {
     PyObject *ret;
+    xmlErrorPtr copy;
 
-#ifdef DEBUG
-    printf("libxml_xmlErrorPtrWrap: error = %p\n", error);
-#endif
     if (error == NULL) {
         Py_INCREF(Py_None);
         return (Py_None);
     }
-    ret = PyCapsule_New((void *) error, (char *) "xmlErrorPtr", NULL);
+    copy = xmlMalloc(sizeof(*copy));
+    if (copy == NULL) {
+        Py_INCREF(Py_None);
+        return (Py_None);
+    }
+    memset(copy, 0, sizeof(*copy));
+    xmlCopyError(error, copy);
+    ret = PyCapsule_New(copy, "xmlErrorPtr", libxml_xmlDestructError);
     return (ret);
 }
