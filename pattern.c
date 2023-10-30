@@ -27,17 +27,14 @@
 #include "libxml.h"
 
 #include <string.h>
+#include <libxml/pattern.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/tree.h>
-#include <libxml/hash.h>
 #include <libxml/dict.h>
 #include <libxml/xmlerror.h>
 #include <libxml/parserInternals.h>
-#include <libxml/pattern.h>
 
 #ifdef LIBXML_PATTERN_ENABLED
-
-/* #define DEBUG_STREAMING */
 
 #ifdef ERROR
 #undef ERROR
@@ -1416,62 +1413,6 @@ error_unfinished:
  *									*
  ************************************************************************/
 
-#ifdef DEBUG_STREAMING
-static void
-xmlDebugStreamComp(xmlStreamCompPtr stream) {
-    int i;
-
-    if (stream == NULL) {
-        printf("Stream: NULL\n");
-	return;
-    }
-    printf("Stream: %d steps\n", stream->nbStep);
-    for (i = 0;i < stream->nbStep;i++) {
-	if (stream->steps[i].ns != NULL) {
-	    printf("{%s}", stream->steps[i].ns);
-	}
-        if (stream->steps[i].name == NULL) {
-	    printf("* ");
-	} else {
-	    printf("%s ", stream->steps[i].name);
-	}
-	if (stream->steps[i].flags & XML_STREAM_STEP_ROOT)
-	    printf("root ");
-	if (stream->steps[i].flags & XML_STREAM_STEP_DESC)
-	    printf("// ");
-	if (stream->steps[i].flags & XML_STREAM_STEP_FINAL)
-	    printf("final ");
-	printf("\n");
-    }
-}
-static void
-xmlDebugStreamCtxt(xmlStreamCtxtPtr ctxt, int match) {
-    int i;
-
-    if (ctxt == NULL) {
-        printf("Stream: NULL\n");
-	return;
-    }
-    printf("Stream: level %d, %d states: ", ctxt->level, ctxt->nbState);
-    if (match)
-        printf("matches\n");
-    else
-        printf("\n");
-    for (i = 0;i < ctxt->nbState;i++) {
-        if (ctxt->states[2 * i] < 0)
-	    printf(" %d: free\n", i);
-	else {
-	    printf(" %d: step %d, level %d", i, ctxt->states[2 * i],
-	           ctxt->states[(2 * i) + 1]);
-            if (ctxt->comp->steps[ctxt->states[2 * i]].flags &
-	        XML_STREAM_STEP_DESC)
-	        printf(" //\n");
-	    else
-	        printf("\n");
-	}
-    }
-}
-#endif
 /**
  * xmlNewStreamComp:
  * @size: the number of expected steps
@@ -1730,9 +1671,6 @@ xmlStreamCompile(xmlPatternPtr comp) {
     stream->steps[s].flags |= XML_STREAM_STEP_FINAL;
     if (root)
 	stream->steps[0].flags |= XML_STREAM_STEP_ROOT;
-#ifdef DEBUG_STREAMING
-    xmlDebugStreamComp(stream);
-#endif
     comp->stream = stream;
     return(0);
 error:
@@ -1853,9 +1791,6 @@ xmlStreamPushInternal(xmlStreamCtxtPtr stream,
     int ret = 0, err = 0, final = 0, tmp, i, m, match, stepNr, desc;
     xmlStreamCompPtr comp;
     xmlStreamStep step;
-#ifdef DEBUG_STREAMING
-    xmlStreamCtxtPtr orig = stream;
-#endif
 
     if ((stream == NULL) || (stream->nbState < 0))
         return(-1);
@@ -2173,9 +2108,6 @@ stream_next:
 
     if (err > 0)
         ret = -1;
-#ifdef DEBUG_STREAMING
-    xmlDebugStreamCtxt(orig, ret);
-#endif
     return(ret);
 }
 

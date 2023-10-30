@@ -16,6 +16,8 @@
 #include <limits.h>
 #include <libxml/xmlversion.h>
 #include <libxml/xmlstring.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/xmlregexp.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -329,14 +331,6 @@ typedef enum {
     XML_ELEMENT_TYPE_ELEMENT
 } xmlElementTypeVal;
 
-#ifdef __cplusplus
-}
-#endif
-#include <libxml/xmlregexp.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * xmlElement:
  *
@@ -630,6 +624,22 @@ struct _xmlDOMWrapCtxt {
 };
 
 /**
+ * xmlRegisterNodeFunc:
+ * @node: the current node
+ *
+ * Signature for the registration callback of a created node
+ */
+typedef void (*xmlRegisterNodeFunc) (xmlNodePtr node);
+
+/**
+ * xmlDeregisterNodeFunc:
+ * @node: the current node
+ *
+ * Signature for the deregistration callback of a discarded node
+ */
+typedef void (*xmlDeregisterNodeFunc) (xmlNodePtr node);
+
+/**
  * xmlChildrenNode:
  *
  * Macro for compatibility naming layer with libxml1. Maps
@@ -652,6 +662,28 @@ struct _xmlDOMWrapCtxt {
 /*
  * Variables.
  */
+
+/** DOC_DISABLE */
+#define XML_GLOBALS_TREE \
+  XML_OP(xmlBufferAllocScheme, xmlBufferAllocationScheme, XML_DEPRECATED) \
+  XML_OP(xmlDefaultBufferSize, int, XML_DEPRECATED) \
+  XML_OP(xmlRegisterNodeDefaultValue, xmlRegisterNodeFunc, XML_DEPRECATED) \
+  XML_OP(xmlDeregisterNodeDefaultValue, xmlDeregisterNodeFunc, \
+         XML_DEPRECATED)
+
+#define XML_OP XML_DECLARE_GLOBAL
+XML_GLOBALS_TREE
+#undef XML_OP
+
+#if defined(LIBXML_THREAD_ENABLED) && !defined(XML_GLOBALS_NO_REDEFINITION)
+  #define xmlBufferAllocScheme XML_GLOBAL_MACRO(xmlBufferAllocScheme)
+  #define xmlDefaultBufferSize XML_GLOBAL_MACRO(xmlDefaultBufferSize)
+  #define xmlRegisterNodeDefaultValue \
+    XML_GLOBAL_MACRO(xmlRegisterNodeDefaultValue)
+  #define xmlDeregisterNodeDefaultValue \
+    XML_GLOBAL_MACRO(xmlDeregisterNodeDefaultValue)
+#endif
+/** DOC_ENABLE */
 
 /*
  * Some helper functions
@@ -1296,11 +1328,23 @@ XMLPUBFUN xmlNodePtr
 XMLPUBFUN xmlNodePtr
             xmlPreviousElementSibling   (xmlNodePtr node);
 #endif
+
+XMLPUBFUN xmlRegisterNodeFunc
+	    xmlRegisterNodeDefault	(xmlRegisterNodeFunc func);
+XMLPUBFUN xmlDeregisterNodeFunc
+	    xmlDeregisterNodeDefault	(xmlDeregisterNodeFunc func);
+XMLPUBFUN xmlRegisterNodeFunc
+            xmlThrDefRegisterNodeDefault(xmlRegisterNodeFunc func);
+XMLPUBFUN xmlDeregisterNodeFunc
+            xmlThrDefDeregisterNodeDefault(xmlDeregisterNodeFunc func);
+
+XML_DEPRECATED XMLPUBFUN xmlBufferAllocationScheme
+            xmlThrDefBufferAllocScheme  (xmlBufferAllocationScheme v);
+XML_DEPRECATED XMLPUBFUN int
+            xmlThrDefDefaultBufferSize  (int v);
+
 #ifdef __cplusplus
 }
-#endif
-#ifndef __XML_PARSER_H__
-#include <libxml/xmlmemory.h>
 #endif
 
 #endif /* __XML_TREE_H__ */
