@@ -34,10 +34,10 @@
 
 #include <libxml/encoding.h>
 #include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
 #ifdef LIBXML_HTML_ENABLED
 #include <libxml/HTMLparser.h>
 #endif
-#include <libxml/globals.h>
 #include <libxml/xmlerror.h>
 
 #include "private/buf.h"
@@ -480,7 +480,7 @@ UTF16LEToUTF8(unsigned char* out, int *outlen,
     unsigned char* outstart = out;
     const unsigned char* processed = inb;
     unsigned char* outend;
-    unsigned short* in = (unsigned short*) inb;
+    unsigned short* in = (unsigned short *) (void *) inb;
     unsigned short* inend;
     unsigned int c, d, inlen;
     unsigned char *tmp;
@@ -566,7 +566,7 @@ static int
 UTF8ToUTF16LE(unsigned char* outb, int *outlen,
             const unsigned char* in, int *inlen)
 {
-    unsigned short* out = (unsigned short*) outb;
+    unsigned short* out = (unsigned short *) (void *) outb;
     const unsigned char* processed = in;
     const unsigned char *const instart = in;
     unsigned short* outstart= out;
@@ -718,7 +718,7 @@ UTF16BEToUTF8(unsigned char* out, int *outlen,
     unsigned char* outstart = out;
     const unsigned char* processed = inb;
     unsigned char* outend;
-    unsigned short* in = (unsigned short*) inb;
+    unsigned short* in = (unsigned short *) (void *) inb;
     unsigned short* inend;
     unsigned int c, d, inlen;
     unsigned char *tmp;
@@ -804,7 +804,7 @@ static int
 UTF8ToUTF16BE(unsigned char* outb, int *outlen,
             const unsigned char* in, int *inlen)
 {
-    unsigned short* out = (unsigned short*) outb;
+    unsigned short* out = (unsigned short *) (void *) outb;
     const unsigned char* processed = in;
     const unsigned char *const instart = in;
     unsigned short* outstart= out;
@@ -1977,11 +1977,11 @@ xmlEncConvertError(int code) {
  * @in:  a pointer to an array of input bytes
  * @inlen:  the length of @in
  *
- * Returns an XML_ENC_ERR code.
- *
  * The value of @inlen after return is the number of octets consumed
  *     as the return value is 0, else unpredictable.
  * The value of @outlen after return is the number of octets produced.
+ *
+ * Returns an XML_ENC_ERR code.
  */
 int
 xmlEncInputChunk(xmlCharEncodingHandler *handler, unsigned char *out,
@@ -2070,6 +2070,8 @@ xmlEncOutputChunk(xmlCharEncodingHandler *handler, unsigned char *out,
  * @in:  an xmlBuffer for the input
  *
  * DEPERECATED: Don't use.
+ *
+ * Returns the number of bytes written or an XML_ENC_ERR code.
  */
 int
 xmlCharEncFirstLine(xmlCharEncodingHandler *handler, xmlBufferPtr out,
@@ -2116,8 +2118,8 @@ xmlCharEncInput(xmlParserInputBufferPtr input)
         avail = xmlBufAvail(out);
         if (avail > INT_MAX)
             avail = INT_MAX;
-        if (avail < toconv * 2) {
-            if (xmlBufGrow(out, toconv * 2) < 0) {
+        if (avail < 4096) {
+            if (xmlBufGrow(out, 4096) < 0) {
                 input->error = XML_ERR_NO_MEMORY;
                 return(XML_ENC_ERR_MEMORY);
             }

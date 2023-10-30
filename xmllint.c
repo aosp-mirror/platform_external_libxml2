@@ -63,7 +63,6 @@
 #ifdef LIBXML_CATALOG_ENABLED
 #include <libxml/catalog.h>
 #endif
-#include <libxml/globals.h>
 #include <libxml/xmlreader.h>
 #ifdef LIBXML_SCHEMATRON_ENABLED
 #include <libxml/schematron.h>
@@ -2131,38 +2130,39 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 #ifdef LIBXML_PUSH_ENABLED
     else if ((html) && (push)) {
         FILE *f;
+        int res;
+        char chars[4096];
+        htmlParserCtxtPtr ctxt;
 
         if ((filename[0] == '-') && (filename[1] == 0)) {
             f = stdin;
         } else {
 	    f = fopen(filename, "rb");
-        }
-        if (f != NULL) {
-            int res;
-            char chars[4096];
-            htmlParserCtxtPtr ctxt;
-
-            res = fread(chars, 1, 4, f);
-            if (res > 0) {
-                ctxt = htmlCreatePushParserCtxt(NULL, NULL,
-                            chars, res, filename, XML_CHAR_ENCODING_NONE);
-                if (ctxt == NULL) {
-                    progresult = XMLLINT_ERR_MEM;
-                    if (f != stdin)
-                        fclose(f);
-                    return;
-                }
-                htmlCtxtUseOptions(ctxt, options);
-                while ((res = fread(chars, 1, pushsize, f)) > 0) {
-                    htmlParseChunk(ctxt, chars, res, 0);
-                }
-                htmlParseChunk(ctxt, chars, 0, 1);
-                doc = ctxt->myDoc;
-                htmlFreeParserCtxt(ctxt);
+            if (f == NULL) {
+                fprintf(stderr, "Can't open %s\n", filename);
+                progresult = XMLLINT_ERR_UNCLASS;
+                return;
             }
+        }
+
+        res = fread(chars, 1, 4, f);
+        ctxt = htmlCreatePushParserCtxt(NULL, NULL,
+                    chars, res, filename, XML_CHAR_ENCODING_NONE);
+        if (ctxt == NULL) {
+            progresult = XMLLINT_ERR_MEM;
             if (f != stdin)
                 fclose(f);
+            return;
         }
+        htmlCtxtUseOptions(ctxt, options);
+        while ((res = fread(chars, 1, pushsize, f)) > 0) {
+            htmlParseChunk(ctxt, chars, res, 0);
+        }
+        htmlParseChunk(ctxt, chars, 0, 1);
+        doc = ctxt->myDoc;
+        htmlFreeParserCtxt(ctxt);
+        if (f != stdin)
+            fclose(f);
     }
 #endif /* LIBXML_PUSH_ENABLED */
 #ifdef HAVE_MMAP
@@ -2200,48 +2200,48 @@ static void parseAndPrintFile(char *filename, xmlParserCtxtPtr rectxt) {
 	 */
 	if (push) {
 	    FILE *f;
+            int ret;
+            int res, size = 1024;
+            char chars[1024];
+            xmlParserCtxtPtr ctxt;
 
 	    /* '-' Usually means stdin -<sven@zen.org> */
 	    if ((filename[0] == '-') && (filename[1] == 0)) {
 	        f = stdin;
 	    } else {
 		f = fopen(filename, "rb");
+                if (f == NULL) {
+                    fprintf(stderr, "Can't open %s\n", filename);
+                    progresult = XMLLINT_ERR_UNCLASS;
+                    return;
+                }
 	    }
-	    if (f != NULL) {
-		int ret;
-	        int res, size = 1024;
-	        char chars[1024];
-                xmlParserCtxtPtr ctxt;
 
-		/* if (repeat) size = 1024; */
-		res = fread(chars, 1, 4, f);
-		if (res > 0) {
-		    ctxt = xmlCreatePushParserCtxt(NULL, NULL,
-		                chars, res, filename);
-                    if (ctxt == NULL) {
-                        progresult = XMLLINT_ERR_MEM;
-                        if (f != stdin)
-                            fclose(f);
-                        return;
-                    }
-		    xmlCtxtUseOptions(ctxt, options);
-                    if (maxAmpl > 0)
-                        xmlCtxtSetMaxAmplification(ctxt, maxAmpl);
-		    while ((res = fread(chars, 1, size, f)) > 0) {
-			xmlParseChunk(ctxt, chars, res, 0);
-		    }
-		    xmlParseChunk(ctxt, chars, 0, 1);
-		    doc = ctxt->myDoc;
-		    ret = ctxt->wellFormed;
-		    xmlFreeParserCtxt(ctxt);
-		    if ((!ret) && (!recovery)) {
-			xmlFreeDoc(doc);
-			doc = NULL;
-		    }
-	        }
+            res = fread(chars, 1, 4, f);
+            ctxt = xmlCreatePushParserCtxt(NULL, NULL,
+                        chars, res, filename);
+            if (ctxt == NULL) {
+                progresult = XMLLINT_ERR_MEM;
                 if (f != stdin)
                     fclose(f);
-	    }
+                return;
+            }
+            xmlCtxtUseOptions(ctxt, options);
+            if (maxAmpl > 0)
+                xmlCtxtSetMaxAmplification(ctxt, maxAmpl);
+            while ((res = fread(chars, 1, size, f)) > 0) {
+                xmlParseChunk(ctxt, chars, res, 0);
+            }
+            xmlParseChunk(ctxt, chars, 0, 1);
+            doc = ctxt->myDoc;
+            ret = ctxt->wellFormed;
+            xmlFreeParserCtxt(ctxt);
+            if ((!ret) && (!recovery)) {
+                xmlFreeDoc(doc);
+                doc = NULL;
+            }
+            if (f != stdin)
+                fclose(f);
 	} else
 #endif /* LIBXML_PUSH_ENABLED */
         if (testIO) {
@@ -3134,7 +3134,6 @@ main(int argc, char **argv) {
     int i, acount;
     int files = 0;
     int version = 0;
-    const char* indent;
 
     if (argc <= 1) {
 	usage(stderr, argv[0]);
@@ -3355,7 +3354,6 @@ main(int argc, char **argv) {
 	else if ((!strcmp(argv[i], "-debugent")) ||
 		 (!strcmp(argv[i], "--debugent"))) {
 	    debugent++;
-	    xmlParserDebugEntities = 1;
 	}
 #endif
 #ifdef LIBXML_C14N_ENABLED
@@ -3525,19 +3523,18 @@ main(int argc, char **argv) {
 	xmlDeregisterNodeDefault(deregisterNode);
     }
 
-    indent = getenv("XMLLINT_INDENT");
-    if(indent != NULL) {
-	xmlTreeIndentString = indent;
+#ifdef LIBXML_OUTPUT_ENABLED
+    {
+        const char *indent = getenv("XMLLINT_INDENT");
+        if (indent != NULL) {
+            xmlTreeIndentString = indent;
+        }
     }
-
+#endif
 
     defaultEntityLoader = xmlGetExternalEntityLoader();
     xmlSetExternalEntityLoader(xmllintExternalEntityLoader);
 
-    if (loaddtd != 0)
-	xmlLoadExtDtdDefaultValue |= XML_DETECT_IDS;
-    if (dtdattrs)
-	xmlLoadExtDtdDefaultValue |= XML_COMPLETE_ATTRS;
     if (noent != 0)
         options |= XML_PARSE_NOENT;
     if ((noblanks != 0) || (format == 1))
@@ -3564,7 +3561,6 @@ main(int argc, char **argv) {
 	xmlSchematronParserCtxtPtr ctxt;
 
         /* forces loading the DTDs */
-        xmlLoadExtDtdDefaultValue |= 1;
 	options |= XML_PARSE_DTDLOAD;
 	if (timing) {
 	    startTimer();
@@ -3600,7 +3596,6 @@ main(int argc, char **argv) {
 	xmlRelaxNGParserCtxtPtr ctxt;
 
         /* forces loading the DTDs */
-        xmlLoadExtDtdDefaultValue |= 1;
 	options |= XML_PARSE_DTDLOAD;
 	if (timing) {
 	    startTimer();
