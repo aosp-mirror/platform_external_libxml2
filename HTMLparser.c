@@ -14,18 +14,16 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include <libxml/HTMLparser.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 #include <libxml/parserInternals.h>
 #include <libxml/xmlerror.h>
-#include <libxml/HTMLparser.h>
 #include <libxml/HTMLtree.h>
 #include <libxml/entities.h>
 #include <libxml/encoding.h>
-#include <libxml/valid.h>
 #include <libxml/xmlIO.h>
-#include <libxml/globals.h>
 #include <libxml/uri.h>
 
 #include "private/buf.h"
@@ -39,9 +37,6 @@
 #define HTML_MAX_NAMELEN 1000
 #define HTML_PARSER_BIG_BUFFER_SIZE 1000
 #define HTML_PARSER_BUFFER_SIZE 100
-
-/* #define DEBUG */
-/* #define DEBUG_PUSH */
 
 static int htmlOmittedDefaultValue = 1;
 
@@ -326,7 +321,6 @@ htmlNodeInfoPop(htmlParserCtxtPtr ctxt)
  ************/
 
 #define CUR_CHAR(l) htmlCurrentChar(ctxt, &l)
-#define CUR_SCHAR(s, l) xmlStringCurrentChar(ctxt, s, &l)
 
 #define COPY_BUF(l,b,i,v)						\
     if (l == 1) b[i++] = v;						\
@@ -1538,20 +1532,11 @@ htmlAutoCloseOnEnd(htmlParserCtxtPtr ctxt)
 static void
 htmlAutoClose(htmlParserCtxtPtr ctxt, const xmlChar * newtag)
 {
-    while ((newtag != NULL) && (ctxt->name != NULL) &&
-           (htmlCheckAutoClose(newtag, ctxt->name))) {
-        if ((ctxt->sax != NULL) && (ctxt->sax->endElement != NULL))
-            ctxt->sax->endElement(ctxt->userData, ctxt->name);
-	htmlnamePop(ctxt);
-    }
-    if (newtag == NULL) {
-        htmlAutoCloseOnEnd(ctxt);
+    if (newtag == NULL)
         return;
-    }
-    while ((newtag == NULL) && (ctxt->name != NULL) &&
-           ((xmlStrEqual(ctxt->name, BAD_CAST "head")) ||
-            (xmlStrEqual(ctxt->name, BAD_CAST "body")) ||
-            (xmlStrEqual(ctxt->name, BAD_CAST "html")))) {
+
+    while ((ctxt->name != NULL) &&
+           (htmlCheckAutoClose(newtag, ctxt->name))) {
         if ((ctxt->sax != NULL) && (ctxt->sax->endElement != NULL))
             ctxt->sax->endElement(ctxt->userData, ctxt->name);
 	htmlnamePop(ctxt);
@@ -5325,18 +5310,6 @@ htmlParseLookupSequence(htmlParserCtxtPtr ctxt, xmlChar first,
     }
     ctxt->checkIndex = base;
     ctxt->endCheckState = quote;
-#ifdef DEBUG_PUSH
-    if (next == 0)
-        xmlGenericError(xmlGenericErrorContext,
-                        "HPP: lookup '%c' failed\n", first);
-    else if (third == 0)
-        xmlGenericError(xmlGenericErrorContext,
-                        "HPP: lookup '%c%c' failed\n", first, next);
-    else
-        xmlGenericError(xmlGenericErrorContext,
-                        "HPP: lookup '%c%c%c' failed\n", first, next,
-                        third);
-#endif
     return (-1);
 }
 
@@ -5397,59 +5370,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
     xmlChar cur, next;
 
     htmlParserNodeInfo node_info;
-
-#ifdef DEBUG_PUSH
-    switch (ctxt->instate) {
-	case XML_PARSER_EOF:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try EOF\n"); break;
-	case XML_PARSER_START:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try START\n"); break;
-	case XML_PARSER_MISC:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try MISC\n");break;
-	case XML_PARSER_COMMENT:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try COMMENT\n");break;
-	case XML_PARSER_PROLOG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try PROLOG\n");break;
-	case XML_PARSER_START_TAG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try START_TAG\n");break;
-	case XML_PARSER_CONTENT:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try CONTENT\n");break;
-	case XML_PARSER_CDATA_SECTION:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try CDATA_SECTION\n");break;
-	case XML_PARSER_END_TAG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try END_TAG\n");break;
-	case XML_PARSER_ENTITY_DECL:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try ENTITY_DECL\n");break;
-	case XML_PARSER_ENTITY_VALUE:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try ENTITY_VALUE\n");break;
-	case XML_PARSER_ATTRIBUTE_VALUE:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try ATTRIBUTE_VALUE\n");break;
-	case XML_PARSER_DTD:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try DTD\n");break;
-	case XML_PARSER_EPILOG:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try EPILOG\n");break;
-	case XML_PARSER_PI:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try PI\n");break;
-	case XML_PARSER_SYSTEM_LITERAL:
-	    xmlGenericError(xmlGenericErrorContext,
-		    "HPP: try SYSTEM_LITERAL\n");break;
-    }
-#endif
 
     while (1) {
 
@@ -5515,24 +5435,12 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    if ((!terminate) &&
 		        (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing internal subset\n");
-#endif
 		    htmlParseDocTypeDecl(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
 		    ctxt->instate = XML_PARSER_PROLOG;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering PROLOG\n");
-#endif
                 } else {
 		    ctxt->instate = XML_PARSER_MISC;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering MISC\n");
-#endif
 		}
 		break;
             case XML_PARSER_MISC:
@@ -5559,10 +5467,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    (in->cur[2] == '-') && (in->cur[3] == '-')) {
 		    if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing Comment\n");
-#endif
 		    htmlParseComment(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
@@ -5571,10 +5475,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    if ((!terminate) &&
 		        (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing PI\n");
-#endif
 		    htmlParsePI(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
@@ -5587,27 +5487,15 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    if ((!terminate) &&
 		        (htmlParseLookupSequence(ctxt, '>', 0, 0, 1) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing internal subset\n");
-#endif
 		    htmlParseDocTypeDecl(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
 		    ctxt->instate = XML_PARSER_PROLOG;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering PROLOG\n");
-#endif
 		} else if ((cur == '<') && (next == '!') &&
 		           (avail < 9)) {
 		    goto done;
 		} else {
 		    ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering START_TAG\n");
-#endif
 		}
 		break;
             case XML_PARSER_PROLOG:
@@ -5621,10 +5509,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    (in->cur[2] == '-') && (in->cur[3] == '-')) {
 		    if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing Comment\n");
-#endif
 		    htmlParseComment(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
@@ -5633,10 +5517,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    if ((!terminate) &&
 		        (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing PI\n");
-#endif
 		    htmlParsePI(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
@@ -5646,10 +5526,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    goto done;
 		} else {
 		    ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering START_TAG\n");
-#endif
 		}
 		break;
             case XML_PARSER_EPILOG:
@@ -5668,10 +5544,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    (in->cur[2] == '-') && (in->cur[3] == '-')) {
 		    if ((!terminate) && (htmlParseLookupCommentEnd(ctxt) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing Comment\n");
-#endif
 		    htmlParseComment(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
@@ -5680,10 +5552,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    if ((!terminate) &&
 		        (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
 			goto done;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: Parsing PI\n");
-#endif
 		    htmlParsePI(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
@@ -5695,10 +5563,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    ctxt->errNo = XML_ERR_DOCUMENT_END;
 		    ctxt->wellFormed = 0;
 		    ctxt->instate = XML_PARSER_EOF;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering EOF\n");
-#endif
 		    if ((ctxt->sax) && (ctxt->sax->endDocument != NULL))
 			ctxt->sax->endDocument(ctxt->userData);
 		    goto done;
@@ -5728,19 +5592,11 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		cur = in->cur[0];
 	        if (cur != '<') {
 		    ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering CONTENT\n");
-#endif
 		    break;
 		}
 		if (next == '/') {
 		    ctxt->instate = XML_PARSER_END_TAG;
 		    ctxt->checkIndex = 0;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering END_TAG\n");
-#endif
 		    break;
 		}
 		if ((!terminate) &&
@@ -5784,10 +5640,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
 		    ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering CONTENT\n");
-#endif
 		    break;
 		}
 
@@ -5812,10 +5664,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
 		    ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		    xmlGenericError(xmlGenericErrorContext,
-			    "HPP: entering CONTENT\n");
-#endif
 		    break;
 		}
 
@@ -5834,10 +5682,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                 if (ctxt->instate == XML_PARSER_EOF)
                     goto done;
 		ctxt->instate = XML_PARSER_CONTENT;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"HPP: entering CONTENT\n");
-#endif
                 break;
 	    }
             case XML_PARSER_CONTENT: {
@@ -5914,10 +5758,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    if ((cur == '<') && (next == '/')) {
 			ctxt->instate = XML_PARSER_END_TAG;
 			ctxt->checkIndex = 0;
-#ifdef DEBUG_PUSH
-			xmlGenericError(xmlGenericErrorContext,
-				"HPP: entering END_TAG\n");
-#endif
 			break;
 		    }
 		} else if ((cur == '<') && (next == '!')) {
@@ -5941,10 +5781,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                         if ((!terminate) &&
                             (htmlParseLookupCommentEnd(ctxt) < 0))
                             goto done;
-#ifdef DEBUG_PUSH
-                        xmlGenericError(xmlGenericErrorContext,
-                                "HPP: Parsing Comment\n");
-#endif
                         htmlParseComment(ctxt);
                         if (ctxt->instate == XML_PARSER_EOF)
                             goto done;
@@ -5959,10 +5795,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                     if ((!terminate) &&
                         (htmlParseLookupSequence(ctxt, '>', 0, 0, 0) < 0))
                         goto done;
-#ifdef DEBUG_PUSH
-                    xmlGenericError(xmlGenericErrorContext,
-                            "HPP: Parsing PI\n");
-#endif
                     htmlParsePI(ctxt);
                     if (ctxt->instate == XML_PARSER_EOF)
                         goto done;
@@ -5970,20 +5802,12 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                 } else if ((cur == '<') && (next == '/')) {
                     ctxt->instate = XML_PARSER_END_TAG;
                     ctxt->checkIndex = 0;
-#ifdef DEBUG_PUSH
-                    xmlGenericError(xmlGenericErrorContext,
-                            "HPP: entering END_TAG\n");
-#endif
                     break;
                 } else if ((cur == '<') && IS_ASCII_LETTER(next)) {
                     if ((!terminate) && (next == 0))
                         goto done;
                     ctxt->instate = XML_PARSER_START_TAG;
                     ctxt->checkIndex = 0;
-#ifdef DEBUG_PUSH
-                    xmlGenericError(xmlGenericErrorContext,
-                            "HPP: entering START_TAG\n");
-#endif
                     break;
                 } else if (cur == '<') {
                     if ((ctxt->sax != NULL) && (!ctxt->disableSAX) &&
@@ -6002,10 +5826,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
                         (htmlParseLookupSequence(ctxt, '<', 0, 0, 0) < 0))
                         goto done;
                     ctxt->checkIndex = 0;
-#ifdef DEBUG_PUSH
-                    xmlGenericError(xmlGenericErrorContext,
-                            "HPP: Parsing char data\n");
-#endif
                     while ((ctxt->instate != XML_PARSER_EOF) &&
                            (cur != '<') && (in->cur < in->end)) {
                         if (cur == '&') {
@@ -6034,10 +5854,6 @@ htmlParseTryOrFinish(htmlParserCtxtPtr ctxt, int terminate) {
 		    ctxt->instate = XML_PARSER_CONTENT;
 		}
 		ctxt->checkIndex = 0;
-#ifdef DEBUG_PUSH
-		xmlGenericError(xmlGenericErrorContext,
-			"HPP: entering CONTENT\n");
-#endif
 	        break;
 	    default:
 		htmlParseErr(ctxt, XML_ERR_INTERNAL_ERROR,
@@ -6069,9 +5885,6 @@ done:
 		    BAD_CAST "-//W3C//DTD HTML 4.0 Transitional//EN",
 		    BAD_CAST "http://www.w3.org/TR/REC-html40/loose.dtd");
     }
-#ifdef DEBUG_PUSH
-    xmlGenericError(xmlGenericErrorContext, "HPP: done %d\n", ret);
-#endif
     return(ret);
 }
 
@@ -6107,9 +5920,6 @@ htmlParseChunk(htmlParserCtxtPtr ctxt, const char *chunk, int size,
             xmlHaltParser(ctxt);
 	    return (ctxt->errNo);
 	}
-#ifdef DEBUG_PUSH
-	xmlGenericError(xmlGenericErrorContext, "HPP: pushed %d\n", size);
-#endif
     }
     htmlParseTryOrFinish(ctxt, terminate);
     if (terminate) {
@@ -6202,9 +6012,6 @@ htmlCreatePushParserCtxt(htmlSAXHandlerPtr sax, void *user_data,
                          "xmlParserInputBufferPush failed\n", NULL, NULL);
             xmlHaltParser(ctxt);
         }
-#ifdef DEBUG_PUSH
-	xmlGenericError(xmlGenericErrorContext, "HPP: pushed %d\n", size);
-#endif
     }
     ctxt->progressive = 1;
 
@@ -6913,7 +6720,7 @@ htmlReadIO(xmlInputReadCallback ioread, xmlInputCloseCallback ioclose,
 /**
  * htmlCtxtReadDoc:
  * @ctxt:  an HTML parser context
- * @cur:  a pointer to a zero terminated string
+ * @str:  a pointer to a zero terminated string
  * @URL:  the base URL to use for the document
  * @encoding:  the document encoding, or NULL
  * @options:  a combination of htmlParserOption(s)

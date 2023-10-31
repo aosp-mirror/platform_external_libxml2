@@ -63,7 +63,16 @@ ignored_words = {
   "LIBXML_ATTR_FORMAT": (5, "macro for gcc printf args checking extension"),
   "LIBXML_ATTR_ALLOC_SIZE": (3, "macro for gcc checking extension"),
   "ATTRIBUTE_NO_SANITIZE": (3, "macro keyword"),
+  "ATTRIBUTE_NO_SANITIZE_INTEGER": (0, "macro keyword"),
   "XML_DEPRECATED": (0, "macro keyword"),
+  "XML_GLOBALS_ALLOC": (0, "macro keyword"),
+  "XML_GLOBALS_ERROR": (0, "macro keyword"),
+  "XML_GLOBALS_HTML": (0, "macro keyword"),
+  "XML_GLOBALS_IO": (0, "macro keyword"),
+  "XML_GLOBALS_PARSER": (0, "macro keyword"),
+  "XML_GLOBALS_SAVE": (0, "macro keyword"),
+  "XML_GLOBALS_TREE": (0, "macro keyword"),
+  "XML_THREAD_LOCAL": (0, "macro keyword"),
 }
 
 def escape(raw):
@@ -292,7 +301,7 @@ class index:
                  continue
              if id in self.enums:
                  continue
-             if id in self.macros:
+             if id in self.macros and id != 'XML_OP':
                  print("macro %s from %s redeclared in %s" % (
                     id, self.macros[id].header, idx.macros[id].header))
              else:
@@ -1264,26 +1273,29 @@ class CParser:
         if token == None:
             return token
 
+        have_sign = 0
+        done = 0
+
         while token[0] == "name" and (
               token[1] == "const" or \
               token[1] == "unsigned" or \
               token[1] == "signed"):
+            if token[1] == "unsigned" or token[1] == "signed":
+                have_sign = 1
             if self.type == "":
                 self.type = token[1]
             else:
                 self.type = self.type + " " + token[1]
             token = self.token()
 
-        if token[0] == "name" and (token[1] == "long" or token[1] == "short"):
+        if token[0] == "name" and token[1] in ("char", "short", "int", "long"):
             if self.type == "":
                 self.type = token[1]
             else:
                 self.type = self.type + " " + token[1]
-            if token[0] == "name" and token[1] == "int":
-                if self.type == "":
-                    self.type = tmp[1]
-                else:
-                    self.type = self.type + " " + tmp[1]
+
+        elif have_sign:
+            done = 1
 
         elif token[0] == "name" and token[1] == "struct":
             if self.type == "":
@@ -1352,7 +1364,8 @@ class CParser:
             self.error("parsing type %s: expecting a name" % (self.type),
                        token)
             return token
-        token = self.token()
+        if not done:
+            token = self.token()
         while token != None and (token[0] == "op" or
               token[0] == "name" and token[1] == "const"):
             self.type = self.type + " " + token[1]
