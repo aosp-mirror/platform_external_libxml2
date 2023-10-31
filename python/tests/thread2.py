@@ -9,6 +9,9 @@ from threading import Thread, Lock
 import setup_test
 import libxml2
 
+# Memory debug specific
+libxml2.debugMemory(1)
+
 THREADS_COUNT = 15
 
 failed = 0
@@ -93,6 +96,9 @@ if failed:
 
 # Memory debug specific
 libxml2.cleanupParser()
+# Note that this can leak memory on Windows if the global state
+# destructors weren't run yet. They should be called eventually,
+# so this leak should be harmless.
 if libxml2.debugMemory(1) == 0:
     print("OK")
 else:
