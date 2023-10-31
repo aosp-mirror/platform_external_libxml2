@@ -18,6 +18,12 @@
 #include <libxml/entities.h>
 #include <libxml/xmlerror.h>
 #include <libxml/xmlstring.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/encoding.h>
+#include <libxml/xmlIO.h>
+/* for compatibility */
+#include <libxml/SAX2.h>
+#include <libxml/threads.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -166,6 +172,8 @@ typedef enum {
 } xmlParserMode;
 
 typedef struct _xmlStartTag xmlStartTag;
+typedef struct _xmlParserNsData xmlParserNsData;
+typedef struct _xmlAttrHashBucket xmlAttrHashBucket;
 
 /**
  * xmlParserCtxt:
@@ -276,7 +284,7 @@ struct _xmlParserCtxt {
     int                nsNr;          /* the number of inherited namespaces */
     int                nsMax;         /* the size of the arrays */
     const xmlChar *   *nsTab;         /* the array of prefix/namespace name */
-    int               *attallocs;     /* which attribute were allocated */
+    unsigned          *attallocs;     /* which attribute were allocated */
     xmlStartTag       *pushTab;       /* array of data for push */
     xmlHashTablePtr    attsDefault;   /* defaulted attributes if any */
     xmlHashTablePtr    attsSpecial;   /* non-CDATA attributes if any */
@@ -313,6 +321,10 @@ struct _xmlParserCtxt {
     unsigned short     nbErrors;    /* number of errors */
     unsigned short   nbWarnings;    /* number of warnings */
     unsigned            maxAmpl;    /* maximum amplification factor */
+
+    xmlParserNsData       *nsdb;    /* namespace database */
+    unsigned        attrHashMax;    /* allocated size */
+    xmlAttrHashBucket *attrHash;    /* atttribute hash table */
 };
 
 /**
@@ -805,18 +817,63 @@ typedef xmlParserInputPtr (*xmlExternalEntityLoader) (const char *URL,
 					 const char *ID,
 					 xmlParserCtxtPtr context);
 
-#ifdef __cplusplus
-}
+/*
+ * Variables
+ */
+
+XMLPUBVAR const char *const xmlParserVersion;
+#ifdef LIBXML_THREAD_ENABLED
+/* backward compatibility */
+XMLPUBFUN const char *const *__xmlParserVersion(void);
 #endif
 
-#include <libxml/encoding.h>
-#include <libxml/xmlIO.h>
-#include <libxml/globals.h>
+/** DOC_DISABLE */
+#define XML_GLOBALS_PARSER_CORE \
+  XML_OP(oldXMLWDcompatibility, int, XML_DEPRECATED) \
+  XML_OP(xmlDefaultSAXLocator, xmlSAXLocator, XML_DEPRECATED) \
+  XML_OP(xmlDoValidityCheckingDefaultValue, int, XML_DEPRECATED) \
+  XML_OP(xmlGetWarningsDefaultValue, int, XML_DEPRECATED) \
+  XML_OP(xmlKeepBlanksDefaultValue, int, XML_DEPRECATED) \
+  XML_OP(xmlLineNumbersDefaultValue, int, XML_DEPRECATED) \
+  XML_OP(xmlLoadExtDtdDefaultValue, int, XML_DEPRECATED) \
+  XML_OP(xmlParserDebugEntities, int, XML_DEPRECATED) \
+  XML_OP(xmlPedanticParserDefaultValue, int, XML_DEPRECATED) \
+  XML_OP(xmlSubstituteEntitiesDefaultValue, int, XML_DEPRECATED)
 
-#ifdef __cplusplus
-extern "C" {
+#ifdef LIBXML_SAX1_ENABLED
+  #define XML_GLOBALS_PARSER_SAX1 \
+    XML_OP(xmlDefaultSAXHandler, xmlSAXHandlerV1, XML_DEPRECATED)
+#else
+  #define XML_GLOBALS_PARSER_SAX1
 #endif
 
+#define XML_GLOBALS_PARSER \
+  XML_GLOBALS_PARSER_CORE \
+  XML_GLOBALS_PARSER_SAX1
+
+#define XML_OP XML_DECLARE_GLOBAL
+XML_GLOBALS_PARSER
+#undef XML_OP
+
+#if defined(LIBXML_THREAD_ENABLED) && !defined(XML_GLOBALS_NO_REDEFINITION)
+  #define oldXMLWDcompatibility XML_GLOBAL_MACRO(oldXMLWDcompatibility)
+  #define xmlDefaultSAXHandler XML_GLOBAL_MACRO(xmlDefaultSAXHandler)
+  #define xmlDefaultSAXLocator XML_GLOBAL_MACRO(xmlDefaultSAXLocator)
+  #define xmlDoValidityCheckingDefaultValue \
+    XML_GLOBAL_MACRO(xmlDoValidityCheckingDefaultValue)
+  #define xmlGetWarningsDefaultValue \
+    XML_GLOBAL_MACRO(xmlGetWarningsDefaultValue)
+  #define xmlKeepBlanksDefaultValue XML_GLOBAL_MACRO(xmlKeepBlanksDefaultValue)
+  #define xmlLineNumbersDefaultValue \
+    XML_GLOBAL_MACRO(xmlLineNumbersDefaultValue)
+  #define xmlLoadExtDtdDefaultValue XML_GLOBAL_MACRO(xmlLoadExtDtdDefaultValue)
+  #define xmlParserDebugEntities XML_GLOBAL_MACRO(xmlParserDebugEntities)
+  #define xmlPedanticParserDefaultValue \
+    XML_GLOBAL_MACRO(xmlPedanticParserDefaultValue)
+  #define xmlSubstituteEntitiesDefaultValue \
+    XML_GLOBAL_MACRO(xmlSubstituteEntitiesDefaultValue)
+#endif
+/** DOC_ENABLE */
 
 /*
  * Init/Cleanup
@@ -850,16 +907,32 @@ XMLPUBFUN xmlDocPtr
 		xmlParseMemory		(const char *buffer,
 					 int size);
 #endif /* LIBXML_SAX1_ENABLED */
-XMLPUBFUN int
+XML_DEPRECATED XMLPUBFUN int
 		xmlSubstituteEntitiesDefault(int val);
-XMLPUBFUN int
+XML_DEPRECATED XMLPUBFUN int
+                xmlThrDefSubstituteEntitiesDefaultValue(int v);
+XML_DEPRECATED XMLPUBFUN int
 		xmlKeepBlanksDefault	(int val);
+XML_DEPRECATED XMLPUBFUN int
+		xmlThrDefKeepBlanksDefaultValue(int v);
 XMLPUBFUN void
 		xmlStopParser		(xmlParserCtxtPtr ctxt);
-XMLPUBFUN int
+XML_DEPRECATED XMLPUBFUN int
 		xmlPedanticParserDefault(int val);
-XMLPUBFUN int
+XML_DEPRECATED XMLPUBFUN int
+                xmlThrDefPedanticParserDefaultValue(int v);
+XML_DEPRECATED XMLPUBFUN int
 		xmlLineNumbersDefault	(int val);
+XML_DEPRECATED XMLPUBFUN int
+                xmlThrDefLineNumbersDefaultValue(int v);
+XML_DEPRECATED XMLPUBFUN int
+                xmlThrDefDoValidityCheckingDefaultValue(int v);
+XML_DEPRECATED XMLPUBFUN int
+                xmlThrDefGetWarningsDefaultValue(int v);
+XML_DEPRECATED XMLPUBFUN int
+                xmlThrDefLoadExtDtdDefaultValue(int v);
+XML_DEPRECATED XMLPUBFUN int
+                xmlThrDefParserDebugEntities(int v);
 
 #ifdef LIBXML_SAX1_ENABLED
 /*
