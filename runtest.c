@@ -359,7 +359,7 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
 }
 
 static void
-testStructuredErrorHandler(void *ctx  ATTRIBUTE_UNUSED, xmlErrorPtr err) {
+testStructuredErrorHandler(void *ctx ATTRIBUTE_UNUSED, const xmlError *err) {
     char *file = NULL;
     int line = 0;
     int code = -1;
@@ -4430,6 +4430,10 @@ thread_specific_data(void *private_data)
     xmlThreadParams *params = (xmlThreadParams *) private_data;
     const char *filename = params->filename;
     int okay = 1;
+
+#ifdef LIBXML_THREAD_ALLOC_ENABLED
+    xmlMemSetup(xmlMemFree, xmlMemMalloc, xmlMemRealloc, xmlMemoryStrdup);
+#endif
 
     myDoc = xmlReadFile(filename, NULL, XML_PARSE_NOENT | XML_PARSE_DTDLOAD);
     if (myDoc) {
