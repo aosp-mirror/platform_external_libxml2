@@ -111,7 +111,6 @@ struct _xmlParserNsData {
 };
 
 struct _xmlAttrHashBucket {
-    unsigned hashValue;
     int index;
 };
 
@@ -2261,8 +2260,11 @@ static int spacePop(xmlParserCtxtPtr ctxt) {
         xmlParserGrow(ctxt);						\
   } while (0)
 
-#define SHRINK if ((ctxt->input->cur - ctxt->input->base > 2 * INPUT_CHUNK) && \
-		   (ctxt->input->end - ctxt->input->cur < 2 * INPUT_CHUNK)) \
+/* Don't shrink push parser buffer. */
+#define SHRINK \
+    if (((ctxt->progressive == 0) || (ctxt->inputNr > 1)) && \
+        (ctxt->input->cur - ctxt->input->base > 2 * INPUT_CHUNK) && \
+	(ctxt->input->end - ctxt->input->cur < 2 * INPUT_CHUNK)) \
 	xmlParserShrink(ctxt);
 
 #define GROW if (ctxt->input->end - ctxt->input->cur < INPUT_CHUNK)	\
@@ -2289,8 +2291,8 @@ static int spacePop(xmlParserCtxtPtr ctxt) {
 #define CUR_CHAR(l) xmlCurrentChar(ctxt, &l)
 #define CUR_SCHAR(s, l) xmlStringCurrentChar(ctxt, s, &l)
 
-#define COPY_BUF(l,b,i,v)						\
-    if (l == 1) b[i++] = v;						\
+#define COPY_BUF(b, i, v)						\
+    if (v < 0x80) b[i++] = v;						\
     else i += xmlCopyCharMultiByte(&b[i],v)
 
 /**
@@ -2840,7 +2842,7 @@ xmlStringDecodeEntitiesInt(xmlParserCtxtPtr ctxt, const xmlChar *str, int len,
 	    int val = xmlParseStringCharRef(ctxt, &str);
 	    if (val == 0)
                 goto int_error;
-	    COPY_BUF(0,buffer,nbchars,val);
+	    COPY_BUF(buffer, nbchars, val);
 	    if (nbchars + XML_PARSER_BUFFER_SIZE > buffer_size) {
 	        growBuffer(buffer, XML_PARSER_BUFFER_SIZE);
 	    }
@@ -2853,7 +2855,7 @@ xmlStringDecodeEntitiesInt(xmlParserCtxtPtr ctxt, const xmlChar *str, int len,
 	    if ((ent != NULL) &&
 		(ent->etype == XML_INTERNAL_PREDEFINED_ENTITY)) {
 		if (ent->content != NULL) {
-		    COPY_BUF(0,buffer,nbchars,ent->content[0]);
+		    COPY_BUF(buffer, nbchars, ent->content[0]);
 		    if (nbchars + XML_PARSER_BUFFER_SIZE > buffer_size) {
 			growBuffer(buffer, XML_PARSER_BUFFER_SIZE);
 		    }
@@ -2964,7 +2966,7 @@ xmlStringDecodeEntitiesInt(xmlParserCtxtPtr ctxt, const xmlChar *str, int len,
                 rep = NULL;
 	    }
 	} else {
-	    COPY_BUF(l,buffer,nbchars,c);
+	    COPY_BUF(buffer, nbchars, c);
 	    str += l;
 	    if (nbchars + XML_PARSER_BUFFER_SIZE > buffer_size) {
 	        growBuffer(buffer, XML_PARSER_BUFFER_SIZE);
@@ -3739,11 +3741,11 @@ xmlParseStringName(xmlParserCtxtPtr ctxt, const xmlChar** str) {
 	return(NULL);
     }
 
-    COPY_BUF(l,buf,len,c);
+    COPY_BUF(buf, len, c);
     cur += l;
     c = CUR_SCHAR(cur, l);
     while (xmlIsNameChar(ctxt, c)) {
-	COPY_BUF(l,buf,len,c);
+	COPY_BUF(buf, len, c);
 	cur += l;
 	c = CUR_SCHAR(cur, l);
 	if (len >= XML_MAX_NAMELEN) { /* test bigentname.xml */
@@ -3773,7 +3775,7 @@ xmlParseStringName(xmlParserCtxtPtr ctxt, const xmlChar** str) {
 		    }
 		    buffer = tmp;
 		}
-		COPY_BUF(l,buffer,len,c);
+		COPY_BUF(buffer, len, c);
 		cur += l;
 		c = CUR_SCHAR(cur, l);
                 if (len > maxLength) {
@@ -3822,7 +3824,7 @@ xmlParseNmtoken(xmlParserCtxtPtr ctxt) {
     c = CUR_CHAR(l);
 
     while (xmlIsNameChar(ctxt, c)) {
-	COPY_BUF(l,buf,len,c);
+	COPY_BUF(buf, len, c);
 	NEXTL(l);
 	c = CUR_CHAR(l);
 	if (len >= XML_MAX_NAMELEN) {
@@ -3852,7 +3854,7 @@ xmlParseNmtoken(xmlParserCtxtPtr ctxt) {
 		    }
 		    buffer = tmp;
 		}
-		COPY_BUF(l,buffer,len,c);
+		COPY_BUF(buffer, len, c);
                 if (len > maxLength) {
                     xmlFatalErr(ctxt, XML_ERR_NAME_TOO_LONG, "NmToken");
                     xmlFree(buffer);
@@ -3954,7 +3956,7 @@ xmlParseEntityValue(xmlParserCtxtPtr ctxt, xmlChar **orig) {
 	    }
 	    buf = tmp;
 	}
-	COPY_BUF(l,buf,len,c);
+	COPY_BUF(buf, len, c);
 	NEXTL(l);
 
 	GROW;
@@ -4238,7 +4240,7 @@ xmlParseAttValueComplex(xmlParserCtxtPtr ctxt, int *attlen, int normalize) {
 	    if ((c == 0x20) || (c == 0xD) || (c == 0xA) || (c == 0x9)) {
 	        if ((len != 0) || (!normalize)) {
 		    if ((!normalize) || (!in_space)) {
-			COPY_BUF(l,buf,len,0x20);
+			COPY_BUF(buf, len, 0x20);
 			while (len + 10 > buf_size) {
 			    growBuffer(buf, 10);
 			}
@@ -4247,7 +4249,7 @@ xmlParseAttValueComplex(xmlParserCtxtPtr ctxt, int *attlen, int normalize) {
 		}
 	    } else {
 	        in_space = 0;
-		COPY_BUF(l,buf,len,c);
+		COPY_BUF(buf, len, c);
 		if (len + 10 > buf_size) {
 		    growBuffer(buf, 10);
 		}
@@ -4394,7 +4396,7 @@ xmlParseSystemLiteral(xmlParserCtxtPtr ctxt) {
 	    }
 	    buf = tmp;
 	}
-	COPY_BUF(l,buf,len,cur);
+	COPY_BUF(buf, len, cur);
         if (len > maxLength) {
             xmlFatalErr(ctxt, XML_ERR_NAME_TOO_LONG, "SystemLiteral");
             xmlFree(buf);
@@ -4714,11 +4716,11 @@ xmlParseCharDataComplex(xmlParserCtxtPtr ctxt, int partial) {
     cur = CUR_CHAR(l);
     while ((cur != '<') && /* checked */
            (cur != '&') &&
-	   (IS_CHAR(cur))) /* test also done in xmlCurrentChar() */ {
+	   (IS_CHAR(cur))) {
 	if ((cur == ']') && (NXT(1) == ']') && (NXT(2) == '>')) {
 	    xmlFatalErr(ctxt, XML_ERR_MISPLACED_CDATA_END, NULL);
 	}
-	COPY_BUF(l,buf,nbchar,cur);
+	COPY_BUF(buf, nbchar, cur);
 	/* move current position before possible calling of ctxt->sax->characters */
 	NEXTL(l);
 	if (nbchar >= XML_PARSER_BIG_BUFFER_SIZE) {
@@ -4961,7 +4963,7 @@ xmlParseCommentComplex(xmlParserCtxtPtr ctxt, xmlChar *buf,
 	    buf = new_buf;
             size = new_size;
 	}
-	COPY_BUF(ql,buf,len,q);
+	COPY_BUF(buf, len, q);
         if (len > maxLength) {
             xmlFatalErrMsgStr(ctxt, XML_ERR_COMMENT_NOT_FINISHED,
                          "Comment too big found", NULL);
@@ -5383,7 +5385,7 @@ xmlParsePI(xmlParserCtxtPtr ctxt) {
 		    buf = tmp;
                     size = new_size;
 		}
-		COPY_BUF(l,buf,len,cur);
+		COPY_BUF(buf, len, cur);
                 if (len > maxLength) {
                     xmlFatalErrMsgStr(ctxt, XML_ERR_PI_NOT_FINISHED,
                                       "PI %s too big found", target);
@@ -7243,7 +7245,7 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
         /*
          * Just encode the value in UTF-8
          */
-        COPY_BUF(0, out, i, value);
+        COPY_BUF(out, i, value);
         out[i] = 0;
         if ((ctxt->sax != NULL) && (ctxt->sax->characters != NULL) &&
             (!ctxt->disableSAX))
@@ -9387,20 +9389,14 @@ xmlParseAttribute2(xmlParserCtxtPtr ctxt,
     return (hname);
 }
 
-ATTRIBUTE_NO_SANITIZE_INTEGER
-static unsigned
-xmlCombineHash(unsigned v1, unsigned v2) {
-    return(HASH_ROL(v1, 15) ^ v2);
-}
-
 /**
  * xmlAttrHashInsert:
  * @ctxt: parser context
- * @aindex: attribute index (this is a multiple of 5)
- * @sizePtr: size of the hash table (input/output value)
+ * @size: size of the hash table
  * @name: attribute name
  * @uri: namespace uri
  * @hashValue: combined hash value of name and uri
+ * @aindex: attribute index (this is a multiple of 5)
  *
  * Inserts a new attribute into the hash table.
  *
@@ -9408,120 +9404,35 @@ xmlCombineHash(unsigned v1, unsigned v2) {
  * index if an attribute was found, -1 if a memory allocation failed.
  */
 static int
-xmlAttrHashInsert(xmlParserCtxtPtr ctxt, int aindex, unsigned *sizePtr,
-                  const xmlChar *name, const xmlChar *uri,
-                  unsigned hashValue) {
+xmlAttrHashInsert(xmlParserCtxtPtr ctxt, unsigned size, const xmlChar *name,
+                  const xmlChar *uri, unsigned hashValue, int aindex) {
     xmlAttrHashBucket *table = ctxt->attrHash;
     xmlAttrHashBucket *bucket;
     unsigned hindex;
-    unsigned size = *sizePtr;
 
-    if (size > 0) {
-        hindex = hashValue & (size - 1);
-        bucket = &table[hindex];
+    hindex = hashValue & (size - 1);
+    bucket = &table[hindex];
 
-        while (bucket->hashValue != 0) {
-            const xmlChar **atts = &ctxt->atts[bucket->index];
+    while (bucket->index >= 0) {
+        const xmlChar **atts = &ctxt->atts[bucket->index];
 
-            if (name == atts[0]) {
-                int nsIndex = (int) (ptrdiff_t) atts[2];
+        if (name == atts[0]) {
+            int nsIndex = (int) (ptrdiff_t) atts[2];
 
-                if ((nsIndex == NS_INDEX_EMPTY) ? (uri == NULL) :
-                    (nsIndex == NS_INDEX_XML) ? (uri == ctxt->str_xml) :
-                    (uri == ctxt->nsTab[nsIndex * 2 + 1]))
-                    return(bucket->index);
-            }
-
-            hindex++;
-            bucket++;
-            if (hindex >= size) {
-                hindex = 0;
-                bucket = table;
-            }
-        }
-    }
-
-    /*
-     * Grow hash table
-     */
-    if ((unsigned) aindex / 5 >= size / 2) {
-        xmlAttrHashBucket *newTable;
-        unsigned newSize, i, nindex;
-
-        newSize = size ? size * 2 : 8;
-
-        if (newSize > ctxt->attrHashMax) {
-            newTable = xmlRealloc(table, newSize * sizeof(newTable[0]));
-            if (newTable == NULL) {
-                xmlErrMemory(ctxt, NULL);
-                return(-1);
-            }
-
-            table = newTable;
-            ctxt->attrHash = newTable;
-            ctxt->attrHashMax = newSize;
+            if ((nsIndex == NS_INDEX_EMPTY) ? (uri == NULL) :
+                (nsIndex == NS_INDEX_XML) ? (uri == ctxt->str_xml) :
+                (uri == ctxt->nsTab[nsIndex * 2 + 1]))
+                return(bucket->index);
         }
 
-        memset(&table[size], 0, (newSize - size) * sizeof(table[0]));
-
-        if (size > 0) {
-            /*
-             * We must search for the start of a probe sequence to make
-             * in-place operation work.
-             */
+        hindex++;
+        bucket++;
+        if (hindex >= size) {
             hindex = 0;
             bucket = table;
-            while (bucket->hashValue != 0) {
-                hindex++;
-                bucket++;
-            }
-
-            for (i = 0; i < size; i++) {
-                if (bucket->hashValue != 0) {
-                    nindex = bucket->hashValue & (newSize - 1);
-
-                    while (nindex != hindex) {
-                        if (table[nindex].hashValue == 0) {
-                            table[nindex] = *bucket;
-                            bucket->hashValue = 0;
-                            break;
-                        }
-
-                        nindex++;
-                        if (nindex >= newSize)
-                            nindex = 0;
-                    }
-                }
-
-                hindex++;
-                bucket++;
-                if (hindex >= size) {
-                    hindex = 0;
-                    bucket = table;
-                }
-            }
-        }
-
-        size = newSize;
-        *sizePtr = newSize;
-
-        /*
-         * Relookup
-         */
-        hindex = hashValue & (size - 1);
-        bucket = &table[hindex];
-
-        while (bucket->hashValue != 0) {
-            hindex++;
-            bucket++;
-            if (hindex >= size) {
-                hindex = 0;
-                bucket = table;
-            }
         }
     }
 
-    bucket->hashValue = hashValue;
     bucket->index = aindex;
 
     return(INT_MAX);
@@ -9573,7 +9484,7 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
     unsigned attrHashSize = 0;
     int maxatts = ctxt->maxatts;
     int nratts, nbatts, nbdef, inputid;
-    int i, j, nbNs, attval, nsIndex;
+    int i, j, nbNs, nbTotalDef, attval, nsIndex, maxAtts;
     int alloc = 0;
 
     if (RAW != '<') return(NULL);
@@ -9584,6 +9495,7 @@ xmlParseStartTag2(xmlParserCtxtPtr ctxt, const xmlChar **pref,
     nratts = 0;
     nbdef = 0;
     nbNs = 0;
+    nbTotalDef = 0;
     attval = 0;
 
     if (xmlParserNsStartElement(ctxt->nsdb) < 0) {
@@ -9851,7 +9763,9 @@ next_attr:
                     if (xmlParserNsPush(ctxt, &attr->name, &attr->value,
                                       NULL, 1) > 0)
                         nbNs++;
-		}
+		} else {
+                    nbTotalDef += 1;
+                }
 	    }
 	}
     }
@@ -9886,51 +9800,77 @@ next_attr:
     }
 
     /*
+     * Maximum number of attributes including default attributes.
+     */
+    maxAtts = nratts + nbTotalDef;
+
+    /*
      * Verify that attribute names are unique.
      */
-    for (i = 0, j = 0; j < nratts; i += 5, j++) {
-        const xmlChar *nsuri;
-        unsigned hashValue, nameHashValue, uriHashValue;
-        int res;
+    if (maxAtts > 1) {
+        attrHashSize = 4;
+        while (attrHashSize / 2 < (unsigned) maxAtts)
+            attrHashSize *= 2;
 
-        attname = atts[i];
-        aprefix = atts[i+1];
-        nsIndex = (ptrdiff_t) atts[i+2];
-        /* Hash values always have bit 31 set, see dict.c */
-        nameHashValue = ctxt->attallocs[j] | 0x80000000;
+        if (attrHashSize > ctxt->attrHashMax) {
+            xmlAttrHashBucket *tmp;
 
-        if (nsIndex == NS_INDEX_EMPTY) {
-            nsuri = NULL;
-            uriHashValue = URI_HASH_EMPTY;
-        } else if (nsIndex == NS_INDEX_XML) {
-            nsuri = ctxt->str_xml_ns;
-            uriHashValue = URI_HASH_XML;
-        } else {
-            nsuri = ctxt->nsTab[nsIndex * 2 + 1];
-            uriHashValue = ctxt->nsdb->extra[nsIndex].uriHashValue;
+            tmp = xmlRealloc(ctxt->attrHash, attrHashSize * sizeof(tmp[0]));
+            if (tmp == NULL) {
+                xmlErrMemory(ctxt, NULL);
+                goto done;
+            }
+
+            ctxt->attrHash = tmp;
+            ctxt->attrHashMax = attrHashSize;
         }
 
-        hashValue = xmlCombineHash(nameHashValue, uriHashValue);
-        res = xmlAttrHashInsert(ctxt, i, &attrHashSize, attname, nsuri,
-                                hashValue);
-        if (res < 0)
-            continue;
+        memset(ctxt->attrHash, -1, attrHashSize * sizeof(ctxt->attrHash[0]));
 
-	/*
-	 * [ WFC: Unique Att Spec ]
-	 * No attribute name may appear more than once in the same
-	 * start-tag or empty-element tag.
-	 * As extended by the Namespace in XML REC.
-	 */
-        if (res < INT_MAX) {
-            if (aprefix == atts[res+1]) {
-                xmlErrAttributeDup(ctxt, aprefix, attname);
+        for (i = 0, j = 0; j < nratts; i += 5, j++) {
+            const xmlChar *nsuri;
+            unsigned hashValue, nameHashValue, uriHashValue;
+            int res;
+
+            attname = atts[i];
+            aprefix = atts[i+1];
+            nsIndex = (ptrdiff_t) atts[i+2];
+            /* Hash values always have bit 31 set, see dict.c */
+            nameHashValue = ctxt->attallocs[j] | 0x80000000;
+
+            if (nsIndex == NS_INDEX_EMPTY) {
+                nsuri = NULL;
+                uriHashValue = URI_HASH_EMPTY;
+            } else if (nsIndex == NS_INDEX_XML) {
+                nsuri = ctxt->str_xml_ns;
+                uriHashValue = URI_HASH_XML;
             } else {
-                xmlNsErr(ctxt, XML_NS_ERR_ATTRIBUTE_REDEFINED,
-                         "Namespaced Attribute %s in '%s' redefined\n",
-                         attname, nsuri, NULL);
+                nsuri = ctxt->nsTab[nsIndex * 2 + 1];
+                uriHashValue = ctxt->nsdb->extra[nsIndex].uriHashValue;
             }
-	}
+
+            hashValue = xmlDictCombineHash(nameHashValue, uriHashValue);
+            res = xmlAttrHashInsert(ctxt, attrHashSize, attname, nsuri,
+                                    hashValue, i);
+            if (res < 0)
+                continue;
+
+            /*
+             * [ WFC: Unique Att Spec ]
+             * No attribute name may appear more than once in the same
+             * start-tag or empty-element tag.
+             * As extended by the Namespace in XML REC.
+             */
+            if (res < INT_MAX) {
+                if (aprefix == atts[res+1]) {
+                    xmlErrAttributeDup(ctxt, aprefix, attname);
+                } else {
+                    xmlNsErr(ctxt, XML_NS_ERR_ATTRIBUTE_REDEFINED,
+                             "Namespaced Attribute %s in '%s' redefined\n",
+                             attname, nsuri, NULL);
+                }
+            }
+        }
     }
 
     /*
@@ -9982,17 +9922,20 @@ next_attr:
                 /*
                  * Check whether the attribute exists
                  */
-                hashValue = xmlCombineHash(attr->name.hashValue, uriHashValue);
-                res = xmlAttrHashInsert(ctxt, nbatts, &attrHashSize, attname,
-                                        nsuri, hashValue);
-                if (res < 0)
-                    continue;
-                if (res < INT_MAX) {
-                    if (aprefix == atts[res+1])
+                if (maxAtts > 1) {
+                    hashValue = xmlDictCombineHash(attr->name.hashValue,
+                                                   uriHashValue);
+                    res = xmlAttrHashInsert(ctxt, attrHashSize, attname, nsuri,
+                                            hashValue, nbatts);
+                    if (res < 0)
                         continue;
-                    xmlNsErr(ctxt, XML_NS_ERR_ATTRIBUTE_REDEFINED,
-                             "Namespaced Attribute %s in '%s' redefined\n",
-                             attname, nsuri, NULL);
+                    if (res < INT_MAX) {
+                        if (aprefix == atts[res+1])
+                            continue;
+                        xmlNsErr(ctxt, XML_NS_ERR_ATTRIBUTE_REDEFINED,
+                                 "Namespaced Attribute %s in '%s' redefined\n",
+                                 attname, nsuri, NULL);
+                    }
                 }
 
                 xmlParserEntityCheck(ctxt, attr->expandedSize);
@@ -10215,7 +10158,7 @@ xmlParseCDSect(xmlParserCtxtPtr ctxt) {
 	    buf = tmp;
 	    size *= 2;
 	}
-	COPY_BUF(rl,buf,len,r);
+	COPY_BUF(buf, len, r);
         if (len > maxLength) {
             xmlFatalErrMsg(ctxt, XML_ERR_CDATA_NOT_FINISHED,
                            "CData section too big found\n");
@@ -12991,9 +12934,8 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
     xmlNodePtr content = NULL;
     xmlNodePtr last = NULL;
     xmlParserErrors ret = XML_ERR_OK;
-#if 0
+    xmlHashedString hprefix, huri;
     unsigned i;
-#endif
 
     if (((oldctxt->depth > 40) && ((oldctxt->options & XML_PARSE_HUGE) == 0)) ||
         (oldctxt->depth >  100)) {
@@ -13026,17 +12968,20 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
     /*
      * Propagate namespaces down the entity
      *
-     * This is disabled for now. The pre-2.12 code was already broken
-     * since the SAX handler was using xmlSearchNs which didn't see the
-     * namespaces added here.
-     *
      * Making entities and namespaces work correctly requires additional
      * changes, see xmlParseReference.
      */
-#if 0
+
+    /* Default namespace */
+    hprefix.name = NULL;
+    hprefix.hashValue = 0;
+    huri.name = xmlParserNsLookupUri(oldctxt, &hprefix);
+    huri.hashValue = 0;
+    if (huri.name != NULL)
+        xmlParserNsPush(ctxt, NULL, &huri, NULL, 0);
+
     for (i = 0; i < oldctxt->nsdb->hashSize; i++) {
         xmlParserNsBucket *bucket = &oldctxt->nsdb->hash[i];
-        xmlHashedString hprefix, huri;
         const xmlChar **ns;
         xmlParserNsExtra *extra;
         unsigned nsIndex;
@@ -13051,10 +12996,13 @@ xmlParseBalancedChunkMemoryInternal(xmlParserCtxtPtr oldctxt,
             hprefix.hashValue = bucket->hashValue;
             huri.name = ns[1];
             huri.hashValue = extra->uriHashValue;
-            xmlParserNsPush(ctxt, &hprefix, &huri, extra->saxData, 0);
+            /*
+             * Don't copy SAX data to avoid a use-after-free with XML reader.
+             * This matches the pre-2.12 behavior.
+             */
+            xmlParserNsPush(ctxt, &hprefix, &huri, NULL, 0);
         }
     }
-#endif
 
     oldsax = ctxt->sax;
     ctxt->sax = oldctxt->sax;
