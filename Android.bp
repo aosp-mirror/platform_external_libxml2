@@ -238,11 +238,13 @@ genrule {
     tools: ["libxml2_genseed"],
     srcs: [
         "test/schemas/*.xsd",
+        "test/schemas/*.inc",
+        "test/schemas/*.imp",
     ],
     // The genseed tool only writes under its current directory.
     // We move outputs to the correct location after generation..
     cmd: "mkdir -p seed/schema && " +
-         "$(location libxml2_genseed) schema $(in) && " +
+         "$(location libxml2_genseed) schema $(locations test/schemas/*.xsd) && " +
          "mkdir -p $(genDir)/fuzz/seed/schema && " +
          "mv -f seed/schema/* $(genDir)/fuzz/seed/schema",
     out: [
@@ -429,13 +431,19 @@ genrule {
     tools: ["libxml2_genseed"],
     srcs: [
         "test/*",
+        "test/dtds/*.dtd",
+        "test/errors/rec_ext.ent",
         "test/errors/*.xml",
         "test/errors10/*.xml",
         "test/namespaces/*",
         "test/valid/*.xml",
+        "test/valid/*.dtd",
+        "test/valid/dtds/*",
         "test/VC/*",
+        "test/VC/dtds/*.dtd",
         "test/VCM/*",
         "test/XInclude/docs/*",
+        "test/XInclude/ents/*",
         "test/XInclude/without-reader/*",
         "test/xmlid/*",
     ],
