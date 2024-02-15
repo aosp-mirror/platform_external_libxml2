@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <libxml/xmlreader.h>
+#include <libxml/parser.h>
 
 #ifdef LIBXML_READER_ENABLED
 
@@ -103,14 +104,6 @@ int main(int argc, char **argv) {
 
     streamFile(argv[1]);
 
-    /*
-     * Cleanup function for the XML library.
-     */
-    xmlCleanupParser();
-    /*
-     * this is to debug memory for regression tests
-     */
-    xmlMemoryDump();
     return(0);
 }
 

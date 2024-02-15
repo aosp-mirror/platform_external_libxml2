@@ -3,6 +3,7 @@
 # this tests the entities substitutions with the XmlTextReader interface
 #
 import sys
+import setup_test
 import libxml2
 
 # Memory debug specific
@@ -141,4 +142,3 @@ if libxml2.debugMemory(1) == 0:
     print("OK")
 else:
     print("Memory leak %d bytes" % (libxml2.debugMemory(1)))
-    libxml2.dumpMemory()

@@ -6,6 +6,7 @@
 import sys
 import glob
 import os
+import setup_test
 import libxml2
 try:
     import StringIO
@@ -41,7 +42,7 @@ value
 """{0}/781333.xml:4: element a: validity error : Element a content does not follow the DTD, expecting ( ..., got 
 <a/>
     ^
-{0}/781333.xml:5: element a: validity error : Element a content does not follow the DTD, Expecting more child
+{0}/781333.xml:5: element a: validity error : Element a content does not follow the DTD, Expecting more children
 
 ^
 """.format(dir_prefix),
@@ -334,4 +335,3 @@ if libxml2.debugMemory(1) == 0:
     print("OK")
 else:
     print("Memory leak %d bytes" % (libxml2.debugMemory(1)))
-    libxml2.dumpMemory()
