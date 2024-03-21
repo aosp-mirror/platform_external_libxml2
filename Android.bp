@@ -148,9 +148,6 @@ cc_library {
     defaults: ["libxml2-defaults"],
     vendor_available: true,
     product_available: true,
-    vndk: {
-        enabled: true,
-    },
     host_supported: true,
     target: {
        android: {
