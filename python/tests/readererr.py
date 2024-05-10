@@ -2,6 +2,7 @@
 #
 # this tests the basic APIs of the XmlTextReader interface
 #
+import setup_test
 import libxml2
 import sys
 try:
@@ -53,4 +54,3 @@ if libxml2.debugMemory(1) == 0:
     print("OK")
 else:
     print("Memory leak %d bytes" % (libxml2.debugMemory(1)))
-    libxml2.dumpMemory()

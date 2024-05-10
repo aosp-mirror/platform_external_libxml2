@@ -16,7 +16,6 @@
 
 #include <libxml/xmlmemory.h>
 #include <libxml/uri.h>
-#include <libxml/globals.h>
 #include <libxml/xmlerror.h>
 
 #include "private/error.h"
@@ -1171,7 +1170,8 @@ xmlSaveUri(xmlURIPtr uri) {
 			if (temp == NULL) goto mem_error;
 			ret = temp;
 		    }
-		    ret[len++] = *p++;
+                    /* TODO: escaping? */
+		    ret[len++] = (xmlChar) *p++;
 		}
 	    }
             if (uri->port > 0) {

@@ -3,6 +3,7 @@
 # this tests the Expand() API of the xmlTextReader interface
 # this extract the Dragon bibliography entries from the XML specification
 #
+import setup_test
 import libxml2
 import os
 import sys
@@ -46,4 +47,3 @@ if libxml2.debugMemory(1) == 0:
     print("OK")
 else:
     print("Memory leak %d bytes" % (libxml2.debugMemory(1)))
-    libxml2.dumpMemory()

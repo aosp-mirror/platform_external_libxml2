@@ -52,6 +52,16 @@ int fuzzUri(const char *data, size_t size);
 #undef LLVMFuzzerTestOneInput
 #endif
 
+#ifdef HAVE_VALID_FUZZER
+int fuzzValidInit(int *argc, char ***argv);
+int fuzzValid(const char *data, size_t size);
+#define LLVMFuzzerInitialize fuzzValidInit
+#define LLVMFuzzerTestOneInput fuzzValid
+#include "valid.c"
+#undef LLVMFuzzerInitialize
+#undef LLVMFuzzerTestOneInput
+#endif
+
 #ifdef HAVE_XINCLUDE_FUZZER
 int fuzzXIncludeInit(int *argc, char ***argv);
 int fuzzXInclude(const char *data, size_t size);
@@ -137,14 +147,9 @@ testEntityLoader(void) {
         "<!ENTITY ent SYSTEM \"ent.txt\">\\\n"
         "ent.txt\\\n"
         "Hello, world!\\\n";
-    static xmlChar expected[] =
-        "<?xml version=\"1.0\"?>\n"
-        "<!DOCTYPE doc SYSTEM \"doc.dtd\">\n"
-        "<doc>Hello, world!</doc>\n";
     const char *docBuffer;
     size_t docSize;
     xmlDocPtr doc;
-    xmlChar *out;
     int ret = 0;
 
     xmlSetExternalEntityLoader(xmlFuzzEntityLoader);
@@ -155,13 +160,23 @@ testEntityLoader(void) {
     doc = xmlReadMemory(docBuffer, docSize, NULL, NULL,
                         XML_PARSE_NOENT | XML_PARSE_DTDLOAD);
 
-    xmlDocDumpMemory(doc, &out, NULL);
-    if (xmlStrcmp(out, expected) != 0) {
-        fprintf(stderr, "Expected:\n%sGot:\n%s", expected, out);
-        ret = 1;
-    }
+#ifdef LIBXML_OUTPUT_ENABLED
+    {
+        static xmlChar expected[] =
+            "<?xml version=\"1.0\"?>\n"
+            "<!DOCTYPE doc SYSTEM \"doc.dtd\">\n"
+            "<doc>Hello, world!</doc>\n";
+        xmlChar *out;
 
-    xmlFree(out);
+        xmlDocDumpMemory(doc, &out, NULL);
+        if (xmlStrcmp(out, expected) != 0) {
+            fprintf(stderr, "Expected:\n%sGot:\n%s", expected, out);
+            ret = 1;
+        }
+        xmlFree(out);
+    }
+#endif
+
     xmlFreeDoc(doc);
     xmlFuzzDataCleanup();
 
@@ -190,7 +205,11 @@ main(void) {
         ret = 1;
 #endif
 #ifdef HAVE_URI_FUZZER
-    if (testFuzzer(NULL, fuzzUri, "seed/uri/*") != 0)
+    if (testFuzzer(fuzzUriInit, fuzzUri, "seed/uri/*") != 0)
+        ret = 1;
+#endif
+#ifdef HAVE_VALID_FUZZER
+    if (testFuzzer(fuzzValidInit, fuzzValid, "seed/valid/*") != 0)
         ret = 1;
 #endif
 #ifdef HAVE_XINCLUDE_FUZZER

@@ -36,7 +36,6 @@
 #include <libxml/catalog.h>
 #include <libxml/xmlerror.h>
 #include <libxml/threads.h>
-#include <libxml/globals.h>
 
 #include "private/buf.h"
 #include "private/error.h"
@@ -2969,6 +2968,8 @@ xmlACatalogAdd(xmlCatalogPtr catal, const xmlChar * type,
 	    if (catal->sgml == NULL)
 		catal->sgml = xmlHashCreate(10);
             res = xmlHashAddEntry(catal->sgml, orig, entry);
+            if (res < 0)
+                xmlFreeCatalogEntry(entry, NULL);
         }
     }
     return (res);

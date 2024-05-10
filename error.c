@@ -14,7 +14,6 @@
 #include <libxml/parser.h>
 #include <libxml/xmlerror.h>
 #include <libxml/xmlmemory.h>
-#include <libxml/globals.h>
 
 #include "private/error.h"
 
@@ -190,10 +189,12 @@ xmlParserPrintFileContextInternal(xmlParserInputPtr input ,
     }
     n = 0;
     /* search backwards for beginning-of-line (to max buff size) */
-    while ((n++ < (sizeof(content)-1)) && (cur > base) &&
-	   (*(cur) != '\n') && (*(cur) != '\r'))
+    while ((n < sizeof(content) - 1) && (cur > base) &&
+	   (*cur != '\n') && (*cur != '\r')) {
         cur--;
-    if ((*(cur) == '\n') || (*(cur) == '\r')) {
+        n++;
+    }
+    if ((n > 0) && ((*cur == '\n') || (*cur == '\r'))) {
         cur++;
     } else {
         /* skip over continuation bytes */
@@ -879,9 +880,9 @@ xmlParserValidityWarning(void *ctx, const char *msg, ...)
  * Get the last global error registered. This is per thread if compiled
  * with thread support.
  *
- * Returns NULL if no error occurred or a pointer to the error
+ * Returns a pointer to the error
  */
-xmlErrorPtr
+const xmlError *
 xmlGetLastError(void)
 {
     if (xmlLastError.code == XML_ERR_OK)
@@ -938,7 +939,7 @@ xmlResetLastError(void)
  *
  * Returns NULL if no error occurred or a pointer to the error
  */
-xmlErrorPtr
+const xmlError *
 xmlCtxtGetLastError(void *ctx)
 {
     xmlParserCtxtPtr ctxt = (xmlParserCtxtPtr) ctx;
@@ -980,7 +981,7 @@ xmlCtxtResetLastError(void *ctx)
  * Returns 0 in case of success and -1 in case of error.
  */
 int
-xmlCopyError(xmlErrorPtr from, xmlErrorPtr to) {
+xmlCopyError(const xmlError *from, xmlErrorPtr to) {
     char *message, *file, *str1, *str2, *str3;
 
     if ((from == NULL) || (to == NULL))

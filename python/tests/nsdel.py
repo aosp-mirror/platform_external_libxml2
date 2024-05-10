@@ -4,6 +4,7 @@
 # allows to detect memory leaks
 #
 import sys
+import setup_test
 import libxml2
 
 instance="""<?xml version="1.0"?>
@@ -59,4 +60,3 @@ if libxml2.debugMemory(1) == 0:
     print("OK")
 else:
     print("Memory leak %d bytes" % (libxml2.debugMemory(1)))
-    libxml2.dumpMemory()
