@@ -6,6 +6,7 @@
 import sys
 import glob
 import os
+import setup_test
 import libxml2
 try:
     import StringIO
@@ -41,7 +42,7 @@ value
 """{0}/781333.xml:4: element a: validity error : Element a content does not follow the DTD, expecting ( ..., got 
 <a/>
     ^
-{0}/781333.xml:5: element a: validity error : Element a content does not follow the DTD, Expecting more child
+{0}/781333.xml:5: element a: validity error : Element a content does not follow the DTD, Expecting more children
 
 ^
 """.format(dir_prefix),
@@ -69,20 +70,6 @@ Entity: line 1:
 Entity: line 1: 
 &lt;!ELEMENT root (middle) >
 ^
-{0}/t8.xml:6: parser error : internal error: xmlParseInternalSubset: error detected in Markup declaration
-
-%defroot; %defmiddle; %deftest;
-                     ^
-Entity: line 1: 
-&lt;!ELEMENT middle (test) >
-^
-{0}/t8.xml:6: parser error : internal error: xmlParseInternalSubset: error detected in Markup declaration
-
-%defroot; %defmiddle; %deftest;
-                               ^
-Entity: line 1: 
-&lt;!ELEMENT test (#PCDATA) >
-^
 """.format(dir_prefix),
     't8a':
 """{0}/t8a.xml:6: parser error : internal error: xmlParseInternalSubset: error detected in Markup declaration
@@ -91,20 +78,6 @@ Entity: line 1:
          ^
 Entity: line 1: 
 &lt;!ELEMENT root (middle) >
-^
-{0}/t8a.xml:6: parser error : internal error: xmlParseInternalSubset: error detected in Markup declaration
-
-%defroot;%defmiddle;%deftest;
-                    ^
-Entity: line 1: 
-&lt;!ELEMENT middle (test) >
-^
-{0}/t8a.xml:6: parser error : internal error: xmlParseInternalSubset: error detected in Markup declaration
-
-%defroot;%defmiddle;%deftest;
-                             ^
-Entity: line 1: 
-&lt;!ELEMENT test (#PCDATA) >
 ^
 """.format(dir_prefix),
     'xlink':
@@ -362,4 +335,3 @@ if libxml2.debugMemory(1) == 0:
     print("OK")
 else:
     print("Memory leak %d bytes" % (libxml2.debugMemory(1)))
-    libxml2.dumpMemory()

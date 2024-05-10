@@ -24,7 +24,6 @@
 #include <libxml/uri.h>
 #include <libxml/catalog.h>
 #include <libxml/parser.h>
-#include <libxml/globals.h>
 
 #if defined(LIBXML_CATALOG_ENABLED) && defined(LIBXML_OUTPUT_ENABLED)
 static int shell = 0;
@@ -509,6 +508,9 @@ int main(int argc, char **argv) {
 		    xmlACatalogDump(catal, stdout);
 		}
 		i += 2;
+
+                xmlFreeCatalog(catal);
+                xmlFreeCatalog(super);
 	    } else {
 		if ((!strcmp(argv[i], "-add")) ||
 		    (!strcmp(argv[i], "--add"))) {
@@ -595,7 +597,6 @@ int main(int argc, char **argv) {
      * Cleanup and check for memory leaks
      */
     xmlCleanupParser();
-    xmlMemoryDump();
     return(exit_value);
 }
 #else

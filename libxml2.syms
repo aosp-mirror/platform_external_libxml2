@@ -1,15 +1,5 @@
 #
-# Officially exported symbols, for which header
-# file definitions are installed in /usr/include/libxml2
-#
-# Automatically generated from symbols.xml and syms.xsl
-#
-# Versions here are *fixed* to match the libxml2 version
-# at which the symbol was introduced. This ensures that
-# a new client app requiring symbol foo() can't accidentally
-# run with old libxml2.so not providing foo() - the global
-# soname version info can't enforce this since we never
-# change the soname
+# Retained for backward compatibility. Don't add new symbols.
 #
 
 LIBXML2_2.4.30 {
@@ -119,11 +109,9 @@ LIBXML2_2.4.30 {
 # SAX2
   xmlDefaultSAXHandlerInit;
 
-# HTMLparser
+# parserInternals
   htmlCreateFileParserCtxt;
   htmlInitAutoClose;
-
-# parserInternals
   inputPop;
   inputPush;
   namePop;
@@ -1585,7 +1573,7 @@ LIBXML2_2.6.0 {
   xmlDictSize;
 
 # parserInternals
-# xmlErrMemory; removed in 2.11.0
+  xmlErrMemory;
   xmlParserMaxDepth; # variable
   xmlStringLenDecodeEntities;
   xmlSwitchInputEncoding;
@@ -2185,12 +2173,19 @@ LIBXML2_2.6.28 {
   xmlTextReaderSetup;
 } LIBXML2_2.6.27;
 
+LIBXML2_2.6.29 {
+    global:
+
+# threads
+  xmlDllMain;
+} LIBXML2_2.6.28;
+
 LIBXML2_2.6.32 {
     global:
 
 # schematron
   xmlSchematronSetValidStructuredErrors;
-} LIBXML2_2.6.28;
+} LIBXML2_2.6.29;
 
 LIBXML2_2.7.0 {
     global:
@@ -2287,14 +2282,4 @@ LIBXML2_2.9.11 {
 # xmlIO
   xmlPopOutputCallbacks;
 } LIBXML2_2.9.8;
-
-LIBXML2_2.11.0 {
-    global:
-
-# HTMLparser
-  htmlNewSAXParserCtxt;
-
-# parser
-  xmlNewSAXParserCtxt;
-} LIBXML2_2.9.11;
 
