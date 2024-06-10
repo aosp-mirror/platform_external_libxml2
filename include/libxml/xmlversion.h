@@ -50,7 +50,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * extra version information, used to show a git commit description
  */
-#define LIBXML_VERSION_EXTRA "-GITandroid-u-beta-1-gpl-274-g8eb2c9c7"
+#define LIBXML_VERSION_EXTRA "-GITv2.12.0-1315-gad02985b"
 
 /**
  * LIBXML_TEST_VERSION:
@@ -171,8 +171,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the FTP support is configured in
  */
-#if 1
-#undef LIBXML_FTP_ENABLED
+#if 0
+#define LIBXML_FTP_ENABLED
 #endif
 
 /**
@@ -180,8 +180,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the HTTP support is configured in
  */
-#if 1
-#undef LIBXML_HTTP_ENABLED
+#if 0
+#define LIBXML_HTTP_ENABLED
 #endif
 
 /**
@@ -198,8 +198,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the HTML support is configured in
  */
-#if 1
-#undef LIBXML_HTML_ENABLED
+#if 0
+#define LIBXML_HTML_ENABLED
 #endif
 
 /**
@@ -207,8 +207,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the deprecated APIs are compiled in for compatibility
  */
-#if 1
-#undef LIBXML_LEGACY_ENABLED
+#if 0
+#define LIBXML_LEGACY_ENABLED
 #endif
 
 /**
@@ -270,8 +270,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether iconv support is available
  */
-#if 1
-#undef LIBXML_ICONV_ENABLED
+#if 0
+#define LIBXML_ICONV_ENABLED
 #endif
 
 /**
@@ -406,8 +406,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Zlib support is compiled in
  */
-#if 1
-#undef LIBXML_ZLIB_ENABLED
+#if 0
+#define LIBXML_ZLIB_ENABLED
 #endif
 
 /**
@@ -415,8 +415,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
  *
  * Whether the Lzma support is compiled in
  */
-#if 1
-#undef LIBXML_LZMA_ENABLED
+#if 0
+#define LIBXML_LZMA_ENABLED
 #endif
 
 #ifdef __GNUC__
