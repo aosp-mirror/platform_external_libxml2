@@ -159,7 +159,7 @@
 #define STDC_HEADERS 1
 
 /* Support for IPv6 */
-#define SUPPORT_IP6 /**/
+#define SUPPORT_IP6
 
 /* Define if va_list is an array type */
 #define VA_LIST_IS_ARRAY 1
