@@ -4,7 +4,6 @@
 #include <libxml/parserInternals.h>
 #include <libxml/catalog.h>
 #include <libxml/threads.h>
-#include <libxml/nanoftp.h>
 #include <libxml/nanohttp.h>
 #include <libxml/uri.h>
 #include <libxml/xpath.h>
@@ -65,7 +64,10 @@
 /*
  * Macros to ignore deprecation warnings
  */
-#if defined(__clang__) || \
+#if defined(__LCC__)
+#define XML_IGNORE_DEPRECATION_WARNINGS \
+    _Pragma("diag_suppress 1215")
+#elif defined(__clang__) || \
     (defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__ >= 406))
 #define XML_IGNORE_DEPRECATION_WARNINGS \
     _Pragma("GCC diagnostic push") \
@@ -86,6 +88,7 @@ typedef struct {
     xmlNodePtr obj;
 } PyxmlNode_Object;
 
+#ifdef LIBXML_XPATH_ENABLED
 #define PyxmlXPathContext_Get(v) (((v) == Py_None) ? NULL : \
 	(((PyxmlXPathContext_Object *)(v))->obj))
 
@@ -101,6 +104,7 @@ typedef struct {
     PyObject_HEAD
     xmlXPathParserContextPtr obj;
 } PyxmlXPathParserContext_Object;
+#endif /* LIBXML_XPATH_ENABLED */
 
 #define PyparserCtxt_Get(v) (((v) == Py_None) ? NULL : \
         (((PyparserCtxt_Object *)(v))->obj))
@@ -118,6 +122,7 @@ typedef struct {
 	xmlValidCtxtPtr obj;
 } PyValidCtxt_Object;
 
+#ifdef LIBXML_CATALOG_ENABLED
 #define Pycatalog_Get(v) (((v) == Py_None) ? NULL : \
         (((Pycatalog_Object *)(v))->obj))
 
@@ -125,6 +130,7 @@ typedef struct {
     PyObject_HEAD
     xmlCatalogPtr obj;
 } Pycatalog_Object;
+#endif /* LIBXML_CATALOG_ENABLED */
 
 #ifdef LIBXML_REGEXP_ENABLED
 #define PyxmlReg_Get(v) (((v) == Py_None) ? NULL : \
@@ -264,12 +270,17 @@ PyObject * libxml_xmlNsPtrWrap(xmlNsPtr ns);
 PyObject * libxml_xmlAttributePtrWrap(xmlAttributePtr ns);
 PyObject * libxml_xmlElementPtrWrap(xmlElementPtr ns);
 PyObject * libxml_doubleWrap(double val);
-PyObject * libxml_xmlXPathContextPtrWrap(xmlXPathContextPtr ctxt);
 PyObject * libxml_xmlParserCtxtPtrWrap(xmlParserCtxtPtr ctxt);
+#ifdef LIBXML_XPATH_ENABLED
+PyObject * libxml_xmlXPathContextPtrWrap(xmlXPathContextPtr ctxt);
 PyObject * libxml_xmlXPathParserContextPtrWrap(xmlXPathParserContextPtr ctxt);
 PyObject * libxml_xmlXPathObjectPtrWrap(xmlXPathObjectPtr obj);
+xmlXPathObjectPtr libxml_xmlXPathObjectPtrConvert(PyObject * obj);
+#endif
 PyObject * libxml_xmlValidCtxtPtrWrap(xmlValidCtxtPtr valid);
+#ifdef LIBXML_CATALOG_ENABLED
 PyObject * libxml_xmlCatalogPtrWrap(xmlCatalogPtr obj);
+#endif
 PyObject * libxml_xmlURIPtrWrap(xmlURIPtr uri);
 PyObject * libxml_xmlOutputBufferPtrWrap(xmlOutputBufferPtr buffer);
 PyObject * libxml_xmlParserInputBufferPtrWrap(xmlParserInputBufferPtr buffer);
@@ -281,7 +292,6 @@ PyObject * libxml_xmlTextReaderPtrWrap(xmlTextReaderPtr reader);
 PyObject * libxml_xmlTextReaderLocatorPtrWrap(xmlTextReaderLocatorPtr locator);
 #endif
 
-xmlXPathObjectPtr libxml_xmlXPathObjectPtrConvert(PyObject * obj);
 #ifdef LIBXML_SCHEMAS_ENABLED
 PyObject * libxml_xmlRelaxNGPtrWrap(xmlRelaxNGPtr ctxt);
 PyObject * libxml_xmlRelaxNGParserCtxtPtrWrap(xmlRelaxNGParserCtxtPtr ctxt);
