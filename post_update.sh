@@ -1,8 +1,32 @@
 #!/bin/bash
 
-# $1 Path to the new version.
-# $2 Path to the old version.
+set -e
 
-cp -a -n $2/config.h $1/
-cp -a -n $2/.gitignore $1/.gitignore
-cp -a -n $2/include/libxml/xmlversion.h $1/include/libxml/
+if [[ "${TARGET_PRODUCT}" != "aosp_x86" ]]; then
+  echo "Please run 'aosp_x86-trunk_staging-eng' first." >&2
+  exit 1
+fi
+
+T="${ANDROID_BUILD_TOP}"
+cd $(dirname "$0")
+
+source ${T}/build/envsetup.sh
+
+CONFIGURE_ARGS=(
+  --enable-ipv6
+  --without-ftp
+  --without-http
+  --without-html
+  --without-legacy
+  --without-iconv
+  --without-zlib
+  --without-lzma
+)
+
+# Show the commands on the terminal.
+set -x
+
+./autogen.sh
+./configure "${CONFIGURE_ARGS[@]}"
+
+make
