@@ -10,47 +10,33 @@
 #ifndef __XML_VERSION_H__
 #define __XML_VERSION_H__
 
-#include <libxml/xmlexports.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*
- * use those to be sure nothing nasty will happen if
- * your library and includes mismatch
- */
-#ifndef LIBXML2_COMPILING_MSCCDEF
-XMLPUBFUN void xmlCheckVersion(int version);
-#endif /* LIBXML2_COMPILING_MSCCDEF */
-
 /**
  * LIBXML_DOTTED_VERSION:
  *
  * the version string like "1.2.3"
  */
-#define LIBXML_DOTTED_VERSION "2.12.0"
+#define LIBXML_DOTTED_VERSION "2.14.0"
 
 /**
  * LIBXML_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXML_VERSION 21200
+#define LIBXML_VERSION 21400
 
 /**
  * LIBXML_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXML_VERSION_STRING "21200"
+#define LIBXML_VERSION_STRING "21400"
 
 /**
  * LIBXML_VERSION_EXTRA:
  *
  * extra version information, used to show a git commit description
  */
-#define LIBXML_VERSION_EXTRA "-GITv2.12.0-1315-gad02985b"
+#define LIBXML_VERSION_EXTRA "-GITv2.13.0-1355-g03bcb01c7"
 
 /**
  * LIBXML_TEST_VERSION:
@@ -58,32 +44,7 @@ XMLPUBFUN void xmlCheckVersion(int version);
  * Macro to check that the libxml version in use is compatible with
  * the version the software has been compiled against
  */
-#define LIBXML_TEST_VERSION xmlCheckVersion(21200);
-
-#ifndef VMS
-#if 0
-/**
- * WITH_TRIO:
- *
- * defined if the trio support need to be configured in
- */
-#define WITH_TRIO
-#else
-/**
- * WITHOUT_TRIO:
- *
- * defined if the trio support should not be configured in
- */
-#define WITHOUT_TRIO
-#endif
-#else /* VMS */
-/**
- * WITH_TRIO:
- *
- * defined if the trio support need to be configured in
- */
-#define WITH_TRIO 1
-#endif /* VMS */
+#define LIBXML_TEST_VERSION xmlCheckVersion(21400);
 
 /**
  * LIBXML_THREAD_ENABLED:
@@ -167,15 +128,6 @@ XMLPUBFUN void xmlCheckVersion(int version);
 #endif
 
 /**
- * LIBXML_FTP_ENABLED:
- *
- * Whether the FTP support is configured in
- */
-#if 0
-#define LIBXML_FTP_ENABLED
-#endif
-
-/**
  * LIBXML_HTTP_ENABLED:
  *
  * Whether the HTTP support is configured in
@@ -248,15 +200,6 @@ XMLPUBFUN void xmlCheckVersion(int version);
 #endif
 
 /**
- * LIBXML_XPTR_LOCS_ENABLED:
- *
- * Whether support for XPointer locations is configured in
- */
-#if 0
-#define LIBXML_XPTR_LOCS_ENABLED
-#endif
-
-/**
  * LIBXML_XINCLUDE_ENABLED:
  *
  * Whether XInclude is configured in
@@ -313,24 +256,6 @@ XMLPUBFUN void xmlCheckVersion(int version);
 #endif
 
 /**
- * DEBUG_MEMORY_LOCATION:
- *
- * Whether the memory debugging is configured in
- */
-#if 0
-#define DEBUG_MEMORY_LOCATION
-#endif
-
-/**
- * LIBXML_DEBUG_RUNTIME:
- *
- * Removed
- */
-#if 0
-#define LIBXML_DEBUG_RUNTIME
-#endif
-
-/**
  * LIBXML_UNICODE_ENABLED:
  *
  * Whether the Unicode related interfaces are compiled in
@@ -355,17 +280,6 @@ XMLPUBFUN void xmlCheckVersion(int version);
  */
 #if 1
 #define LIBXML_AUTOMATA_ENABLED
-#endif
-
-/**
- * LIBXML_EXPR_ENABLED:
- *
- * Whether the formal expressions interfaces are compiled in
- *
- * This code is unused and disabled unconditionally for now.
- */
-#if 0
-#define LIBXML_EXPR_ENABLED
 #endif
 
 /**
@@ -508,9 +422,8 @@ XMLPUBFUN void xmlCheckVersion(int version);
     attrs XMLPUBVAR type name;
 #endif
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+#include <libxml/xmlexports.h>
+
 #endif
 
 
