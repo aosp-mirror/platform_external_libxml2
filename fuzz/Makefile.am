@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = -Wno-syntax
-EXTRA_PROGRAMS = genSeed html regexp schema uri valid xinclude xml xpath
+EXTRA_PROGRAMS = genSeed \
+		 api html lint reader regexp schema uri valid xinclude \
+		 xml xpath
 check_PROGRAMS = testFuzzer
 EXTRA_DIST = html.dict regexp.dict schema.dict xml.dict xpath.dict \
 	     static_seed/uri static_seed/regexp fuzz.h
@@ -20,14 +22,17 @@ XML_SEED_CORPUS_SRC = \
     '$(top_srcdir)/test/valid/*.xml' \
     '$(top_srcdir)/test/VC/*' \
     '$(top_srcdir)/test/VCM/*' \
+    '$(top_srcdir)/test/XInclude/docs/*' \
+    '$(top_srcdir)/test/XInclude/without-reader/*' \
     '$(top_srcdir)/test/xmlid/*'
 
 testFuzzer_SOURCES = testFuzzer.c fuzz.c
 
 .PHONY: corpus clean-corpus
 
-corpus: seed/html.stamp seed/regexp.stamp seed/schema.stamp seed/uri.stamp \
-    seed/valid.stamp seed/xinclude.stamp seed/xml.stamp seed/xpath.stamp
+corpus: seed/html.stamp seed/lint.stamp seed/reader.stamp seed/regexp.stamp \
+    seed/schema.stamp seed/uri.stamp seed/valid.stamp seed/xinclude.stamp \
+    seed/xml.stamp seed/xpath.stamp
 
 check-local: corpus
 	./testFuzzer$(EXEEXT)
@@ -56,8 +61,7 @@ fuzz-xml: xml$(EXEEXT) seed/xml.stamp
 	./xml$(EXEEXT) \
 	    -dict=xml.dict \
 	    -max_len=$(XML_MAX_LEN) \
-	    -timeout=20 \
-	    -rss_limit_mb=4096 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/xml seed/xml
 
 # DTD validation fuzzer
@@ -75,17 +79,14 @@ fuzz-valid: valid$(EXEEXT) seed/valid.stamp
 	./valid$(EXEEXT) \
 	    -dict=xml.dict \
 	    -max_len=$(XML_MAX_LEN) \
-	    -timeout=20 \
-	    -rss_limit_mb=4096 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/valid seed/valid
 
 # XInclude fuzzer
 
 seed/xinclude.stamp: genSeed$(EXEEXT)
 	@mkdir -p seed/xinclude
-	./genSeed$(EXEEXT) xinclude \
-	    '$(top_srcdir)/test/XInclude/docs/*' \
-	    '$(top_srcdir)/test/XInclude/without-reader/*'
+	./genSeed$(EXEEXT) xinclude $(XML_SEED_CORPUS_SRC)
 	@touch seed/xinclude.stamp
 
 xinclude_SOURCES = xinclude.c fuzz.c
@@ -96,8 +97,7 @@ fuzz-xinclude: xinclude$(EXEEXT) seed/xinclude.stamp
 	./xinclude$(EXEEXT) \
 	    -dict=xml.dict \
 	    -max_len=$(XML_MAX_LEN) \
-	    -timeout=20 \
-	    -rss_limit_mb=4096 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/xinclude seed/xinclude
 
 # HTML fuzzer
@@ -115,9 +115,56 @@ fuzz-html: html$(EXEEXT) seed/html.stamp
 	./html$(EXEEXT) \
 	    -dict=html.dict \
 	    -max_len=1000000 \
-	    -timeout=10 \
-	    -rss_limit_mb=4096 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/html seed/html
+
+# Reader fuzzer
+
+seed/reader.stamp: genSeed$(EXEEXT)
+	@mkdir -p seed/reader
+	./genSeed$(EXEEXT) reader $(XML_SEED_CORPUS_SRC)
+	@touch seed/reader.stamp
+
+reader_SOURCES = reader.c fuzz.c
+reader_LDFLAGS = $(AM_LDFLAGS) -fsanitize=fuzzer
+
+fuzz-reader: reader$(EXEEXT) seed/reader.stamp
+	@mkdir -p corpus/reader
+	./reader$(EXEEXT) \
+	    -dict=xml.dict \
+	    -max_len=$(XML_MAX_LEN) \
+	    $$XML_FUZZ_OPTIONS \
+	    corpus/reader seed/reader
+
+# xmllint fuzzer
+
+seed/lint.stamp: genSeed$(EXEEXT)
+	@mkdir -p seed/lint
+	./genSeed$(EXEEXT) lint $(XML_SEED_CORPUS_SRC)
+	@touch seed/lint.stamp
+
+lint_SOURCES = lint.c fuzz.c
+lint_LDFLAGS = -fsanitize=fuzzer
+
+fuzz-lint: lint$(EXEEXT) seed/lint.stamp
+	@mkdir -p corpus/lint
+	./lint$(EXEEXT) \
+	    -dict=xml.dict \
+	    -max_len=$(XML_MAX_LEN) \
+	    $$XML_FUZZ_OPTIONS \
+	    corpus/lint seed/lint
+
+# API fuzzer
+
+api_SOURCES = api.c fuzz.c
+api_LDFLAGS = -fsanitize=fuzzer
+
+fuzz-api: api$(EXEEXT)
+	@mkdir -p corpus/api
+	./api$(EXEEXT) \
+	    -max_len=100 \
+	    $$XML_FUZZ_OPTIONS \
+	    corpus/api
 
 # Regexp fuzzer
 
@@ -134,7 +181,7 @@ fuzz-regexp: regexp$(EXEEXT) seed/regexp.stamp
 	./regexp$(EXEEXT) \
 	    -dict=regexp.dict \
 	    -max_len=200 \
-	    -timeout=5 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/regexp seed/regexp
 
 # URI fuzzer
@@ -151,7 +198,7 @@ fuzz-uri: uri$(EXEEXT) seed/uri.stamp
 	@mkdir -p corpus/uri
 	./uri$(EXEEXT) \
 	    -max_len=10000 \
-	    -timeout=2 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/uri seed/uri
 
 # XML Schema fuzzer
@@ -169,8 +216,7 @@ fuzz-schema: schema$(EXEEXT) seed/schema.stamp
 	./schema$(EXEEXT) \
 	    -dict=schema.dict \
 	    -max_len=$(XML_MAX_LEN) \
-	    -timeout=20 \
-	    -rss_limit_mb=4096 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/schema seed/schema
 
 # XPath fuzzer
@@ -188,7 +234,6 @@ fuzz-xpath: xpath$(EXEEXT) seed/xpath.stamp
 	./xpath$(EXEEXT) \
 	    -dict=xpath.dict \
 	    -max_len=10000 \
-	    -timeout=20 \
-	    -rss_limit_mb=4096 \
+	    $$XML_FUZZ_OPTIONS \
 	    corpus/xpath seed/xpath
 

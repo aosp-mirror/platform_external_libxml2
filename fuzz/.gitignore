@@ -1,6 +1,9 @@
+api
 corpus/
 genSeed
 html
+lint
+reader
 regexp
 schema
 seed/
