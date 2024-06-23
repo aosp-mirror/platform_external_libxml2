@@ -19,15 +19,8 @@ debugsym=None
 # C parser analysis code
 #
 ignored_files = {
-  "trio": "too many non standard macros",
-  "trio.c": "too many non standard macros",
-  "trionan.c": "too many non standard macros",
-  "triostr.c": "too many non standard macros",
   "config.h": "generated portability layer",
   "libxml.h": "internal only",
-  "testOOM.c": "out of memory tester",
-  "testOOMlib.h": "out of memory tester",
-  "testOOMlib.c": "out of memory tester",
   "rngparser.c": "not yet integrated",
   "testModule.c": "test tool",
   "testThreads.c": "test tool",
@@ -67,10 +60,8 @@ ignored_words = {
   "XML_DEPRECATED": (0, "macro keyword"),
   "XML_GLOBALS_ALLOC": (0, "macro keyword"),
   "XML_GLOBALS_ERROR": (0, "macro keyword"),
-  "XML_GLOBALS_HTML": (0, "macro keyword"),
   "XML_GLOBALS_IO": (0, "macro keyword"),
   "XML_GLOBALS_PARSER": (0, "macro keyword"),
-  "XML_GLOBALS_SAVE": (0, "macro keyword"),
   "XML_GLOBALS_TREE": (0, "macro keyword"),
   "XML_THREAD_LOCAL": (0, "macro keyword"),
 }
@@ -914,7 +905,7 @@ class CParser:
                 i = i + 1
             if retdesc == "" and ret[0] != "void":
                 self.warning("Function comment for %s lacks description of return value" % (name))
-            if desc == "":
+            if desc == "" and retdesc == "":
                 self.warning("Function comment for %s lacks description of the function" % (name))
 
         return(((ret[0], retdesc), args, desc))
@@ -1783,7 +1774,8 @@ class docBuilder:
         try:
             (ret, params, desc) = id.info
             if (desc == None or desc == '') and \
-               name[0:9] != "xmlThrDef" and name != "xmlDllMain":
+               name[0:9] != "xmlThrDef" and name != "xmlDllMain" and \
+               ret[1] == '':
                 print("%s %s from %s has no description" % (id.type, name,
                        self.modulename_file(id.module)))
 
@@ -1817,7 +1809,8 @@ class docBuilder:
                                  escape(dict.info[data]),
                                  data.lower()))
                 except:
-                    print("Header %s lacks a %s description" % (module, data))
+                    if data != 'Author':
+                        print("Header %s lacks a %s description" % (module, data))
             if 'Description' in dict.info:
                 desc = dict.info['Description']
                 if desc.find("DEPRECATED") != -1:
