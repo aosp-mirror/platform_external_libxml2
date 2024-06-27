@@ -27,6 +27,9 @@
 #define SEED_BUF_SIZE 16384
 #define EXPR_SIZE 4500
 
+#define FLAG_READER (1 << 0)
+#define FLAG_LINT   (1 << 1)
+
 typedef int
 (*fileFunc)(const char *base, FILE *out);
 
@@ -41,30 +44,36 @@ static struct {
     const char *fuzzer;
     int counter;
     char cwd[PATH_SIZE];
+    int flags;
 } globalData;
 
 #if defined(HAVE_SCHEMA_FUZZER) || \
     defined(HAVE_XML_FUZZER)
 /*
- * A custom entity loader that writes all external DTDs or entities to a
- * single file in the format expected by xmlFuzzEntityLoader.
+ * A custom resource loader that writes all external DTDs or entities to a
+ * single file in the format expected by xmlFuzzResourceLoader.
  */
-static xmlParserInputPtr
-fuzzEntityRecorder(const char *URL, const char *ID,
-                      xmlParserCtxtPtr ctxt) {
+static int
+fuzzResourceRecorder(void *data ATTRIBUTE_UNUSED, const char *URL,
+                     const char *ID ATTRIBUTE_UNUSED,
+                     xmlResourceType type ATTRIBUTE_UNUSED, int flags,
+                     xmlParserInputPtr *out) {
     xmlParserInputPtr in;
     static const int chunkSize = 16384;
-    int len;
+    int code, len;
 
-    in = xmlNoNetExternalEntityLoader(URL, ID, ctxt);
-    if (in == NULL)
-        return(NULL);
+    *out = NULL;
+
+    code = xmlInputCreateUrl(URL, flags, &in);
+    if (code != XML_ERR_OK)
+        return(code);
 
     if (globalData.entities == NULL) {
         globalData.entities = xmlHashCreate(4);
     } else if (xmlHashLookup(globalData.entities,
                              (const xmlChar *) URL) != NULL) {
-        return(in);
+        *out = in;
+        return(XML_ERR_OK);
     }
 
     do {
@@ -72,7 +81,7 @@ fuzzEntityRecorder(const char *URL, const char *ID,
         if (len < 0) {
             fprintf(stderr, "Error reading %s\n", URL);
             xmlFreeInputStream(in);
-            return(NULL);
+            return(in->buf->error);
         }
     } while (len > 0);
 
@@ -85,7 +94,7 @@ fuzzEntityRecorder(const char *URL, const char *ID,
     xmlHashAddEntry(globalData.entities, (const xmlChar *) URL,
                     globalData.entities);
 
-    return(xmlNoNetExternalEntityLoader(URL, ID, ctxt));
+    return(xmlInputCreateUrl(URL, flags, out));
 }
 
 static void
@@ -93,12 +102,10 @@ fuzzRecorderInit(FILE *out) {
     globalData.out = out;
     globalData.entities = xmlHashCreate(8);
     globalData.oldLoader = xmlGetExternalEntityLoader();
-    xmlSetExternalEntityLoader(fuzzEntityRecorder);
 }
 
 static void
 fuzzRecorderCleanup(void) {
-    xmlSetExternalEntityLoader(globalData.oldLoader);
     xmlHashFree(globalData.entities, NULL);
     globalData.out = NULL;
     globalData.entities = NULL;
@@ -110,20 +117,56 @@ fuzzRecorderCleanup(void) {
 static int
 processXml(const char *docFile, FILE *out) {
     int opts = XML_PARSE_NOENT | XML_PARSE_DTDLOAD;
+    xmlParserCtxtPtr ctxt;
     xmlDocPtr doc;
 
-    /* Parser options. */
-    xmlFuzzWriteInt(out, opts, 4);
-    /* Max allocations. */
-    xmlFuzzWriteInt(out, 0, 4);
+    if (globalData.flags & FLAG_LINT) {
+        /* Switches */
+        xmlFuzzWriteInt(out, 0, 4);
+        xmlFuzzWriteInt(out, 0, 4);
+        /* maxmem */
+        xmlFuzzWriteInt(out, 0, 4);
+        /* max-ampl */
+        xmlFuzzWriteInt(out, 0, 1);
+        /* pretty */
+        xmlFuzzWriteInt(out, 0, 1);
+        /* encode */
+        xmlFuzzWriteString(out, "");
+        /* pattern */
+        xmlFuzzWriteString(out, "");
+        /* xpath */
+        xmlFuzzWriteString(out, "");
+    } else {
+        /* Parser options. */
+        xmlFuzzWriteInt(out, opts, 4);
+        /* Max allocations. */
+        xmlFuzzWriteInt(out, 0, 4);
+
+        if (globalData.flags & FLAG_READER) {
+            /* Initial reader program with a couple of OP_READs */
+            xmlFuzzWriteString(out, "\x01\x01\x01\x01\x01\x01\x01\x01");
+        }
+    }
 
     fuzzRecorderInit(out);
 
-    doc = xmlReadFile(docFile, NULL, opts);
+    ctxt = xmlNewParserCtxt();
+    xmlCtxtSetErrorHandler(ctxt, xmlFuzzSErrorFunc, NULL);
+    xmlCtxtSetResourceLoader(ctxt, fuzzResourceRecorder, NULL);
+    doc = xmlCtxtReadFile(ctxt, docFile, NULL, opts);
 #ifdef LIBXML_XINCLUDE_ENABLED
-    xmlXIncludeProcessFlags(doc, opts);
+    {
+        xmlXIncludeCtxtPtr xinc = xmlXIncludeNewContext(doc);
+
+        xmlXIncludeSetErrorHandler(xinc, xmlFuzzSErrorFunc, NULL);
+        xmlXIncludeSetResourceLoader(xinc, fuzzResourceRecorder, NULL);
+        xmlXIncludeSetFlags(xinc, opts);
+        xmlXIncludeProcessNode(xinc, (xmlNodePtr) doc);
+        xmlXIncludeFreeContext(xinc);
+    }
 #endif
     xmlFreeDoc(doc);
+    xmlFreeParserCtxt(ctxt);
 
     fuzzRecorderCleanup();
 
@@ -172,7 +215,8 @@ processSchema(const char *docFile, FILE *out) {
     fuzzRecorderInit(out);
 
     pctxt = xmlSchemaNewParserCtxt(docFile);
-    xmlSchemaSetParserErrors(pctxt, xmlFuzzErrorFunc, xmlFuzzErrorFunc, NULL);
+    xmlSchemaSetParserStructuredErrors(pctxt, xmlFuzzSErrorFunc, NULL);
+    xmlSchemaSetResourceLoader(pctxt, fuzzResourceRecorder, NULL);
     schema = xmlSchemaParse(pctxt);
     xmlSchemaFreeParserCtxt(pctxt);
     xmlSchemaFree(schema);
@@ -408,13 +452,23 @@ main(int argc, const char **argv) {
         return(1);
     }
 
-    xmlSetGenericErrorFunc(NULL, xmlFuzzErrorFunc);
-
     fuzzer = argv[1];
     if (strcmp(fuzzer, "html") == 0) {
 #ifdef HAVE_HTML_FUZZER
         processArg = processPattern;
         globalData.processFile = processHtml;
+#endif
+    } else if (strcmp(fuzzer, "lint") == 0) {
+#ifdef HAVE_LINT_FUZZER
+        processArg = processPattern;
+        globalData.flags |= FLAG_LINT;
+        globalData.processFile = processXml;
+#endif
+    } else if (strcmp(fuzzer, "reader") == 0) {
+#ifdef HAVE_READER_FUZZER
+        processArg = processPattern;
+        globalData.flags |= FLAG_READER;
+        globalData.processFile = processXml;
 #endif
     } else if (strcmp(fuzzer, "schema") == 0) {
 #ifdef HAVE_SCHEMA_FUZZER
@@ -422,7 +476,7 @@ main(int argc, const char **argv) {
         globalData.processFile = processSchema;
 #endif
     } else if (strcmp(fuzzer, "valid") == 0) {
-#ifdef HAVE_XINCLUDE_FUZZER
+#ifdef HAVE_VALID_FUZZER
         processArg = processPattern;
         globalData.processFile = processXml;
 #endif
