@@ -16,14 +16,15 @@ LLVMFuzzerInitialize(int *argc ATTRIBUTE_UNUSED,
     xmlInitParser();
 #ifdef LIBXML_CATALOG_ENABLED
     xmlInitializeCatalog();
+    xmlCatalogSetDefaults(XML_CATA_ALLOW_NONE);
 #endif
-    xmlSetGenericErrorFunc(NULL, xmlFuzzErrorFunc);
 
     return 0;
 }
 
 int
 LLVMFuzzerTestOneInput(const char *data, size_t size) {
+    xmlParserCtxtPtr ctxt;
     htmlDocPtr doc;
     const char *docBuffer;
     size_t maxAlloc, docSize;
@@ -31,7 +32,7 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
 
     xmlFuzzDataInit(data, size);
     opts = (int) xmlFuzzReadInt(4);
-    maxAlloc = xmlFuzzReadInt(4) % (size + 1);
+    maxAlloc = xmlFuzzReadInt(4) % (size + 100);
 
     docBuffer = xmlFuzzReadRemaining(&docSize);
     if (docBuffer == NULL) {
@@ -42,31 +43,49 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
     /* Pull parser */
 
     xmlFuzzMemSetLimit(maxAlloc);
-    doc = htmlReadMemory(docBuffer, docSize, NULL, NULL, opts);
+    ctxt = htmlNewParserCtxt();
+    if (ctxt != NULL) {
+        xmlCtxtSetErrorHandler(ctxt, xmlFuzzSErrorFunc, NULL);
+        doc = htmlCtxtReadMemory(ctxt, docBuffer, docSize, NULL, NULL, opts);
+        xmlFuzzCheckMallocFailure("htmlCtxtReadMemory",
+                                  ctxt->errNo == XML_ERR_NO_MEMORY);
+
+        if (doc != NULL) {
+            xmlDocPtr copy;
 
 #ifdef LIBXML_OUTPUT_ENABLED
-    {
-        xmlOutputBufferPtr out;
+            xmlOutputBufferPtr out;
+            const xmlChar *content;
 
-        /*
-         * Also test the serializer. Call htmlDocContentDumpOutput with our
-         * own buffer to avoid encoding the output. The HTML encoding is
-         * excruciatingly slow (see htmlEntityValueLookup).
-         */
-        out = xmlAllocOutputBuffer(NULL);
-        htmlDocContentDumpOutput(out, doc, NULL);
-        xmlOutputBufferClose(out);
-    }
+            /*
+             * Also test the serializer. Call htmlDocContentDumpOutput with our
+             * own buffer to avoid encoding the output. The HTML encoding is
+             * excruciatingly slow (see htmlEntityValueLookup).
+             */
+            out = xmlAllocOutputBuffer(NULL);
+            htmlDocContentDumpOutput(out, doc, NULL);
+            content = xmlOutputBufferGetContent(out);
+            xmlOutputBufferClose(out);
+            xmlFuzzCheckMallocFailure("htmlDocContentDumpOutput",
+                                      content == NULL);
 #endif
 
-    xmlFreeDoc(doc);
+            copy = xmlCopyDoc(doc, 1);
+            xmlFuzzCheckMallocFailure("xmlCopyNode", copy == NULL);
+            xmlFreeDoc(copy);
+
+            xmlFreeDoc(doc);
+        }
+
+        htmlFreeParserCtxt(ctxt);
+    }
+
 
     /* Push parser */
 
 #ifdef LIBXML_PUSH_ENABLED
     {
         static const size_t maxChunkSize = 128;
-        xmlParserCtxtPtr ctxt;
         size_t consumed, chunkSize;
 
         xmlFuzzMemSetLimit(maxAlloc);
@@ -74,6 +93,7 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
                                         XML_CHAR_ENCODING_NONE);
 
         if (ctxt != NULL) {
+            xmlCtxtSetErrorHandler(ctxt, xmlFuzzSErrorFunc, NULL);
             htmlCtxtUseOptions(ctxt, opts);
 
             for (consumed = 0; consumed < docSize; consumed += chunkSize) {
@@ -84,6 +104,8 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
             }
 
             htmlParseChunk(ctxt, NULL, 0, 1);
+            xmlFuzzCheckMallocFailure("htmlParseChunk",
+                                      ctxt->errNo == XML_ERR_NO_MEMORY);
             xmlFreeDoc(ctxt->myDoc);
             htmlFreeParserCtxt(ctxt);
         }

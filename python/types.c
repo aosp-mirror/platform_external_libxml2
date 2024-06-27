@@ -425,6 +425,21 @@ libxml_xmlElementPtrWrap(xmlElementPtr elem)
 }
 
 PyObject *
+libxml_xmlParserCtxtPtrWrap(xmlParserCtxtPtr ctxt)
+{
+    PyObject *ret;
+
+    if (ctxt == NULL) {
+        Py_INCREF(Py_None);
+        return (Py_None);
+    }
+
+    ret = PyCapsule_New((void *) ctxt, (char *) "xmlParserCtxtPtr", NULL);
+    return (ret);
+}
+
+#ifdef LIBXML_XPATH_ENABLED
+PyObject *
 libxml_xmlXPathContextPtrWrap(xmlXPathContextPtr ctxt)
 {
     PyObject *ret;
@@ -447,20 +462,6 @@ libxml_xmlXPathParserContextPtrWrap(xmlXPathParserContextPtr ctxt)
         return (Py_None);
     }
     ret = PyCapsule_New((void *)ctxt, (char *)"xmlXPathParserContextPtr", NULL);
-    return (ret);
-}
-
-PyObject *
-libxml_xmlParserCtxtPtrWrap(xmlParserCtxtPtr ctxt)
-{
-    PyObject *ret;
-
-    if (ctxt == NULL) {
-        Py_INCREF(Py_None);
-        return (Py_None);
-    }
-
-    ret = PyCapsule_New((void *) ctxt, (char *) "xmlParserCtxtPtr", NULL);
     return (ret);
 }
 
@@ -557,109 +558,6 @@ libxml_xmlXPathObjectPtrWrap(xmlXPathObjectPtr obj)
         case XPATH_STRING:
 	    ret = PY_IMPORT_STRING((char *) obj->stringval);
             break;
-#ifdef LIBXML_XPTR_LOCS_ENABLED
-        case XPATH_POINT:
-        {
-            PyObject *node;
-            PyObject *indexIntoNode;
-            PyObject *tuple;
-
-            node = libxml_xmlNodePtrWrap(obj->user);
-            indexIntoNode = PY_IMPORT_INT((long) obj->index);
-
-            tuple = PyTuple_New(2);
-            PyTuple_SetItem(tuple, 0, node);
-            PyTuple_SetItem(tuple, 1, indexIntoNode);
-
-            ret = tuple;
-            break;
-        }
-        case XPATH_RANGE:
-        {
-            unsigned short bCollapsedRange;
-
-            bCollapsedRange = ( (obj->user2 == NULL) ||
-		                ((obj->user2 == obj->user) && (obj->index == obj->index2)) );
-            if ( bCollapsedRange ) {
-                PyObject *node;
-                PyObject *indexIntoNode;
-                PyObject *tuple;
-                PyObject *list;
-
-                list = PyList_New(1);
-
-                node = libxml_xmlNodePtrWrap(obj->user);
-                indexIntoNode = PY_IMPORT_INT((long) obj->index);
-
-                tuple = PyTuple_New(2);
-                PyTuple_SetItem(tuple, 0, node);
-                PyTuple_SetItem(tuple, 1, indexIntoNode);
-
-                PyList_SetItem(list, 0, tuple);
-
-                ret = list;
-            } else {
-                PyObject *node;
-                PyObject *indexIntoNode;
-                PyObject *tuple;
-                PyObject *list;
-
-                list = PyList_New(2);
-
-                node = libxml_xmlNodePtrWrap(obj->user);
-                indexIntoNode = PY_IMPORT_INT((long) obj->index);
-
-                tuple = PyTuple_New(2);
-                PyTuple_SetItem(tuple, 0, node);
-                PyTuple_SetItem(tuple, 1, indexIntoNode);
-
-                PyList_SetItem(list, 0, tuple);
-
-                node = libxml_xmlNodePtrWrap(obj->user2);
-                indexIntoNode = PY_IMPORT_INT((long) obj->index2);
-
-                tuple = PyTuple_New(2);
-                PyTuple_SetItem(tuple, 0, node);
-                PyTuple_SetItem(tuple, 1, indexIntoNode);
-
-                PyList_SetItem(list, 1, tuple);
-
-                ret = list;
-            }
-            break;
-        }
-        case XPATH_LOCATIONSET:
-        {
-            xmlLocationSetPtr set;
-
-            set = obj->user;
-            if ( set && set->locNr > 0 ) {
-                int i;
-                PyObject *list;
-
-                list = PyList_New(set->locNr);
-
-                for (i=0; i<set->locNr; i++) {
-                    xmlXPathObjectPtr setobj;
-                    PyObject *pyobj;
-
-                    setobj = set->locTab[i]; /*xmlXPathObjectPtr setobj*/
-
-                    pyobj = libxml_xmlXPathObjectPtrWrap(setobj);
-                    /* xmlXPathFreeObject(setobj) is called */
-                    set->locTab[i] = NULL;
-
-                    PyList_SetItem(list, i, pyobj);
-                }
-                set->locNr = 0;
-                ret = list;
-            } else {
-                Py_INCREF(Py_None);
-                ret = Py_None;
-            }
-            break;
-        }
-#endif /* LIBXML_XPTR_LOCS_ENABLED */
         default:
             Py_INCREF(Py_None);
             ret = Py_None;
@@ -758,6 +656,7 @@ libxml_xmlXPathObjectPtrConvert(PyObject *obj)
     }
     return (ret);
 }
+#endif /* LIBXML_XPATH_ENABLED */
 
 PyObject *
 libxml_xmlValidCtxtPtrWrap(xmlValidCtxtPtr valid)
@@ -776,6 +675,7 @@ libxml_xmlValidCtxtPtrWrap(xmlValidCtxtPtr valid)
 	return (ret);
 }
 
+#ifdef LIBXML_CATALOG_ENABLED
 PyObject *
 libxml_xmlCatalogPtrWrap(xmlCatalogPtr catal)
 {
@@ -790,6 +690,7 @@ libxml_xmlCatalogPtrWrap(xmlCatalogPtr catal)
                                      (char *) "xmlCatalogPtr", NULL);
     return (ret);
 }
+#endif /* LIBXML_CATALOG_ENABLED */
 
 PyObject *
 libxml_xmlOutputBufferPtrWrap(xmlOutputBufferPtr buffer)
