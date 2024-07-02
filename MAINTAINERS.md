@@ -82,15 +82,36 @@ Create a new GitLab release on
 
 ### Announce the release
 
-Announce the release by sending an email to the mailing list at
-xml@gnome.org.
+Announce the release on https://discourse.gnome.org under topics 'libxml2'
+and 'announcements'.
+
+## Breaking the ABI
+
+Unfortunately, libxml2 exposes many internal structs which makes some
+beneficial changes impossible without breaking the ABI.
+
+The following changes are allowed (after careful consideration):
+
+- Appending members to structs which client code should never allocate
+  directly. A notable example is xmlParserCtxt. Other structs like
+  xmlError are allocated directly by client code and must not be changed.
+
+- Making a void function return a value.
+
+- Making functions accept const pointers unless it's a typedef for a
+  callback.
+
+- Changing signedness of struct members or function arguments.
 
 ## Updating the CI Docker image
 
-Note that the CI image is used for libxslt as well. Run the following
-commands with the Dockerfile in the .gitlab-ci directory:
+Note that the CI image is used for libxslt as well. First create a
+GitLab access token with `read_registry` and `write_registry`
+permissions. Then run the following commands with the Dockerfile in the
+.gitlab-ci directory:
 
-    docker login registry.gitlab.gnome.org
+    docker login -u <username> -p <access_token> \
+        registry.gitlab.gnome.org
     docker build -t registry.gitlab.gnome.org/gnome/libxml2 - \
         < .gitlab-ci/Dockerfile
     docker push registry.gitlab.gnome.org/gnome/libxml2
