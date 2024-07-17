@@ -22,6 +22,16 @@ int fuzzHtml(const char *data, size_t size);
 #undef LLVMFuzzerTestOneInput
 #endif
 
+#ifdef HAVE_READER_FUZZER
+int fuzzReaderInit(int *argc, char ***argv);
+int fuzzReader(const char *data, size_t size);
+#define LLVMFuzzerInitialize fuzzReaderInit
+#define LLVMFuzzerTestOneInput fuzzReader
+#include "reader.c"
+#undef LLVMFuzzerInitialize
+#undef LLVMFuzzerTestOneInput
+#endif
+
 #ifdef HAVE_REGEXP_FUZZER
 int fuzzRegexpInit(int *argc, char ***argv);
 int fuzzRegexp(const char *data, size_t size);
@@ -138,6 +148,7 @@ error:
 #ifdef HAVE_XML_FUZZER
 static int
 testEntityLoader(void) {
+    xmlParserCtxtPtr ctxt;
     static const char data[] =
         "doc.xml\\\n"
         "<!DOCTYPE doc SYSTEM \"doc.dtd\">\n"
@@ -152,13 +163,14 @@ testEntityLoader(void) {
     xmlDocPtr doc;
     int ret = 0;
 
-    xmlSetExternalEntityLoader(xmlFuzzEntityLoader);
-
     xmlFuzzDataInit(data, sizeof(data) - 1);
     xmlFuzzReadEntities();
     docBuffer = xmlFuzzMainEntity(&docSize);
-    doc = xmlReadMemory(docBuffer, docSize, NULL, NULL,
-                        XML_PARSE_NOENT | XML_PARSE_DTDLOAD);
+    ctxt = xmlNewParserCtxt();
+    xmlCtxtSetResourceLoader(ctxt, xmlFuzzResourceLoader, NULL);
+    doc = xmlCtxtReadMemory(ctxt, docBuffer, docSize, NULL, NULL,
+                            XML_PARSE_NOENT | XML_PARSE_DTDLOAD);
+    xmlFreeParserCtxt(ctxt);
 
 #ifdef LIBXML_OUTPUT_ENABLED
     {
@@ -194,6 +206,10 @@ main(void) {
 #endif
 #ifdef HAVE_HTML_FUZZER
     if (testFuzzer(fuzzHtmlInit, fuzzHtml, "seed/html/*") != 0)
+        ret = 1;
+#endif
+#ifdef HAVE_READER_FUZZER
+    if (testFuzzer(fuzzReaderInit, fuzzReader, "seed/reader/*") != 0)
         ret = 1;
 #endif
 #ifdef HAVE_REGEXP_FUZZER
