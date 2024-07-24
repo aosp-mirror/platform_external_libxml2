@@ -63,8 +63,7 @@ Entity: line 1:
       ^
 """.format(dir_prefix),
     't8':
-"""{0}/t8.xml:6: parser error : internal error: xmlParseInternalSubset: error detected in Markup declaration
-
+"""{0}/t8.xml:6: parser error : Content error in the internal subset
 %defroot; %defmiddle; %deftest;
          ^
 Entity: line 1: 
@@ -72,8 +71,7 @@ Entity: line 1:
 ^
 """.format(dir_prefix),
     't8a':
-"""{0}/t8a.xml:6: parser error : internal error: xmlParseInternalSubset: error detected in Markup declaration
-
+"""{0}/t8a.xml:6: parser error : Content error in the internal subset
 %defroot;%defmiddle;%deftest;
          ^
 Entity: line 1: 
@@ -96,7 +94,7 @@ def callback(ctx, str):
     err = err + "%s" % (str)
 libxml2.registerErrorHandler(callback, "")
 
-parsing_error_files = ["766956", "cond_sect2", "t8", "t8a"]
+parsing_error_files = ["766956", "cond_sect2", "t8", "t8a", "pe-in-text-decl"]
 expect_parsing_error = [os.path.join(dir_prefix, f + ".xml") for f in parsing_error_files]
 
 valid_files = glob.glob(os.path.join(dir_prefix, "*.x*"))
@@ -114,12 +112,11 @@ for file in valid_files:
     if ret != 0 and file not in expect_parsing_error:
         print("Error parsing and validating %s" % (file))
         #sys.exit(1)
-    if (err):
-        if not(file in expect and err == expect[file]):
-            failures += 1
-            print("Error: ", err)
-            if file in expect:
-                print("Expected: ", expect[file])
+    if file in expect and err != expect[file]:
+        failures += 1
+        print("Error: ", err)
+        if file in expect:
+            print("Expected: ", expect[file])
 
 if failures:
     print("Failed %d tests" % failures)

@@ -1,6 +1,3 @@
-exampledir = $(docdir)/python/examples
-dist_example_DATA = $(PYTESTS) $(XMLS) setup_test.py
-
 PYTESTS=	\
     build.py	\
     attribs.py	\
@@ -55,6 +52,8 @@ XMLS=		\
     valid.xml	\
     invalid.xml	\
     test.dtd
+
+EXTRA_DIST = $(PYTESTS) $(XMLS) setup_test.py meson.build
 
 CLEANFILES = core tmp.xml *.pyc
 
