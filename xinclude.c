@@ -174,10 +174,10 @@ xmlXIncludeErr(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node, int error,
         data = xmlGenericErrorContext;
     }
 
-    res = __xmlRaiseError(schannel, channel, data, ctxt, node,
-                          XML_FROM_XINCLUDE, error, XML_ERR_ERROR,
-                          NULL, 0, (const char *) extra, NULL, NULL, 0, 0,
-		          msg, (const char *) extra);
+    res = xmlRaiseError(schannel, channel, data, ctxt, node,
+                        XML_FROM_XINCLUDE, error, XML_ERR_ERROR,
+                        NULL, 0, (const char *) extra, NULL, NULL, 0, 0,
+                        msg, (const char *) extra);
     if (res < 0) {
         ctxt->errNo = XML_ERR_NO_MEMORY;
         ctxt->fatalErr = 1;
@@ -341,13 +341,20 @@ xmlXIncludeParseFile(xmlXIncludeCtxtPtr ctxt, const char *URL) {
 	xmlDictReference(pctxt->dict);
     }
 
-    xmlCtxtUseOptions(pctxt, ctxt->parseFlags);
+    /*
+     * We set DTDLOAD to make sure that ID attributes declared in
+     * external DTDs are detected.
+     */
+    xmlCtxtUseOptions(pctxt, ctxt->parseFlags | XML_PARSE_DTDLOAD);
 
     inputStream = xmlLoadResource(pctxt, URL, NULL, XML_RESOURCE_XINCLUDE);
     if (inputStream == NULL)
         goto error;
 
-    inputPush(pctxt, inputStream);
+    if (inputPush(pctxt, inputStream) < 0) {
+        xmlFreeInputStream(inputStream);
+        goto error;
+    }
 
     xmlParseDocument(pctxt);
 
@@ -414,6 +421,10 @@ xmlXIncludeAddNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr cur) {
             xmlXIncludeErrMemory(ctxt);
 	    goto error;
         }
+    } else if (xmlStrlen(href) > XML_MAX_URI_LENGTH) {
+        xmlXIncludeErr(ctxt, cur, XML_XINCLUDE_HREF_URI, "URI too long\n",
+                       NULL);
+        goto error;
     }
 
     parse = xmlXIncludeGetProp(ctxt, cur, XINCLUDE_PARSE);
@@ -630,7 +641,14 @@ xmlXIncludeBaseFixup(xmlXIncludeCtxtPtr ctxt, xmlNodePtr cur, xmlNodePtr copy,
         xmlXIncludeErrMemory(ctxt);
 
     if ((base != NULL) && !xmlStrEqual(base, targetBase)) {
-        if (xmlBuildRelativeURISafe(base, targetBase, &relBase) < 0) {
+        if ((xmlStrlen(base) > XML_MAX_URI_LENGTH) ||
+            (xmlStrlen(targetBase) > XML_MAX_URI_LENGTH)) {
+            relBase = xmlStrdup(base);
+            if (relBase == NULL) {
+                xmlXIncludeErrMemory(ctxt);
+                goto done;
+            }
+        } else if (xmlBuildRelativeURISafe(base, targetBase, &relBase) < 0) {
             xmlXIncludeErrMemory(ctxt);
             goto done;
         }
@@ -1211,9 +1229,11 @@ loaded:
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
             ctxt->xpctxt->opLimit = 100000;
 #endif
+        } else {
+            ctxt->xpctxt->doc = doc;
         }
 	xptr = xmlXPtrEval(fragment, ctxt->xpctxt);
-	if (xptr == NULL) {
+	if (ctxt->xpctxt->lastError.code != XML_ERR_OK) {
             if (ctxt->xpctxt->lastError.code == XML_ERR_NO_MEMORY)
                 xmlXIncludeErrMemory(ctxt);
             else
@@ -1222,6 +1242,8 @@ loaded:
                                fragment);
             goto error;
 	}
+        if (xptr == NULL)
+            goto done;
 	switch (xptr->type) {
 	    case XPATH_UNDEFINED:
 	    case XPATH_BOOLEAN:
@@ -1293,6 +1315,7 @@ loaded:
     }
 #endif
 
+done:
     ret = 0;
 
 error:
@@ -1387,9 +1410,14 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, xmlXIncludeRefPtr ref) {
     inputStream = xmlLoadResource(pctxt, (const char*) url, NULL,
                                   XML_RESOURCE_XINCLUDE_TEXT);
     if (inputStream == NULL) {
+        /*
+         * ENOENT only produces a warning which isn't reflected in errNo.
+         */
         if (pctxt->errNo == XML_ERR_NO_MEMORY)
             xmlXIncludeErrMemory(ctxt);
-        else
+        else if ((pctxt->errNo != XML_ERR_OK) &&
+                 (pctxt->errNo != XML_IO_ENOENT) &&
+                 (pctxt->errNo != XML_IO_UNKNOWN))
             xmlXIncludeErr(ctxt, NULL, pctxt->errNo, "load error", NULL);
 	goto error;
     }
@@ -1422,7 +1450,7 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, xmlXIncludeRefPtr ref) {
     }
 
     content = xmlBufContent(buf->buffer);
-    len = xmlBufLength(buf->buffer);
+    len = xmlBufUse(buf->buffer);
     for (i = 0; i < len;) {
         int cur;
         int l;
@@ -1692,10 +1720,15 @@ xmlXIncludeIncludeNode(xmlXIncludeCtxtPtr ctxt, xmlXIncludeRefPtr ref) {
 		nb_elem++;
 	    tmp = tmp->next;
 	}
-	if (nb_elem > 1) {
-	    xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_MULTIPLE_ROOT,
-		       "XInclude error: would result in multiple root nodes\n",
-			   NULL);
+        if (nb_elem != 1) {
+            if (nb_elem > 1)
+                xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_MULTIPLE_ROOT,
+                               "XInclude error: would result in multiple root "
+                               "nodes\n", NULL);
+            else
+                xmlXIncludeErr(ctxt, ref->elem, XML_XINCLUDE_MULTIPLE_ROOT,
+                               "XInclude error: would result in no root "
+                               "node\n", NULL);
             xmlFreeNodeList(list);
 	    return(-1);
 	}
@@ -1789,11 +1822,6 @@ xmlXIncludeTestNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node) {
         (xmlStrEqual(node->ns->href, XINCLUDE_OLD_NS))) {
 	if (xmlStrEqual(node->ns->href, XINCLUDE_OLD_NS)) {
 	    if (ctxt->legacy == 0) {
-#if 0 /* wait for the XML Core Working Group to get something stable ! */
-		xmlXIncludeWarn(ctxt, node, XML_XINCLUDE_DEPRECATED_NS,
-	               "Deprecated XInclude namespace found, use %s",
-		                XINCLUDE_NS);
-#endif
 	        ctxt->legacy = 1;
 	    }
 	}
