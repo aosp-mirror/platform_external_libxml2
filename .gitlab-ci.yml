@@ -30,7 +30,7 @@ gcc:medium:
   extends: .test
   variables:
     BASE_CONFIG: "--with-minimum"
-    CONFIG: "--with-threads --with-tree --with-xpath --with-output --with-html"
+    CONFIG: "--with-threads --with-tree --with-xpath --with-output --with-html --with-iso8859x"
     CFLAGS: "-O2"
 
 gcc:legacy:
@@ -298,3 +298,14 @@ pages:
       - public/devhelp/*.xsl
   only:
     - master@GNOME/libxml2
+
+downstream-nokogiri:
+  # owner: @flavorjones
+  image: ghcr.io/sparklemotion/nokogiri-test:upstream-libxml
+  script:
+    - .gitlab-ci/downstream-nokogiri.sh
+
+downstream-perl:
+  image: registry.gitlab.gnome.org/gnome/libxml2
+  script:
+    - sh .gitlab-ci/downstream-perl.sh
