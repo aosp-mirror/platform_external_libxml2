@@ -36,7 +36,7 @@
  *
  * extra version information, used to show a git commit description
  */
-#define LIBXML_VERSION_EXTRA "-GITv2.13.0-1355-g03bcb01c7"
+#define LIBXML_VERSION_EXTRA "-GITv2.13.0-1617-g3a370fae1"
 
 /**
  * LIBXML_TEST_VERSION:
@@ -67,7 +67,7 @@
 /**
  * LIBXML_TREE_ENABLED:
  *
- * Whether the DOM like tree manipulation API support is configured in
+ * Always enabled since 2.14.0
  */
 #if 1
 #define LIBXML_TREE_ENABLED
