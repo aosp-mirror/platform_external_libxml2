@@ -6,6 +6,7 @@
  */
 
 #define XML_DEPRECATED
+#define XML_DEPRECATED_MEMBER
 
 #include <stdio.h>
 #include <string.h>
@@ -310,9 +311,9 @@ static int testCharRangeByte1(xmlParserCtxtPtr ctxt) {
         c = testCurrentChar(ctxt, &len);
         if (c < 0)
             continue;
-	if ((i == 0) || (i >= 0x80)) {
+	if (i >= 0x80) {
 	    /* we must see an error there */
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 	        fprintf(stderr,
 		    "Failed to detect invalid char for Byte 0x%02X\n", i);
 		return(1);
@@ -349,7 +350,7 @@ static int testCharRangeByte2(xmlParserCtxtPtr ctxt) {
 
 	    /* if first bit of first char is set, then second bit must too */
 	    if ((i & 0x80) && ((i & 0x40) == 0)) {
-		if (lastError != XML_ERR_INVALID_CHAR) {
+		if (lastError != XML_ERR_INVALID_ENCODING) {
 		    fprintf(stderr,
 		    "Failed to detect invalid char for Bytes 0x%02X 0x%02X\n",
 		            i, j);
@@ -362,7 +363,7 @@ static int testCharRangeByte2(xmlParserCtxtPtr ctxt) {
 	     * bits must be 10
 	     */
 	    else if ((i & 0x80) && ((j & 0xC0) != 0x80)) {
-		if (lastError != XML_ERR_INVALID_CHAR) {
+		if (lastError != XML_ERR_INVALID_ENCODING) {
 		    fprintf(stderr,
 		"Failed to detect invalid char for Bytes 0x%02X 0x%02X: %d\n",
 		            i, j, c);
@@ -375,7 +376,7 @@ static int testCharRangeByte2(xmlParserCtxtPtr ctxt) {
 	     * than 0x80, i.e. one of bits 5 to 1 of i must be set
 	     */
 	    else if ((i & 0x80) && ((i & 0x1E) == 0)) {
-		if (lastError != XML_ERR_INVALID_CHAR) {
+		if (lastError != XML_ERR_INVALID_ENCODING) {
 		    fprintf(stderr,
 		"Failed to detect invalid char for Bytes 0x%02X 0x%02X: %d\n",
 		            i, j, c);
@@ -388,7 +389,7 @@ static int testCharRangeByte2(xmlParserCtxtPtr ctxt) {
 	     * at least 3 bytes, but we give only 2 !
 	     */
 	    else if ((i & 0xE0) == 0xE0) {
-		if (lastError != XML_ERR_INVALID_CHAR) {
+		if (lastError != XML_ERR_INVALID_ENCODING) {
 		    fprintf(stderr,
 		"Failed to detect invalid char for Bytes 0x%02X 0x%02X 0x00\n",
 		            i, j);
@@ -446,7 +447,7 @@ static int testCharRangeByte3(xmlParserCtxtPtr ctxt) {
 	 * at least 4 bytes, but we give only 3 !
 	 */
 	if ((i & 0xF0) == 0xF0) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
 	"Failed to detect invalid char for Bytes 0x%02X 0x%02X 0x%02X 0x%02X\n",
 			i, j, K, data[3]);
@@ -458,7 +459,7 @@ static int testCharRangeByte3(xmlParserCtxtPtr ctxt) {
 	 * The second and the third bytes must start with 10
 	 */
 	else if (((j & 0xC0) != 0x80) || ((K & 0xC0) != 0x80)) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
 	"Failed to detect invalid char for Bytes 0x%02X 0x%02X 0x%02X\n",
 			i, j, K);
@@ -472,7 +473,7 @@ static int testCharRangeByte3(xmlParserCtxtPtr ctxt) {
 	 * the 6th byte of data[1] must be set
 	 */
 	else if (((i & 0xF) == 0) && ((j & 0x20) == 0)) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
 	    "Failed to detect invalid char for Bytes 0x%02X 0x%02X 0x%02X\n",
 			i, j, K);
@@ -484,7 +485,7 @@ static int testCharRangeByte3(xmlParserCtxtPtr ctxt) {
 	 * There are values that are not allowed in UTF-8
 	 */
 	else if ((value > 0xD7FF) && (value <0xE000)) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
 	"Failed to detect invalid char 0x%04X for Bytes 0x%02X 0x%02X 0x%02X\n",
 			value, i, j, K);
@@ -548,7 +549,7 @@ static int testCharRangeByte4(xmlParserCtxtPtr ctxt) {
 	 * at least 5 bytes, but we give only 4 !
 	 */
 	if ((i & 0xF8) == 0xF8) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
   "Failed to detect invalid char for Bytes 0x%02X 0x%02X 0x%02X 0x%02X\n",
 			i, j, K, data[3]);
@@ -561,7 +562,7 @@ static int testCharRangeByte4(xmlParserCtxtPtr ctxt) {
 	 */
 	else if (((j & 0xC0) != 0x80) || ((K & 0xC0) != 0x80) ||
 	         ((L & 0xC0) != 0x80)) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
 	"Failed to detect invalid char for Bytes 0x%02X 0x%02X 0x%02X 0x%02X\n",
 			i, j, K, L);
@@ -575,7 +576,7 @@ static int testCharRangeByte4(xmlParserCtxtPtr ctxt) {
 	 * the 6 or 5th byte of j must be set
 	 */
 	else if (((i & 0x7) == 0) && ((j & 0x30) == 0)) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
 	"Failed to detect invalid char for Bytes 0x%02X 0x%02X 0x%02X 0x%02X\n",
 			i, j, K, L);
@@ -588,7 +589,7 @@ static int testCharRangeByte4(xmlParserCtxtPtr ctxt) {
 	 */
 	else if (((value > 0xD7FF) && (value < 0xE000)) ||
 		 (value > 0x10FFFF)) {
-	    if (lastError != XML_ERR_INVALID_CHAR) {
+	    if (lastError != XML_ERR_INVALID_ENCODING) {
 		fprintf(stderr,
 "Failed to detect invalid char 0x%04X for Bytes 0x%02X 0x%02X 0x%02X 0x%02X\n",
 			value, i, j, K, L);
@@ -648,8 +649,8 @@ static int testCharRanges(void) {
         fprintf(stderr, "Failed to allocate parser context\n");
 	return(1);
     }
-    buf = xmlParserInputBufferCreateMem(data, sizeof(data),
-                                        XML_CHAR_ENCODING_NONE);
+    buf = xmlParserInputBufferCreateStatic(data, sizeof(data),
+                                           XML_CHAR_ENCODING_NONE);
     if (buf == NULL) {
         fprintf(stderr, "Failed to allocate input buffer\n");
 	test_ret = 1;
@@ -750,21 +751,20 @@ error:
 static char *
 convert(xmlCharEncodingHandlerPtr handler, const char *utf8, int size,
         int *outSize) {
+    xmlBufferPtr in, out;
     char *ret;
-    int inlen;
-    int res;
 
-    inlen = size;
-    *outSize = size * 2;
-    ret = xmlMalloc(*outSize);
-    if (ret == NULL)
-        return(NULL);
-    res = handler->output(BAD_CAST ret, outSize, BAD_CAST utf8, &inlen);
-    if ((res < 0) || (inlen != size)) {
-        xmlFree(ret);
-        return(NULL);
-    }
+    in = xmlBufferCreate();
+    xmlBufferAdd(in, BAD_CAST utf8, size);
+    out = xmlBufferCreate();
+    xmlCharEncOutFunc(handler, out, in);
 
+    if (outSize)
+        *outSize = out->use;
+    ret = (char *) xmlBufferDetach(out);
+
+    xmlBufferFree(out);
+    xmlBufferFree(in);
     return(ret);
 }
 
@@ -879,8 +879,110 @@ error:
 
 #endif
 
-int main(void) {
+static void
+bufDump(const char *prefix, const xmlChar *content, int len) {
+    int i;
 
+    fprintf(stderr, "%s", prefix);
+    for (i = 0; i < len; i++) {
+        fprintf(stderr, " %02X", content[i]);
+    }
+    fprintf(stderr, "\n");
+}
+
+static int
+bufCompare(xmlBufferPtr got, const xmlChar *expectContent, int expectLen) {
+    const xmlChar *gotContent = xmlBufferContent(got);
+    int gotLen = xmlBufferLength(got);
+
+    if ((gotLen == expectLen) &&
+        (memcmp(gotContent, expectContent, gotLen) == 0))
+        return(0);
+
+    bufDump("got:     ", gotContent, gotLen);
+    bufDump("expected:", expectContent, expectLen);
+
+    return(-1);
+}
+
+static int
+testEncHandler(xmlCharEncodingHandlerPtr handler, const xmlChar *dec,
+                int decSize, const xmlChar *enc, int encSize) {
+    xmlBufferPtr encBuf = xmlBufferCreate();
+    xmlBufferPtr decBuf = xmlBufferCreate();
+    int ret = 0;
+
+    xmlBufferAdd(encBuf, enc, encSize);
+    xmlCharEncInFunc(handler, decBuf, encBuf);
+    if (bufCompare(decBuf, dec, decSize) != 0) {
+        fprintf(stderr, "Decoding %s failed\n", handler->name);
+        ret = -1;
+    }
+
+#ifdef LIBXML_OUTPUT_ENABLED
+    xmlBufferEmpty(decBuf);
+    xmlBufferAdd(decBuf, dec, decSize);
+    xmlCharEncOutFunc(handler, encBuf, decBuf);
+    if (bufCompare(encBuf, enc, encSize) != 0) {
+        fprintf(stderr, "Encoding %s failed\n", handler->name);
+        ret = -1;
+    }
+#endif
+
+    xmlBufferFree(decBuf);
+    xmlBufferFree(encBuf);
+    return(ret);
+}
+
+static int
+testUTF16(void) {
+    static const xmlChar utf8[] =
+        "\x01"
+        "\x7F"
+        "\xC2\x80"
+        "\xDF\xBF"
+        "\xE0\xA0\x80"
+        "\xEF\xBF\xBF"
+        "\xF0\x90\x80\x80"
+        "\xF4\x8F\xBF\xBF";
+    static const xmlChar utf16LE[] =
+        "\x01\x00"
+        "\x7F\x00"
+        "\x80\x00"
+        "\xFF\x07"
+        "\x00\x08"
+        "\xFF\xFF"
+        "\x00\xD8\x00\xDC"
+        "\xFF\xDB\xFF\xDF";
+    static const xmlChar utf16BE[] =
+        "\x00\x01"
+        "\x00\x7F"
+        "\x00\x80"
+        "\x07\xFF"
+        "\x08\x00"
+        "\xFF\xFF"
+        "\xD8\x00\xDC\x00"
+        "\xDB\xFF\xDF\xFF";
+
+    xmlCharEncodingHandlerPtr handler16LE, handler16BE;
+    int ret = 0;
+
+    handler16LE = xmlFindCharEncodingHandler("UTF-16LE");
+    handler16BE = xmlFindCharEncodingHandler("UTF-16BE");
+
+    if (testEncHandler(handler16LE,
+                       utf8, sizeof(utf8) - 1,
+                       utf16LE, sizeof(utf16LE) - 1) != 0)
+        ret = -1;
+    if (testEncHandler(handler16BE,
+                       utf8, sizeof(utf8) - 1,
+                       utf16BE, sizeof(utf16BE) - 1) != 0)
+        ret = -1;
+
+    return(ret);
+}
+
+int main(void) {
     int ret = 0;
 
     /*
@@ -906,6 +1008,7 @@ int main(void) {
     ret += testUserEncodingPush();
     ret += testUTF8Chunks();
 #endif
+    ret += testUTF16();
 
     /*
      * Cleanup function for the XML library.

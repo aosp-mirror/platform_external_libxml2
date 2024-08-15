@@ -6,4 +6,12 @@ xmlInitGlobalsInternal(void);
 XML_HIDDEN void
 xmlCleanupGlobalsInternal(void);
 
+XML_HIDDEN xmlError *
+xmlGetLastErrorInternal(void);
+
+#ifdef LIBXML_THREAD_ENABLED
+XML_HIDDEN unsigned *
+xmlGetLocalRngState(void);
+#endif
+
 #endif /* XML_GLOBALS_H_PRIVATE__ */

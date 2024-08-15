@@ -1,7 +1,7 @@
 .test:
   image: registry.gitlab.gnome.org/gnome/libxml2
   variables:
-    BASE_CONFIG: "--with-ftp --with-legacy --with-xptr-locs"
+    BASE_CONFIG: "--with-legacy"
   before_script:
     - rm -rf libxml2-build
     - mkdir libxml2-build
@@ -12,7 +12,12 @@
 gcc:
   extends: .test
   variables:
-    CONFIG: "--without-tls"
+    CFLAGS: "-O2"
+
+gcc:c89:
+  extends: .test
+  variables:
+    CONFIG: "--without-python"
     CFLAGS: "-O2 -std=c89 -D_XOPEN_SOURCE=600"
 
 gcc:minimum:
@@ -25,7 +30,7 @@ gcc:medium:
   extends: .test
   variables:
     BASE_CONFIG: "--with-minimum"
-    CONFIG: "--with-threads --with-tree --with-xpath --with-output --with-html"
+    CONFIG: "--with-threads --with-tree --with-xpath --with-output --with-html --with-iso8859x"
     CFLAGS: "-O2"
 
 gcc:legacy:
@@ -35,12 +40,6 @@ gcc:legacy:
   variables:
     BASE_CONFIG: "--with-legacy"
     CFLAGS: "-O2"
-
-gcc:python3:
-  extends: .test
-  variables:
-    CFLAGS: "-O2"
-    PYTHON: "/usr/bin/python3"
 
 gcc:static:
   extends: .test
@@ -73,7 +72,9 @@ clang:msan:
   tags:
     - win32-ps
   variables:
-    BASE_CONFIG: "--with-ftp --with-legacy --with-xptr-locs"
+    BASE_CONFIG: "--with-legacy"
+    # Disabled for now, see #658
+    CONFIG: "--without-python"
     CHERE_INVOKING: "yes"
   before_script:
     - $Env:Path="C:\msys64\usr\bin;$Env:Path"
@@ -273,12 +274,22 @@ cmake:msvc:v141:x86:static:
     BUILD_SHARED_LIBS: "OFF"
     SUFFIX: static
 
+meson:
+  image: registry.gitlab.gnome.org/gnome/libxml2
+  script:
+    - sh .gitlab-ci/test_meson.sh
+
+cmake:linux:gcc:shared:
+  extends: .cmake:linux
+  variables:
+    BUILD_SHARED_LIBS: "ON"
+    CC: gcc
+    SUFFIX: linux-gcc-shared
+
 pages:
   script:
     - mkdir -p public
-    - cp -r doc/devhelp doc/tutorial doc/xmllint.html doc/xmlcatalog.html public
-    - mkdir -p public/examples
-    - cp doc/examples/*.html doc/examples/*.c public/examples
+    - cp -r doc/devhelp doc/xmllint.html doc/xmlcatalog.html public
   artifacts:
     paths:
       - public
@@ -287,3 +298,14 @@ pages:
       - public/devhelp/*.xsl
   only:
     - master@GNOME/libxml2
+
+downstream-nokogiri:
+  # owner: @flavorjones
+  image: ghcr.io/sparklemotion/nokogiri-test:upstream-libxml
+  script:
+    - .gitlab-ci/downstream-nokogiri.sh
+
+downstream-perl:
+  image: registry.gitlab.gnome.org/gnome/libxml2
+  script:
+    - sh .gitlab-ci/downstream-perl.sh
