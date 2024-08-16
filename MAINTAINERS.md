@@ -50,7 +50,7 @@ You can get started by running
 
 ### Bump the version number
 
-Edit the version number in `configure.ac` if you haven't done so already.
+Update the version number in `VERSION` if you haven't done so already.
 
 ### Build the tarball
 
