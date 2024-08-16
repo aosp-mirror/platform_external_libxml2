@@ -41,14 +41,6 @@
  * Attributes
  */
 
-#ifndef ATTRIBUTE_UNUSED
-# if __GNUC__ * 100 + __GNUC_MINOR__ >= 207
-#  define ATTRIBUTE_UNUSED __attribute__((unused))
-# else
-#  define ATTRIBUTE_UNUSED
-# endif
-#endif
-
 #if !defined(__clang__) && (__GNUC__ * 100 + __GNUC_MINOR__ >= 403)
   #define LIBXML_ATTR_ALLOC_SIZE(x) __attribute__((alloc_size(x)))
 #else
