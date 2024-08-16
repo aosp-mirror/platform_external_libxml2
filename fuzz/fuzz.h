@@ -15,8 +15,20 @@
 extern "C" {
 #endif
 
+#if __GNUC__ * 100 + __GNUC_MINOR__ >= 207 || defined(__clang__)
+  #define ATTRIBUTE_UNUSED __attribute__((unused))
+#else
+  #define ATTRIBUTE_UNUSED
+#endif
+
 #if defined(LIBXML_HTML_ENABLED)
   #define HAVE_HTML_FUZZER
+#endif
+#if 1
+  #define HAVE_LINT_FUZZER
+#endif
+#if defined(LIBXML_READER_ENABLED)
+  #define HAVE_READER_FUZZER
 #endif
 #if defined(LIBXML_REGEXP_ENABLED)
   #define HAVE_REGEXP_FUZZER
@@ -47,8 +59,10 @@ int
 LLVMFuzzerTestOneInput(const char *data, size_t size);
 
 void
-xmlFuzzErrorFunc(void *ctx ATTRIBUTE_UNUSED, const char *msg ATTRIBUTE_UNUSED,
-                 ...);
+xmlFuzzErrorFunc(void *ctx, const char *msg, ...);
+
+void
+xmlFuzzSErrorFunc(void *ctx, const xmlError *error);
 
 void
 xmlFuzzMemSetup(void);
@@ -58,6 +72,12 @@ xmlFuzzMemSetLimit(size_t limit);
 
 int
 xmlFuzzMallocFailed(void);
+
+void
+xmlFuzzResetMallocFailed(void);
+
+void
+xmlFuzzCheckMallocFailure(const char *func, int expect);
 
 void
 xmlFuzzDataInit(const char *data, size_t size);
@@ -70,6 +90,9 @@ xmlFuzzWriteInt(FILE *out, size_t v, int size);
 
 size_t
 xmlFuzzReadInt(int size);
+
+size_t
+xmlFuzzBytesRemaining(void);
 
 const char *
 xmlFuzzReadRemaining(size_t *size);
@@ -88,6 +111,10 @@ xmlFuzzMainUrl(void);
 
 const char *
 xmlFuzzMainEntity(size_t *size);
+
+int
+xmlFuzzResourceLoader(void *data, const char *URL, const char *ID,
+                      xmlResourceType type, int flags, xmlParserInputPtr *out);
 
 xmlParserInputPtr
 xmlFuzzEntityLoader(const char *URL, const char *ID, xmlParserCtxtPtr ctxt);

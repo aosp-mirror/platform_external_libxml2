@@ -25,11 +25,14 @@ extern "C" {
 /**
  * xmlParserMaxDepth:
  *
+ * DEPRECATED: has no effect
+ *
  * arbitrary depth limit for the XML documents that we allow to
  * process. This is not a limitation of the parser but a safety
  * boundary feature, use XML_PARSE_HUGE option to override it.
  */
-XMLPUBVAR unsigned int xmlParserMaxDepth;
+XML_DEPRECATED
+XMLPUBVAR const unsigned int xmlParserMaxDepth;
 
 /**
  * XML_MAX_TEXT_LENGTH:
@@ -68,7 +71,7 @@ XMLPUBVAR unsigned int xmlParserMaxDepth;
  * use XML_PARSE_HUGE option to override it.
  * Introduced in 2.9.0
  */
-#define XML_MAX_DICTIONARY_LIMIT 10000000
+#define XML_MAX_DICTIONARY_LIMIT 100000000
 
 /**
  * XML_MAX_LOOKUP_LIMIT:
@@ -293,9 +296,7 @@ XMLPUBVAR const xmlChar xmlStringText[];
 XMLPUBVAR const xmlChar xmlStringTextNoenc[];
 XMLPUBVAR const xmlChar xmlStringComment[];
 
-/*
- * Function to finish the work of the macros where needed.
- */
+XML_DEPRECATED
 XMLPUBFUN int                   xmlIsLetter     (int c);
 
 /**
@@ -313,9 +314,14 @@ XMLPUBFUN xmlParserCtxtPtr
 			xmlCreateEntityParserCtxt(const xmlChar *URL,
 						 const xmlChar *ID,
 						 const xmlChar *base);
+XMLPUBFUN void
+			xmlCtxtErrMemory	(xmlParserCtxtPtr ctxt);
 XMLPUBFUN int
 			xmlSwitchEncoding	(xmlParserCtxtPtr ctxt,
 						 xmlCharEncoding enc);
+XMLPUBFUN int
+			xmlSwitchEncodingName	(xmlParserCtxtPtr ctxt,
+						 const char *encoding);
 XMLPUBFUN int
 			xmlSwitchToEncoding	(xmlParserCtxtPtr ctxt,
 					 xmlCharEncodingHandlerPtr handler);
@@ -589,6 +595,7 @@ XMLPUBFUN int			xmlCurrentChar		(xmlParserCtxtPtr ctxt,
 						 int *len);
 XMLPUBFUN int		xmlCopyCharMultiByte	(xmlChar *out,
 						 int val);
+XML_DEPRECATED
 XMLPUBFUN int			xmlCopyChar		(int len,
 						 xmlChar *out,
 						 int val);
@@ -596,66 +603,6 @@ XML_DEPRECATED
 XMLPUBFUN void			xmlNextChar		(xmlParserCtxtPtr ctxt);
 XML_DEPRECATED
 XMLPUBFUN void			xmlParserInputShrink	(xmlParserInputPtr in);
-
-/*
- * Specific function to keep track of entities references
- * and used by the XSLT debugger.
- */
-#ifdef LIBXML_LEGACY_ENABLED
-/**
- * xmlEntityReferenceFunc:
- * @ent: the entity
- * @firstNode:  the fist node in the chunk
- * @lastNode:  the last nod in the chunk
- *
- * Callback function used when one needs to be able to track back the
- * provenance of a chunk of nodes inherited from an entity replacement.
- */
-typedef	void	(*xmlEntityReferenceFunc)	(xmlEntityPtr ent,
-						 xmlNodePtr firstNode,
-						 xmlNodePtr lastNode);
-
-XML_DEPRECATED
-XMLPUBFUN void		xmlSetEntityReferenceFunc	(xmlEntityReferenceFunc func);
-
-XML_DEPRECATED
-XMLPUBFUN xmlChar *
-			xmlParseQuotedString	(xmlParserCtxtPtr ctxt);
-XML_DEPRECATED
-XMLPUBFUN void
-                        xmlParseNamespace       (xmlParserCtxtPtr ctxt);
-XML_DEPRECATED
-XMLPUBFUN xmlChar *
-			xmlNamespaceParseNSDef	(xmlParserCtxtPtr ctxt);
-XML_DEPRECATED
-XMLPUBFUN xmlChar *
-			xmlScanName		(xmlParserCtxtPtr ctxt);
-XML_DEPRECATED
-XMLPUBFUN xmlChar *
-			xmlNamespaceParseNCName	(xmlParserCtxtPtr ctxt);
-XML_DEPRECATED
-XMLPUBFUN void	xmlParserHandleReference(xmlParserCtxtPtr ctxt);
-XML_DEPRECATED
-XMLPUBFUN xmlChar *
-			xmlNamespaceParseQName	(xmlParserCtxtPtr ctxt,
-						 xmlChar **prefix);
-/**
- * Entities
- */
-XML_DEPRECATED
-XMLPUBFUN xmlChar *
-		xmlDecodeEntities		(xmlParserCtxtPtr ctxt,
-						 int len,
-						 int what,
-						 xmlChar end,
-						 xmlChar  end2,
-						 xmlChar end3);
-XML_DEPRECATED
-XMLPUBFUN void
-			xmlHandleEntity		(xmlParserCtxtPtr ctxt,
-						 xmlEntityPtr entity);
-
-#endif /* LIBXML_LEGACY_ENABLED */
 
 #ifdef __cplusplus
 }

@@ -10,10 +10,14 @@
 #ifndef __XML_IO_H__
 #define __XML_IO_H__
 
+/** DOC_DISABLE */
 #include <stdio.h>
 #include <libxml/xmlversion.h>
 #include <libxml/encoding.h>
+#define XML_TREE_INTERNALS
 #include <libxml/tree.h>
+#undef XML_TREE_INTERNALS
+/** DOC_ENABLE */
 
 #ifdef __cplusplus
 extern "C" {
@@ -207,6 +211,7 @@ XMLPUBFUN xmlParserInputBufferPtr
 XMLPUBFUN xmlParserInputBufferPtr
 	xmlParserInputBufferCreateFilename	(const char *URI,
                                                  xmlCharEncoding enc);
+XML_DEPRECATED
 XMLPUBFUN xmlParserInputBufferPtr
 	xmlParserInputBufferCreateFile		(FILE *file,
                                                  xmlCharEncoding enc);
@@ -216,7 +221,6 @@ XMLPUBFUN xmlParserInputBufferPtr
 XMLPUBFUN xmlParserInputBufferPtr
 	xmlParserInputBufferCreateMem		(const char *mem, int size,
 	                                         xmlCharEncoding enc);
-XML_DEPRECATED
 XMLPUBFUN xmlParserInputBufferPtr
 	xmlParserInputBufferCreateStatic	(const char *mem, int size,
 	                                         xmlCharEncoding enc);
@@ -225,12 +229,15 @@ XMLPUBFUN xmlParserInputBufferPtr
 						 xmlInputCloseCallback  ioclose,
 						 void *ioctx,
 	                                         xmlCharEncoding enc);
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlParserInputBufferRead		(xmlParserInputBufferPtr in,
 						 int len);
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlParserInputBufferGrow		(xmlParserInputBufferPtr in,
 						 int len);
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlParserInputBufferPush		(xmlParserInputBufferPtr in,
 						 int len,
@@ -322,12 +329,14 @@ xmlOutputBufferPtr
 
 #ifdef LIBXML_HTTP_ENABLED
 /*  This function only exists if HTTP support built into the library  */
+XML_DEPRECATED
 XMLPUBFUN void
 	xmlRegisterHTTPPostCallbacks	(void );
 #endif /* LIBXML_HTTP_ENABLED */
 
 #endif /* LIBXML_OUTPUT_ENABLED */
 
+XML_DEPRECATED
 XMLPUBFUN xmlParserInputPtr
 	xmlCheckHTTPInput		(xmlParserCtxtPtr ctxt,
 					 xmlParserInputPtr ret);
@@ -340,26 +349,28 @@ XMLPUBFUN xmlParserInputPtr
 					 const char *ID,
 					 xmlParserCtxtPtr ctxt);
 
-/*
- * xmlNormalizeWindowsPath is obsolete, don't use it.
- * Check xmlCanonicPath in uri.h for a better alternative.
- */
+XML_DEPRECATED
 XMLPUBFUN xmlChar *
 	xmlNormalizeWindowsPath		(const xmlChar *path);
 
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlCheckFilename		(const char *path);
 /**
  * Default 'file://' protocol callbacks
  */
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlFileMatch			(const char *filename);
+XML_DEPRECATED
 XMLPUBFUN void *
 	xmlFileOpen			(const char *filename);
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlFileRead			(void * context,
 					 char * buffer,
 					 int len);
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlFileClose			(void * context);
 
@@ -367,38 +378,27 @@ XMLPUBFUN int
  * Default 'http://' protocol callbacks
  */
 #ifdef LIBXML_HTTP_ENABLED
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlIOHTTPMatch			(const char *filename);
+XML_DEPRECATED
 XMLPUBFUN void *
 	xmlIOHTTPOpen			(const char *filename);
 #ifdef LIBXML_OUTPUT_ENABLED
+XML_DEPRECATED
 XMLPUBFUN void *
 	xmlIOHTTPOpenW			(const char * post_uri,
 					 int   compression );
 #endif /* LIBXML_OUTPUT_ENABLED */
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlIOHTTPRead			(void * context,
 					 char * buffer,
 					 int len);
+XML_DEPRECATED
 XMLPUBFUN int
 	xmlIOHTTPClose			(void * context);
 #endif /* LIBXML_HTTP_ENABLED */
-
-/**
- * Default 'ftp://' protocol callbacks
- */
-#if defined(LIBXML_FTP_ENABLED)
-XMLPUBFUN int
-	xmlIOFTPMatch			(const char *filename);
-XMLPUBFUN void *
-	xmlIOFTPOpen			(const char *filename);
-XMLPUBFUN int
-	xmlIOFTPRead			(void * context,
-					 char * buffer,
-					 int len);
-XMLPUBFUN int
-	xmlIOFTPClose			(void * context);
-#endif /* defined(LIBXML_FTP_ENABLED) */
 
 XMLPUBFUN xmlParserInputBufferCreateFilenameFunc
 	xmlParserInputBufferCreateFilenameDefault(
@@ -406,9 +406,11 @@ XMLPUBFUN xmlParserInputBufferCreateFilenameFunc
 XMLPUBFUN xmlOutputBufferCreateFilenameFunc
 	xmlOutputBufferCreateFilenameDefault(
 		xmlOutputBufferCreateFilenameFunc func);
+XML_DEPRECATED
 XMLPUBFUN xmlOutputBufferCreateFilenameFunc
 	xmlThrDefOutputBufferCreateFilenameDefault(
 		xmlOutputBufferCreateFilenameFunc func);
+XML_DEPRECATED
 XMLPUBFUN xmlParserInputBufferCreateFilenameFunc
 	xmlThrDefParserInputBufferCreateFilenameDefault(
 		xmlParserInputBufferCreateFilenameFunc func);
