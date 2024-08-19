@@ -34,29 +34,16 @@ typedef enum {
     XML_SAVE_XHTML	= 1<<4, /* force XHTML1 specific rules */
     XML_SAVE_AS_XML     = 1<<5, /* force XML serialization on HTML doc */
     XML_SAVE_AS_HTML    = 1<<6, /* force HTML serialization on XML doc */
-    XML_SAVE_WSNONSIG   = 1<<7  /* format with non-significant whitespace */
+    XML_SAVE_WSNONSIG   = 1<<7, /* format with non-significant whitespace */
+    /* Available since 2.14.0 */
+    XML_SAVE_EMPTY      = 1<<8, /* force empty tags, overriding global */
+    XML_SAVE_NO_INDENT  = 1<<9, /* disable indenting */
+    XML_SAVE_INDENT     = 1<<10 /* force indenting, overriding global */
 } xmlSaveOption;
 
 
 typedef struct _xmlSaveCtxt xmlSaveCtxt;
 typedef xmlSaveCtxt *xmlSaveCtxtPtr;
-
-/** DOC_DISABLE */
-#define XML_GLOBALS_SAVE \
-  XML_OP(xmlIndentTreeOutput, int, XML_EMPTY) \
-  XML_OP(xmlTreeIndentString, const char *, XML_EMPTY) \
-  XML_OP(xmlSaveNoEmptyTags, int, XML_EMPTY)
-
-#define XML_OP XML_DECLARE_GLOBAL
-XML_GLOBALS_SAVE
-#undef XML_OP
-
-#if defined(LIBXML_THREAD_ENABLED) && !defined(XML_GLOBALS_NO_REDEFINITION)
-  #define xmlIndentTreeOutput XML_GLOBAL_MACRO(xmlIndentTreeOutput)
-  #define xmlTreeIndentString XML_GLOBAL_MACRO(xmlTreeIndentString)
-  #define xmlSaveNoEmptyTags XML_GLOBAL_MACRO(xmlSaveNoEmptyTags)
-#endif
-/** DOC_ENABLE */
 
 XMLPUBFUN xmlSaveCtxtPtr
 		xmlSaveToFd		(int fd,
@@ -91,28 +78,32 @@ XMLPUBFUN int
 XMLPUBFUN int
 		xmlSaveClose		(xmlSaveCtxtPtr ctxt);
 XMLPUBFUN int
+		xmlSaveFinish		(xmlSaveCtxtPtr ctxt);
+XMLPUBFUN int
+		xmlSaveSetIndentString	(xmlSaveCtxtPtr ctxt,
+					 const char *indent);
+XML_DEPRECATED
+XMLPUBFUN int
 		xmlSaveSetEscape	(xmlSaveCtxtPtr ctxt,
 					 xmlCharEncodingOutputFunc escape);
+XML_DEPRECATED
 XMLPUBFUN int
 		xmlSaveSetAttrEscape	(xmlSaveCtxtPtr ctxt,
 					 xmlCharEncodingOutputFunc escape);
 
+XML_DEPRECATED
 XMLPUBFUN int
                 xmlThrDefIndentTreeOutput(int v);
+XML_DEPRECATED
 XMLPUBFUN const char *
                 xmlThrDefTreeIndentString(const char * v);
+XML_DEPRECATED
 XMLPUBFUN int
                 xmlThrDefSaveNoEmptyTags(int v);
 
 #ifdef __cplusplus
 }
 #endif
-
-#else /* LIBXML_OUTPUT_ENABLED */
-
-/** DOC_DISABLE */
-#define XML_GLOBALS_SAVE
-/** DOC_ENABLE */
 
 #endif /* LIBXML_OUTPUT_ENABLED */
 #endif /* __XML_XMLSAVE_H__ */

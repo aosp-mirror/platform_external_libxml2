@@ -64,8 +64,7 @@ if [ ! -d $srcdir/m4 ]; then
         mkdir $srcdir/m4
 fi
 
-# Replaced by autoreconf below
-autoreconf -if -Wall
+aclocal
 
 if ! grep -q pkg.m4 aclocal.m4; then
     cat <<EOF
@@ -75,6 +74,8 @@ your distribution or set ACLOCAL_PATH to the directory containing pkg.m4.
 EOF
     exit 1
 fi
+
+autoreconf -if -Wall || exit 1
 
 cd $THEDIR
 
@@ -88,6 +89,7 @@ if test -z "$NOCONFIGURE"; then
     if test "$?" -ne 0; then
         echo
         echo "Configure script failed, check config.log for more info."
+        exit 1
     else
         echo
         echo "Now type 'make' to compile libxml2."

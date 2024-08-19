@@ -14,17 +14,15 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
-#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
+#include <sys/stat.h>
+
+#ifdef _WIN32
+  #include <io.h>
+#else
+  #include <unistd.h>
 #endif
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#elif defined (_WIN32)
-#include <io.h>
-#endif
+
 #ifdef LIBXML_ZLIB_ENABLED
 #include <zlib.h>
 #endif
@@ -101,8 +99,8 @@ xz_error(xz_statep state, int err, const char *msg)
     }
 
     /* construct error message with path */
-    if ((state->msg =
-         xmlMalloc(strlen(state->path) + strlen(msg) + 3)) == NULL) {
+    state->msg = xmlMalloc(strlen(state->path) + strlen(msg) + 3);
+    if (state->msg == NULL) {
         state->err = LZMA_MEM_ERROR;
         state->msg = (char *) "out of memory";
         return;
@@ -110,7 +108,6 @@ xz_error(xz_statep state, int err, const char *msg)
     strcpy(state->msg, state->path);
     strcat(state->msg, ": ");
     strcat(state->msg, msg);
-    return;
 }
 
 static void
@@ -195,6 +192,12 @@ xz_compressed(xzFile f) {
         case COPY:
 	    return(0);
 	case GZIP:
+#ifdef LIBXML_ZLIB_ENABLED
+            /* Don't use lzma for gzip */
+	    return(0);
+#else
+	    return(1);
+#endif
 	case LZMA:
 	    return(1);
     }
@@ -207,24 +210,10 @@ __libxml2_xzopen(const char *path, const char *mode)
     return xz_open(path, -1, mode);
 }
 
-int
-__libxml2_xzcompressed(xzFile f) {
-    return xz_compressed(f);
-}
-
 xzFile
-__libxml2_xzdopen(int fd, const char *mode)
+__libxml2_xzdopen(const char *path, int fd, const char *mode)
 {
-    char *path;                 /* identifier for error messages */
-    size_t path_size = 7 + 3 * sizeof(int);
-    xzFile xz;
-
-    if (fd == -1 || (path = xmlMalloc(path_size)) == NULL)
-        return NULL;
-    snprintf(path, path_size, "<fd:%d>", fd);       /* for debugging */
-    xz = xz_open(path, fd, mode);
-    xmlFree(path);
-    return xz;
+    return xz_open(path, fd, mode);
 }
 
 static int
@@ -320,8 +309,12 @@ is_format_lzma(xz_statep state)
      * If someone complains, this will be reconsidered.
      */
     if (dict_size != UINT32_MAX) {
-        uint32_t d = dict_size - 1;
+        uint32_t d;
 
+        if (dict_size == 0)
+            return 0;
+
+        d = dict_size - 1;
         d |= d >> 2;
         d |= d >> 3;
         d |= d >> 4;
@@ -698,6 +691,13 @@ xz_skip(xz_statep state, uint64_t len)
                 return -1;
         }
     return 0;
+}
+
+int
+__libxml2_xzcompressed(xzFile f) {
+    xz_head(f);
+
+    return xz_compressed(f);
 }
 
 int
