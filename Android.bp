@@ -71,7 +71,6 @@ license {
 cc_defaults {
     name: "libxml2-defaults",
     srcs: [
-        "SAX.c",
         "entities.c",
         "encoding.c",
         "error.c",
@@ -176,7 +175,10 @@ cc_library_static {
 
 cc_binary_host {
     name: "xmllint",
-    srcs: ["xmllint.c"],
+    srcs: [
+        "shell.c",
+        "xmllint.c",
+    ],
     cflags: [
         "-Wall",
         "-Werror",
