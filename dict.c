@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "private/dict.h"
+#include "private/error.h"
 #include "private/globals.h"
 #include "private/threads.h"
 
@@ -928,13 +929,9 @@ xmlDictQLookup(xmlDictPtr dict, const xmlChar *prefix, const xmlChar *name) {
   #define WIN32_LEAN_AND_MEAN
   #include <windows.h>
   #include <bcrypt.h>
-#elif defined(HAVE_GETENTROPY)
-  #ifdef HAVE_UNISTD_H
-    #include <unistd.h>
-  #endif
-  #ifdef HAVE_SYS_RANDOM_H
-    #include <sys/random.h>
-  #endif
+#elif HAVE_DECL_GETENTROPY
+  #include <unistd.h>
+  #include <sys/random.h>
 #else
   #include <time.h>
 #endif
@@ -960,21 +957,17 @@ xmlInitRandom(void) {
         status = BCryptGenRandom(NULL, (unsigned char *) globalRngState,
                                  sizeof(globalRngState),
                                  BCRYPT_USE_SYSTEM_PREFERRED_RNG);
-        if (!BCRYPT_SUCCESS(status)) {
-            fprintf(stderr, "libxml2: BCryptGenRandom failed with "
-                    "error code %lu\n", GetLastError());
-            abort();
-        }
-#elif defined(HAVE_GETENTROPY)
+        if (!BCRYPT_SUCCESS(status))
+            xmlAbort("libxml2: BCryptGenRandom failed with error code %lu\n",
+                     GetLastError());
+#elif HAVE_DECL_GETENTROPY
         while (1) {
             if (getentropy(globalRngState, sizeof(globalRngState)) == 0)
                 break;
 
-            if (errno != EINTR) {
-                fprintf(stderr, "libxml2: getentropy failed with "
-                        "error code %d\n", errno);
-                abort();
-            }
+            if (errno != EINTR)
+                xmlAbort("libxml2: getentropy failed with error code %d\n",
+                         errno);
         }
 #else
         int var;
