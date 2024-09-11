@@ -60,6 +60,9 @@
 #define XML_SGML_DEFAULT_CATALOG "file://" SYSCONFDIR "/sgml/catalog"
 #endif
 
+static xmlChar *xmlCatalogNormalizePublic(const xmlChar *pubID);
+static int xmlExpandCatalog(xmlCatalogPtr catal, const char *filename);
+
 /************************************************************************
  *									*
  *			Types, all private				*
@@ -173,21 +176,6 @@ static xmlRMutex xmlCatalogMutex;
  * Whether the default system catalog was initialized.
  */
 static int xmlCatalogInitialized = 0;
-
-/************************************************************************
- *									*
- *			Forward declarations				*
- *									*
- ************************************************************************/
-
-static xmlChar *
-xmlCatalogNormalizePublic(const xmlChar *pubID);
-
-static int
-xmlExpandCatalog(xmlCatalogPtr catal, const char *filename);
-
-static int
-xmlFetchXMLCatalogFile(xmlCatalogEntryPtr catal);
 
 /************************************************************************
  *									*
@@ -547,9 +535,6 @@ static void xmlDumpXMLCatalogNode(xmlCatalogEntryPtr catal, xmlNodePtr catalog,
 	        case XML_CATA_BROKEN_CATALOG:
 	        case XML_CATA_CATALOG:
 		    if (cur == catal) {
-                        if (cur->children == NULL) {
-                            xmlFetchXMLCatalogFile(cur);
-                        }
 			cur = cur->children;
 		        continue;
 		    }
@@ -3143,6 +3128,7 @@ xmlLoadCatalog(const char *filename)
 
 	xmlDefaultCatalog = catal;
 	xmlRMutexUnlock(&xmlCatalogMutex);
+        xmlCatalogInitialized = 1;
 	return(0);
     }
 
@@ -3347,8 +3333,7 @@ int
 xmlCatalogAdd(const xmlChar *type, const xmlChar *orig, const xmlChar *replace) {
     int res = -1;
 
-    if (!xmlCatalogInitialized)
-	xmlInitializeCatalog();
+    xmlInitParser();
 
     xmlRMutexLock(&xmlCatalogMutex);
     /*
@@ -3364,6 +3349,7 @@ xmlCatalogAdd(const xmlChar *type, const xmlChar *orig, const xmlChar *replace) 
 				    orig, NULL,  xmlCatalogDefaultPrefer, NULL);
 	}
 	xmlRMutexUnlock(&xmlCatalogMutex);
+        xmlCatalogInitialized = 1;
 	return(0);
     }
 
