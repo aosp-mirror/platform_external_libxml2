@@ -36,7 +36,7 @@
  *
  * extra version information, used to show a git commit description
  */
-#define LIBXML_VERSION_EXTRA "-GITv2.13.0-1617-g3a370fae1"
+#define LIBXML_VERSION_EXTRA "-GITv2.13.0-1651-gccfe2bdd"
 
 /**
  * LIBXML_TEST_VERSION:
@@ -335,7 +335,6 @@
 
 #ifdef __GNUC__
 /** DOC_DISABLE */
-
 #ifndef ATTRIBUTE_UNUSED
 # if ((__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 7)))
 #  define ATTRIBUTE_UNUSED __attribute__((unused))
