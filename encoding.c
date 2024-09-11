@@ -1297,11 +1297,13 @@ xmlUconvConvert(unsigned char *out, int *outlen,
 
             case U_INVALID_CHAR_FOUND:
             case U_ILLEGAL_CHAR_FOUND:
+            case U_ILLEGAL_ESCAPE_SEQUENCE:
+            case U_UNSUPPORTED_ESCAPE_SEQUENCE:
                 ret = XML_ENC_ERR_INPUT;
                 break;
 
             case U_MEMORY_ALLOCATION_ERROR:
-                ret = XML_ERR_NO_MEMORY;
+                ret = XML_ENC_ERR_MEMORY;
                 break;
 
             default:
