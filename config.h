@@ -5,6 +5,10 @@
    don't. */
 /* #undef HAVE_DECL_GETENTROPY */
 
+/* Define to 1 if you have the declaration of `glob', and to 0 if you don't.
+   */
+#define HAVE_DECL_GLOB 1
+
 /* Define to 1 if you have the declaration of `mmap', and to 0 if you don't.
    */
 #define HAVE_DECL_MMAP 1
@@ -17,9 +21,6 @@
 
 /* Define to 1 if the system has the `destructor' function attribute */
 #define HAVE_FUNC_ATTRIBUTE_DESTRUCTOR 1
-
-/* Define to 1 if you have the <glob.h> header file. */
-#define HAVE_GLOB_H 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
