@@ -1,17 +1,17 @@
 project(
     'libxml2',
     'c',
-    version: '2.13.0',
+    version: files('VERSION'),
     license: 'MIT',
     default_options: ['buildtype=debug', 'warning_level=3'],
     meson_version: '>= 0.61',
 )
 
 v_array = meson.project_version().split('.')
-v_maj = v_array[0]
-v_min = v_array[1]
-v_mic = v_array[2]
-v_nbr = v_maj.to_int() * 10000 + v_min.to_int() * 100 + v_mic.to_int()
+v_maj = v_array[0].to_int()
+v_min = v_array[1].to_int()
+v_mic = v_array[2].to_int()
+v_nbr = v_maj * 10000 + v_min * 100 + v_mic
 v_extra = ''
 r = run_command('git', 'describe', check: false)
 if (r.returncode() == 0)
@@ -53,170 +53,130 @@ endif
 cc = meson.get_compiler('c')
 
 # options
-want_c14n = get_option('c14n')
-want_catalog = get_option('catalog')
-want_debug = get_option('debuging')
-want_history = get_option('history')
-want_html = get_option('html')
-want_http = get_option('http')
-want_ipv6 = get_option('ipv6')
-want_iso8859x = get_option('iso8859x')
-want_legacy = get_option('legacy')
-want_output = get_option('output')
-want_pattern = get_option('pattern')
-want_push = get_option('push')
-want_python = get_option('python')
-want_reader = get_option('reader')
-want_readline = get_option('readline')
-want_regexps = get_option('regexps')
-want_sax1 = get_option('sax1')
-want_schemas = get_option('schemas')
-want_schematron = get_option('schematron')
-want_thread_alloc = get_option('thread-alloc')
-want_tls = get_option('tls')
-want_tree = get_option('tree')
-want_valid = get_option('valid')
-want_writer = get_option('writer')
-want_xinclude = get_option('xinclude')
-want_xpath = get_option('xpath')
-want_xptr = get_option('xptr')
 
-# TODO: Options should be three-valued: "yes", "no", default
+# disabled by default
+want_icu = get_option('icu').enabled()
+want_legacy = get_option('legacy').enabled()
+want_thread_alloc = get_option('thread-alloc').enabled()
+want_tls = get_option('tls').enabled()
 
-# TODO: Legacy defaults
+# default depends on minimum option
 
-# hard dependencies on options
+want_minimum = get_option('minimum')
 
-if want_c14n == true
-    if want_output == false
-        message('-Dc14n=true overrides -Doutput')
-    endif
-    want_output = true
-    if want_xpath == false
-        message('-Dc14n=true overrides -Dxpath')
-    endif
-    want_xpath = true
-endif
+feature = get_option('catalog')
+want_catalog = want_minimum ? feature.enabled() : feature.allowed()
 
-if want_schemas == true
-    if want_pattern == false
-        message('-Dschemas=true overrides -Dpattern')
-    endif
-    want_pattern = true
-    if want_regexps == false
-        message('-Dschemas=true overrides -Dregexps')
-    endif
-    want_regexps = true
-endif
+feature = get_option('debugging')
+want_debug = want_minimum ? feature.enabled() : feature.allowed()
 
-if want_schematron == true
-    if want_pattern == false
-        message('-Dschematron=true overrides -Dpattern')
-    endif
-    want_pattern = true
-    if want_tree == false
-        message('-Dschematron=true overrides -Dtree')
-    endif
-    want_tree = true
-    if want_xpath == false
-        message('-Dschematron=true overrides -Dxpath')
-    endif
-    want_xpath = true
-endif
+feature = get_option('html')
+want_html = want_minimum ? feature.enabled() : feature.allowed()
 
-if want_reader == true
-    if want_push == false
-        message('-Dreader=true overrides -Dpush')
-    endif
-    want_push = true
-    if want_tree == false
-        message('-Dreader=true overrides -Dtree')
-    endif
-    want_tree = true
-endif
+feature = get_option('iconv')
+want_iconv = want_minimum ? feature.enabled() : feature.allowed()
 
-if want_writer == true
-    if want_output == false
-        message('-Dwriter=true overrides -Doutput')
-    endif
-    want_output = true
-    if want_push == false
-        message('-Dwriter=true overrides -Dpush')
-    endif
-    want_push = true
-endif
+feature = get_option('iso8859x')
+want_iso8859x = want_minimum ? feature.enabled() : feature.allowed()
 
-if want_xinclude == true
-    if want_xpath == false
-        message('-Dxinclude=true overrides -Dxpath')
-    endif
-    want_xpath = true
-endif
+feature = get_option('python')
+want_python = want_minimum ? feature.enabled() : feature.allowed()
 
-if want_xptr == true
-    if want_xpath == false
-        message('-Dxptr=true overrides -Dxpath')
-    endif
-    want_xpath = true
-endif
+feature = get_option('modules')
+want_modules = want_minimum ? feature.enabled() : feature.allowed()
 
-# minimum dependencies
+feature = get_option('sax1')
+want_sax1 = want_minimum ? feature.enabled() : feature.allowed()
 
-if get_option('minimum')
-    # TODO: This is should allow other options
-    want_c14n = false
-    want_catalog = false
-    want_debug = false
-    want_history = false
-    want_html = false
-    want_http = false
-    want_ipv6 = false
-    want_iso8859x = false
-    want_output = false
-    want_pattern = false
-    want_push = false
-    want_python = false
-    want_reader = false
-    want_readline = false
-    want_regexps = false
-    want_sax1 = false
-    want_schemas = false
-    want_schematron = false
-    want_thread_alloc = false
-    want_tree = false
-    want_valid = false
-    want_writer = false
-    want_xinclude = false
-    want_xpath = false
-    want_xptr = false
-else
-    # Disable dependent modules
-    if want_output == false
-        want_c14n = false
-        want_writer = false
-    endif
-    if want_pattern == false
-        want_schemas = false
-        want_schematron = false
-    endif
-    if want_push == false
-        want_reader = false
-        want_writer = false
-    endif
-    if want_regexps == false
-        want_schemas = false
-    endif
-    if want_tree == false
-        want_reader = false
-        want_schematron = false
-    endif
-    if want_xpath == false
-        want_c14n = false
-        want_schematron = false
-        want_xinclude = false
-        want_xptr = false
-    endif
-endif
+feature = get_option('threads')
+want_threads = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('valid')
+want_valid = want_minimum ? feature.enabled() : feature.allowed()
+
+# default depends on legacy option
+
+feature = get_option('http')
+want_http = want_legacy ? feature.allowed() : feature.enabled()
+
+feature = get_option('lzma')
+want_lzma = want_legacy ? feature.allowed() : feature.enabled()
+
+feature = get_option('zlib')
+want_zlib = want_legacy ? feature.allowed() : feature.enabled()
+
+# dependencies
+
+feature = get_option('output')
+want_output = not want_minimum \
+    or get_option('c14n').enabled() \
+    or get_option('writer').enabled() ? \
+    feature.allowed() : feature.enabled()
+
+feature = get_option('pattern')
+want_pattern = not want_minimum \
+    or get_option('schemas').enabled() \
+    or get_option('schematron').enabled() ? \
+    feature.allowed() : feature.enabled()
+
+feature = get_option('regexps')
+want_regexps = not want_minimum \
+    or get_option('schemas').enabled() ? \
+    feature.allowed() : feature.enabled()
+
+feature = get_option('push')
+want_push = not want_minimum \
+    or get_option('reader').enabled() \
+    or get_option('writer').enabled() ? \
+    feature.allowed() : feature.enabled()
+
+feature = get_option('readline')
+want_readline = get_option('history').enabled() ? \
+    feature.allowed() : feature.enabled()
+
+feature = get_option('xpath')
+want_xpath = not want_minimum \
+    or get_option('c14n').enabled() \
+    or get_option('schematron').enabled() \
+    or get_option('xinclude').enabled() \
+    or get_option('xptr').enabled() ? \
+    feature.allowed() : feature.enabled()
+
+feature = get_option('c14n') \
+    .require(want_output, error_message: 'c14n requires output') \
+    .require(want_xpath, error_message: 'c14n requires xpath')
+want_c14n = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('history') \
+    .require(want_readline, error_message: 'history requires readline')
+want_history = feature.enabled()
+
+feature = get_option('reader') \
+    .require(want_push, error_message: 'reader requires push')
+want_reader = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('schemas') \
+    .require(want_pattern, error_message: 'schemas requires pattern') \
+    .require(want_regexps, error_message: 'schemas requires regexps')
+want_schemas = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('schematron') \
+    .require(want_pattern, error_message: 'schematron requires pattern') \
+    .require(want_xpath, error_message: 'schematron requires xpath')
+want_schematron = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('writer') \
+    .require(want_output, error_message: 'writer requires output') \
+    .require(want_push, error_message: 'writer requires push')
+want_writer = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('xinclude') \
+    .require(want_xpath, error_message: 'xinclude requires xpath')
+want_xinclude = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('xptr') \
+    .require(want_xpath, error_message: 'xptr requires xpath')
+want_xptr = want_minimum ? feature.enabled() : feature.allowed()
 
 cflags_try = []
 
@@ -231,6 +191,7 @@ if cc.get_argument_syntax() == 'gcc'
         '-Wmissing-prototypes',
         '-Wno-long-long',
         '-Wno-format-extra-args',
+        '-Wno-array-bounds',
     ]
 
     if host_machine.cpu_family() == 'alpha'
@@ -257,7 +218,6 @@ endforeach
 #
 # [X] config.h.in
 # [X] include/libxml/xmlversion.h.in
-# [N] libxml-2.0-uninstalled.pc.in
 # [X] libxml-2.0.pc.in
 # [X] libxml2-config.cmake.in
 # [X] python/setup.py.in
@@ -274,44 +234,27 @@ config_h.set_quoted('LOCALEDIR', dir_locale)
 
 # header files
 xml_check_headers = [
-    'stdint.h',
-    'fcntl.h',
-    'unistd.h',
-    'sys/stat.h',
-    'sys/mman.h',
-    'sys/socket.h',
-    'netinet/in.h',
-    'arpa/inet.h',
-    'netdb.h',
-    'sys/select.h',
-    'poll.h',
-    'sys/time.h',
-    'sys/timeb.h',
-    'dl.h',
-    'dlfcn.h',
-    'glob.h',
+    [ 'stdint.h', true ],
+    [ 'poll.h', want_http ],
 ]
 
 foreach header : xml_check_headers
-    if cc.has_header(header)
-        config_h.set10('HAVE_' + header.underscorify().to_upper(), true)
+    if header[1] and cc.has_header(header[0])
+        config_h.set10('HAVE_' + header[0].underscorify().to_upper(), true)
     endif
 endforeach
 
 # library functions
 xml_check_functions = [
     # fct             | header
-    ['gettimeofday', 'sys/time.h'],
-    ['ftime', 'sys/timeb.h'],
-    ['stat', 'sys/stat.h'],
+    ['getentropy', 'sys/random.h'],
+    ['glob', 'glob.h'],
     ['mmap', 'sys/mman.h'],
-    ['munmap', 'sys/mman.h'],
 ]
 
 foreach function : xml_check_functions
-    if cc.has_header_symbol(function[1], function[0])
-        config_h.set10('HAVE_' + function[0].to_upper(), true)
-    endif
+    config_h.set10('HAVE_DECL_' + function[0].underscorify().to_upper(),
+                   cc.has_header_symbol(function[1], function[0]))
 endforeach
 
 # library
@@ -331,53 +274,18 @@ if sys_windows == false
 endif
 
 ### thread local storage
-support_tls = true
-if want_tls == true
-    tls_src = '''
-#include <threads.h>
-int main()
-{
-    _Thread_local int v;
-    return 0;
-}
-    '''
-    res = cc.compiles(tls_src, name: '_Thread_local')
-    if res == true
-        config_h.set('XML_THREAD_LOCAL', '_Thread_local')
-    else
-        tls_src = '''
-int main()
-{
-    __thread int v;
-    return 0;
-}
-        '''
-        res = cc.compiles(tls_src, name: '__thread')
-        if res == true
-            config_h.set('XML_THREAD_LOCAL', '__thread')
-        else
-            tls_src = '''
-int main()
-{
-    __declspec(thread) int v;
-    return 0;
-}
-            '''
-            res = cc.compiles(tls_src, name: '__declspec(thread)')
-            if res == true
-                config_h.set('XML_THREAD_LOCAL', '__declspec(thread)')
-            else
-                want_tls = false
-                support_tls = false
-            endif
+if want_tls
+    foreach t : ['_Thread_local', '__thread', '__declspec(thread)']
+        if cc.compiles('@0@ int v;'.format(t))
+            config_h.set('XML_THREAD_LOCAL', t)
+            break
         endif
-    endif
+    endforeach
 endif
 
 ### __attribute__((destructor))
 if cc.has_function_attribute('destructor')
-    config_h.set10('HAVE_ATTRIBUTE_DESTRUCTOR', true)
-    config_h.set('ATTRIBUTE_DESTRUCTOR', '__attribute__((destructor))')
+    config_h.set10('HAVE_FUNC_ATTRIBUTE_DESTRUCTOR', true)
 endif
 
 ### DSO support
@@ -389,67 +297,39 @@ else
     module_extension = '.so'
 endif
 
-dl_dep = dependency('', required: false)
-if not get_option('minimum')
-    if host_machine.system() != 'windows'
-        if meson.version().version_compare('>=0.62')
-            dl_dep = dependency('dl', required: get_option('modules'))
-        else
-            dl_dep = cc.find_library('dl', required: get_option('modules'))
-        endif
-        if dl_dep.found()
-            config_h.set10('HAVE_DLOPEN', true)
-            xml_deps += dl_dep
-        endif
-    elif get_option('modules').allowed()
-        dl_dep = declare_dependency()
+if want_modules and host_machine.system() != 'windows'
+    if meson.version().version_compare('>=0.62')
+        dl_dep = dependency('dl', required: false)
+    else
+        dl_dep = cc.find_library('dl', required: false)
+    endif
+    if dl_dep.found()
+        config_h.set10('HAVE_DLOPEN', true)
+        xml_deps += dl_dep
     endif
 endif
 
 ### threads
-threads_dep = dependency('', required: false)
-if not get_option('minimum')
-    if host_machine.system() != 'windows'
-        threads_dep = dependency('threads', required: get_option('threads'))
-        if threads_dep.found()
-            config_h.set10('HAVE_PTHREAD_H', true)
-            xml_deps += threads_dep
-        endif
-    elif get_option('threads').allowed()
-        threads_dep = declare_dependency()
-    endif
+if want_threads
+    threads_dep = dependency('threads')
+    xml_deps += threads_dep
+else
+    threads_dep = dependency('', required: false)
 endif
-
-want_thread_alloc = threads_dep.found()
 
 ### xmllint shell history
 xmllint_deps = []
-if want_history == true and want_readline == true
-    termlib_lib = ['ncurses', 'curses', 'termcap', 'terminfo', 'termlib']
 
-    foreach tl : termlib_lib
-        termlib_dep = cc.find_library(tl)
-        if (
-            termlib_dep.found()
-            and cc.has_function('tputs', dependencies: termlib_dep)
-        )
-            xmllint_deps += termlib_dep
-            config_h.set10('HAVE_LIB' + tl.underscorify().to_upper(), true)
-            break
-        endif
-    endforeach
+if want_readline
+    readline_dep = dependency('readline')
+    config_h.set('HAVE_LIBREADLINE', true)
+    xmllint_deps += readline_dep
+endif
 
-    history_dep = dependency('history', required: false)
-    if history_dep.found()
-        xmllint_deps += history_dep
-        config_h.set10('HAVE_LIBHISTORY', true)
-    endif
-
-    readline_dep = dependency('readline', required: false)
-    if readline_dep.found()
-        xmllint_deps += readline_dep
-        config_h.set10('HAVE_LIBREADLINE', true)
-    endif
+if want_history
+    history_dep = dependency('history')
+    config_h.set('HAVE_LIBHISTORY', true)
+    xmllint_deps += history_dep
 endif
 
 ### crypto
@@ -461,138 +341,50 @@ endif
 ### inet
 if want_http == true
     if sys_windows == true
-        ws2_dep = cc.find_library('ws2_32', required: true)
-        xml_deps += ws2_dep
+        net_dep = cc.find_library('ws2_32', required: true)
+        xml_deps += net_dep
     else
+        net_dep = dependency('', required: false)
         has_in_libc = cc.has_function('gethostbyname')
         if has_in_libc == false
-            nsl_dep = cc.find_library('nsl', required: true)
-            if nsl_dep.found()
+            net_dep = cc.find_library('nsl', required: true)
+            if net_dep.found()
                 has_in_nsl = cc.has_function(
                     'gethostbyname',
-                    dependencies: nsl_dep,
+                    dependencies: net_dep,
                     required: false,
                 )
                 if has_in_nsl == true
-                    xml_deps += nsl_dep
+                    xml_deps += net_dep
                 endif
             endif
-        endif
-    endif
-
-    ### socket length
-    socklen_src = '''
-#include <stddef.h>
-#ifdef _WIN32
-  #include <ws2tcpip.h>
-#else
-  #include <sys/socket.h>
-#endif
-int main()
-{
-    (void)getsockopt (1, 1, 1, NULL, (socklen_t *)NULL);
-    return 0;
-}
-    '''
-    res = cc.compiles(socklen_src, name: 'socket length as socklen_t')
-    if res == true
-        config_h.set('XML_SOCKLEN_T', 'socklen_t')
-    else
-        socklen_src = '''
-#include <stddef.h>
-#include <sys/socket.h>
-int main()
-{
-    (void)getsockopt (1, 1, 1, NULL, (size_t *)NULL);
-    return 0;
-}
-        '''
-        res = cc.compiles(socklen_src, name: 'socket length as size_t')
-        if res == true
-            config_h.set('XML_SOCKLEN_T', 'size_t')
-        else
-            socklen_src = '''
-#include <stddef.h>
-#include <sys/socket.h>
-int main()
-{
-    (void)getsockopt (1, 1, 1, NULL, (int *)NULL);
-    return 0;
-}
-            '''
-            res = cc.compiles(socklen_src, name: 'socket length as int')
-            if res == false
-                message('could not determine socket length type, use int')
-            endif
-            config_h.set('XML_SOCKLEN_T', 'int')
-        endif
-    endif
-
-    if want_ipv6 == true
-        ### IPV6 on Windows has been supported since Windows XP SP1 (around 2003)
-        ### see:
-        ### https://learn.microsoft.com/en-us/windows/win32/winsock/ipv6-support-2
-        ### nevertheless, we check it like autotools
-        ipv6_src = '''
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-#include <sys/socket.h>
-#ifdef HAVE_NETDB_H
-#include <netdb.h>
-#endif
-#endif
-int main()
-{
-    struct sockaddr_storage ss;
-    socket(AF_INET6, SOCK_STREAM, 0);
-    getaddrinfo(0, 0, 0, 0);
-    return 0;
-}
-        '''
-        res = cc.compiles(ipv6_src, name: 'support for IPV6')
-        if res == true
-            config_h.set10('SUPPORT_IP6', true)
         endif
     endif
 endif
 
 ### zlib
-if not get_option('minimum')
-    zlib_dep = dependency('zlib', required: get_option('zlib'))
-else
-    zlib_dep = dependency('', required: false)
+if want_zlib
+    xml_deps += dependency('zlib')
 endif
-xml_deps += zlib_dep
 
 ### lzma
-if not get_option('minimum')
-    lzma_dep = dependency('liblzma', required: get_option('lzma'))
-else
-    lzma_dep = dependency('', required: false)
-endif
-xml_deps += lzma_dep
-
-### iconv
-if not get_option('minimum')
-    iconv_dep = dependency('iconv', required: get_option('iconv'))
-else
-    iconv_dep = dependency('', required: false)
-endif
-xml_deps += iconv_dep
-
-if not iconv_dep.found() and want_iso8859x == false
-    want_iso8859x = false
-else
-    want_iso8859x = true
+if want_lzma
+    xml_deps += dependency('liblzma')
 endif
 
 # icu
-icu_dep = dependency('icu-i18n', method: 'pkg-config', required: get_option('icu'))
-if icu_dep.found()
-    def_var = icu_dep.get_variable(pkgconfig: 'DEFS')
-    config_dir += include_directories(def_var)
+if want_icu
+    icu_dep = dependency('icu-i18n', method: 'pkg-config')
+    defs = icu_dep.get_variable(pkgconfig: 'DEFS')
+    if cc.has_argument(defs)
+        libxml2_cflags += defs
+    endif
     xml_deps += icu_dep
+endif
+
+### iconv
+if want_iconv
+    xml_deps += dependency('iconv')
 endif
 
 subdir('include/libxml')
@@ -632,13 +424,12 @@ xml_opt_src = [
     [want_html, ['HTMLparser.c', 'HTMLtree.c']],
     [want_http, ['nanohttp.c']],
     [want_legacy, ['legacy.c']],
-    [lzma_dep.found(), ['xzlib.c']],
-    [dl_dep.found(), ['xmlmodule.c']],
+    [want_lzma, ['xzlib.c']],
+    [want_modules, ['xmlmodule.c']],
     [want_output, ['xmlsave.c']],
     [want_pattern, ['pattern.c']],
     [want_reader, ['xmlreader.c']],
     [want_regexps, ['xmlregexp.c', 'xmlunicode.c']],
-    [want_sax1, ['SAX.c']],
     [want_schemas, ['relaxng.c', 'xmlschemas.c', 'xmlschemastypes.c']],
     [want_schemas and not want_xpath, ['xpath.c']],
     [want_schematron, ['schematron.c']],
@@ -662,6 +453,7 @@ foreach file : xml_opt_src
     endif
 endforeach
 
+v_min_compat = 0
 xml_lib = library(
     'xml2',
     files(xml_src),
@@ -670,6 +462,7 @@ xml_lib = library(
     include_directories: config_dir,
     install: true,
     version: meson.project_version(),
+    soversion: v_maj + v_min_compat,
 )
 
 dep_inc = include_directories('include')
@@ -681,7 +474,7 @@ meson.override_dependency('libxml-2.0', xml_dep)
 
 executable(
     'xmllint',
-    files('xmllint.c'),
+    files('xmllint.c', 'shell.c'),
     dependencies: [xml_dep, xmllint_deps],
     include_directories: config_dir,
     install: true,
@@ -709,26 +502,25 @@ testdso_mod = shared_module(
 
 ## tests
 
-checks = [
-    'runsuite',
-    'runtest',
-    'runxmlconf',
+checks = {
+    'runsuite': [],
+    'runtest': threads_dep,
+    'runxmlconf': [],
 # Disabled for now, see #694
-#    'testModule',
-    'testThreads',
-    'testapi',
-    'testchar',
-    'testdict',
-    'testlimits',
-    'testparser',
-    'testrecurse',
-]
+#    'testModule': [],
+    'testapi': [],
+    'testchar': [],
+    'testdict': [],
+    'testlimits': [],
+    'testparser': [],
+    'testrecurse': [],
+}
 
-foreach check : checks
+foreach check, deps : checks
     exe = executable(
         check,
         files(check + '.c'),
-        dependencies: [threads_dep, xml_dep],
+        dependencies: [deps, xml_dep],
         include_directories: config_dir,
     )
     if check != 'testlimits'
@@ -752,7 +544,8 @@ pkgmod.generate(
     description: 'libXML library version2.',
     filebase: 'libxml-2.0',
     name: 'libXML',
-    variables: 'modules=' + dl_dep.found().to_string('1', '0'),
+    subdirs:  [meson.project_name()],
+    variables: 'modules=' + want_modules.to_string('1', '0'),
 )
 
 ## libxml2-config.cmake file
@@ -762,12 +555,12 @@ config_cmake.set('LIBXML_MAJOR_VERSION', v_maj)
 config_cmake.set('LIBXML_MINOR_VERSION', v_min)
 config_cmake.set('LIBXML_MICRO_VERSION', v_mic)
 config_cmake.set('VERSION', meson.project_version())
-config_cmake.set('WITH_ICONV', iconv_dep.found().to_int().to_string())
-config_cmake.set('WITH_ICU', icu_dep.found().to_int().to_string())
-config_cmake.set('WITH_LZMA', lzma_dep.found().to_int().to_string())
-config_cmake.set('WITH_MODULES', dl_dep.found().to_int().to_string())
-config_cmake.set('WITH_THREADS', threads_dep.found().to_int().to_string())
-config_cmake.set('WITH_ZLIB', zlib_dep.found().to_int().to_string())
+config_cmake.set('WITH_ICONV', want_iconv.to_int().to_string())
+config_cmake.set('WITH_ICU', want_icu.to_int().to_string())
+config_cmake.set('WITH_LZMA', want_lzma.to_int().to_string())
+config_cmake.set('WITH_MODULES', want_modules.to_int().to_string())
+config_cmake.set('WITH_THREADS', want_threads.to_int().to_string())
+config_cmake.set('WITH_ZLIB', want_zlib.to_int().to_string())
 config_cmake.set('XML_CFLAGS', xml_cflags)
 configure_file(
     input: 'libxml2-config.cmake.in',
@@ -775,17 +568,6 @@ configure_file(
     configuration: config_cmake,
     install_dir: dir_lib / 'cmake' / 'libxml2',
 )
-
-install_data(files('libxml.m4'), install_dir: dir_data / 'aclocal')
-
-if support_tls == false
-    message('===============================================================')
-    message('WARNING: Your C compiler appears to not support thread-local')
-    message('storage. Future versions of libxml2 will require this feature')
-    message('for multi-threading.')
-    message('===============================================================\n',
-    )
-endif
 
 # summary
 
@@ -798,13 +580,12 @@ summary(
         'history': want_history,
         'html': want_html,
         'http': want_http,
-        'iconv': iconv_dep.found(),
-        'icu': icu_dep.found(),
-        'ipv6': want_ipv6,
+        'iconv': want_iconv,
+        'icu': want_icu,
         'iso8859x': want_iso8859x,
         'legacy': want_legacy,
-        'lzma': lzma_dep.found(),
-        'modules': dl_dep.found(),
+        'lzma': want_lzma,
+        'modules': want_modules,
         'output': want_output,
         'pattern': want_pattern,
         'push': want_push,
@@ -815,16 +596,15 @@ summary(
         'sax1': want_sax1,
         'schemas': want_schemas,
         'schematron': want_schematron,
-        'threads': threads_dep.found(),
+        'threads': want_threads,
         'thread-alloc': want_thread_alloc,
         'tls': want_tls,
-        'tree': want_tree,
         'valid': want_valid,
         'writer': want_writer,
         'xinclude': want_xinclude,
         'xpath': want_xpath,
         'xptr': want_xptr,
-        'zlib': zlib_dep.found(),
+        'zlib': want_zlib,
     },
     section: 'Configuration Options Summary:',
 )

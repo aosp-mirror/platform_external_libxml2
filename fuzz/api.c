@@ -2496,7 +2496,7 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
                 list = xmlStringGetNodeList(
                     getDoc(0),
                     value = getStr(0));
-                oomReport = (value != NULL && list == NULL);
+                oomReport = (value != NULL && value[0] != 0 && list == NULL);
                 xmlFreeNodeList(list);
                 endOp();
                 break;
@@ -2514,37 +2514,45 @@ LLVMFuzzerTestOneInput(const char *data, size_t size) {
                     doc,
                     value,
                     xmlStrlen(value));
-                oomReport = (value != NULL && list == NULL);
+                oomReport = (value != NULL && value[0] != 0 && list == NULL);
                 xmlFreeNodeList(list);
                 endOp();
                 break;
             }
 
             case OP_XML_NODE_LIST_GET_STRING: {
+                xmlDocPtr doc;
+                xmlNodePtr list;
                 xmlChar *string;
 
                 startOp("xmlNodeListGetString");
                 incStrIdx();
+                doc = getDoc(0);
+                list = getNode(1);
                 string = xmlNodeListGetString(
-                    getDoc(0),
-                    getNode(1),
+                    doc,
+                    list,
                     getInt(0));
-                oomReport = (string == NULL);
+                oomReport = (list != NULL && string == NULL);
                 moveStr(0, string);
                 endOp();
                 break;
             }
 
             case OP_XML_NODE_LIST_GET_RAW_STRING: {
+                xmlDocPtr doc;
+                xmlNodePtr list;
                 xmlChar *string;
 
                 startOp("xmlNodeListGetRawString");
                 incStrIdx();
+                doc = getDoc(0);
+                list = getNode(1);
                 string = xmlNodeListGetRawString(
-                    getDoc(0),
-                    getNode(1),
+                    doc,
+                    list,
                     getInt(0));
-                oomReport = (string == NULL);
+                oomReport = (list != NULL && string == NULL);
                 moveStr(0, string);
                 endOp();
                 break;

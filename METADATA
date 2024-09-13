@@ -4,7 +4,7 @@
 
 # This project was upgraded with external_updater.
 # Usage: tools/external_updater/updater.sh update external/libxml2
-# For more info, check https://cs.android.com/android/platform/superproject/+/main:tools/external_updater/README.md
+# For more info, check https://cs.android.com/android/platform/superproject/main/+/main:tools/external_updater/README.md
 
 name: "libxml2"
 description: "Libxml2 is the XML C parser and toolkit developed for the Gnome project (but usable outside of the Gnome platform), it is free software available under the MIT License."
@@ -16,13 +16,13 @@ third_party {
   }
   last_upgrade_date {
     year: 2024
-    month: 6
-    day: 13
+    month: 9
+    day: 11
   }
   homepage: "http://www.xmlsoft.org/"
   identifier {
     type: "Git"
     value: "https://github.com/GNOME/libxml2/"
-    version: "3b4a84e4b71010012ac94eb32a04965af8ec93ef"
+    version: "5e7874015ef5ed8b2705eb2f7b0960f56f7760ea"
   }
 }
