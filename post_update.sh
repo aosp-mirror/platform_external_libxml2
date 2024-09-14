@@ -2,11 +2,6 @@
 
 set -e
 
-if [[ "${TARGET_PRODUCT}" != "aosp_x86" ]]; then
-  echo "Please run 'aosp_x86-trunk_staging-eng' first." >&2
-  exit 1
-fi
-
 T="${ANDROID_BUILD_TOP}"
 cd $(dirname "$0")
 
