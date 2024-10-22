@@ -36,7 +36,7 @@
  *
  * extra version information, used to show a git commit description
  */
-#define LIBXML_VERSION_EXTRA "-GITv2.13.0-1651-gccfe2bdd"
+#define LIBXML_VERSION_EXTRA "-GITv2.13.0-1719-g0a6934a2"
 
 /**
  * LIBXML_TEST_VERSION:
