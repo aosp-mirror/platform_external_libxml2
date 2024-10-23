@@ -245,10 +245,10 @@ xmlSAX2InternalSubset(void *ctx, const xmlChar *name,
 
     if (ctxt->myDoc == NULL)
 	return;
+    if ((ctxt->html) && (ctxt->instate != XML_PARSER_MISC))
+        return;
     dtd = xmlGetIntSubset(ctxt->myDoc);
     if (dtd != NULL) {
-	if (ctxt->html)
-	    return;
 	xmlUnlinkNode((xmlNodePtr) dtd);
 	xmlFreeDtd(dtd);
 	ctxt->myDoc->intSubset = NULL;
@@ -1773,7 +1773,7 @@ xmlSAX2TextNode(xmlParserCtxtPtr ctxt, const xmlChar *str, int len) {
      * intern the formatting blanks found between tags, or the
      * very short strings
      */
-    if (ctxt->dictNames) {
+    if ((!ctxt->html) && (ctxt->dictNames)) {
         xmlChar cur = str[len];
 
 	if ((len < (int) (2 * sizeof(void *))) &&
