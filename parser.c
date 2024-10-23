@@ -62,6 +62,7 @@
 #include <libxml/xmlIO.h>
 #include <libxml/uri.h>
 #include <libxml/SAX2.h>
+#include <libxml/HTMLparser.h>
 #ifdef LIBXML_CATALOG_ENABLED
 #include <libxml/catalog.h>
 #endif
@@ -113,10 +114,6 @@ struct _xmlParserNsData {
     unsigned elementId;
     int defaultNsIndex;
     int minNsIndex;
-};
-
-struct _xmlAttrHashBucket {
-    int index;
 };
 
 static int
@@ -9392,11 +9389,11 @@ next_attr:
                     nsIndex = NS_INDEX_EMPTY;
                     nsuri = NULL;
                     uriHashValue = URI_HASH_EMPTY;
-                } if (aprefix == ctxt->str_xml) {
+                } else if (aprefix == ctxt->str_xml) {
                     nsIndex = NS_INDEX_XML;
                     nsuri = ctxt->str_xml_ns;
                     uriHashValue = URI_HASH_XML;
-                } else if (aprefix != NULL) {
+                } else {
                     nsIndex = xmlParserNsLookup(ctxt, &attr->prefix, NULL);
                     if ((nsIndex == INT_MAX) ||
                         (nsIndex < ctxt->nsdb->minNsIndex)) {
@@ -13376,7 +13373,10 @@ xmlCtxtSetOptionsInternal(xmlParserCtxtPtr ctxt, int options, int keepMask)
               XML_PARSE_OLDSAX |
               XML_PARSE_IGNORE_ENC |
               XML_PARSE_BIG_LINES |
-              XML_PARSE_NO_XXE;
+              XML_PARSE_NO_XXE |
+              XML_PARSE_NO_UNZIP |
+              XML_PARSE_NO_SYS_CATALOG |
+              XML_PARSE_NO_CATALOG_PI;
 
     ctxt->options = (ctxt->options & keepMask) | (options & allMask);
 
@@ -13596,6 +13596,11 @@ xmlCtxtSetOptionsInternal(xmlParserCtxtPtr ctxt, int options, int keepMask)
 int
 xmlCtxtSetOptions(xmlParserCtxtPtr ctxt, int options)
 {
+#ifdef LIBXML_HTML_ENABLED
+    if ((ctxt != NULL) && (ctxt->html))
+        return(htmlCtxtSetOptions(ctxt, options));
+#endif
+
     return(xmlCtxtSetOptionsInternal(ctxt, options, 0));
 }
 
@@ -13647,6 +13652,11 @@ int
 xmlCtxtUseOptions(xmlParserCtxtPtr ctxt, int options)
 {
     int keepMask;
+
+#ifdef LIBXML_HTML_ENABLED
+    if ((ctxt != NULL) && (ctxt->html))
+        return(htmlCtxtUseOptions(ctxt, options));
+#endif
 
     /*
      * For historic reasons, some options can only be enabled.
