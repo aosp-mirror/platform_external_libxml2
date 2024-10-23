@@ -290,9 +290,12 @@ skip_impl = (
 )
 
 deprecated_funcs = {
+    'htmlAutoCloseTag': True,
     'htmlDefaultSAXHandlerInit': True,
     'htmlHandleOmittedElem': True,
     'htmlInitAutoClose': True,
+    'htmlIsAutoClosed': True,
+    'htmlIsBooleanAttr': True,
     'htmlParseCharRef': True,
     'htmlParseElement': True,
     'namePop': True,
@@ -407,6 +410,7 @@ deprecated_funcs = {
     'xmlValidatePushElement': True,
     'xmlValidateRoot': True,
     'xmlValidate': True,
+    'xmlXPathEvalExpr': True,
     'xmlXPathInit': True,
     'xmlXPtrEvalRangePredicate': True,
     'xmlXPtrNewCollapsedRange': True,
