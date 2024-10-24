@@ -475,7 +475,7 @@ xmlFdOpen(const char *filename, int write, int *out) {
             flags = _O_WRONLY | _O_CREAT | _O_TRUNC;
         else
             flags = _O_RDONLY;
-	fd = _wopen(wpath, flags | _O_BINARY, 0777);
+	fd = _wopen(wpath, flags | _O_BINARY, 0666);
         xmlFree(wpath);
     }
 #else
@@ -483,7 +483,7 @@ xmlFdOpen(const char *filename, int write, int *out) {
         flags = O_WRONLY | O_CREAT | O_TRUNC;
     else
         flags = O_RDONLY;
-    fd = open(filename, flags, 0777);
+    fd = open(filename, flags, 0666);
 #endif /* WIN32 */
 
     if (fd < 0) {
@@ -1381,6 +1381,8 @@ xmlParserInputBufferCreateUrl(const char *URI, xmlCharEncoding enc,
     int ret;
     int i;
 
+    xmlInitParser();
+
     *out = NULL;
     if (URI == NULL)
         return(XML_ERR_ARGUMENT);
@@ -1468,6 +1470,8 @@ __xmlOutputBufferCreateFilename(const char *URI,
     xmlURIPtr puri;
     int i = 0;
     char *unescaped = NULL;
+
+    xmlInitParser();
 
     if (URI == NULL)
         return(NULL);
@@ -2229,98 +2233,86 @@ xmlParserInputBufferRead(xmlParserInputBufferPtr in, int len) {
  */
 int
 xmlOutputBufferWrite(xmlOutputBufferPtr out, int len, const char *data) {
+    xmlBufPtr buf = NULL;
     size_t written = 0;
+    int ret;
 
     if ((out == NULL) || (out->error))
         return(-1);
     if (len < 0)
         return(0);
 
-    while (len > 0) {
-        xmlBufPtr buf = NULL;
-        int chunk;
-        int ret;
+    ret = xmlBufAdd(out->buffer, (const xmlChar *) data, len);
+    if (ret != 0) {
+        out->error = XML_ERR_NO_MEMORY;
+        return(-1);
+    }
 
-	chunk = len;
-	if (chunk > 256 * 1024)
-	    chunk = 256 * 1024;
-
-        ret = xmlBufAdd(out->buffer, (const xmlChar *) data, chunk);
-        if (ret != 0) {
-            out->error = XML_ERR_NO_MEMORY;
-            return(-1);
+    /*
+     * first handle encoding stuff.
+     */
+    if (out->encoder != NULL) {
+        /*
+         * Store the data in the incoming raw buffer
+         */
+        if (out->conv == NULL) {
+            out->conv = xmlBufCreate(MINLEN);
+            if (out->conv == NULL) {
+                out->error = XML_ERR_NO_MEMORY;
+                return(-1);
+            }
         }
 
-	/*
-	 * first handle encoding stuff.
-	 */
-	if (out->encoder != NULL) {
-	    /*
-	     * Store the data in the incoming raw buffer
-	     */
-	    if (out->conv == NULL) {
-		out->conv = xmlBufCreate(MINLEN);
-                if (out->conv == NULL) {
-                    out->error = XML_ERR_NO_MEMORY;
-                    return(-1);
-                }
-	    }
+        /*
+         * convert as much as possible to the parser reading buffer.
+         */
+        if (xmlBufUse(out->buffer) < 256) {
+            ret = 0;
+        } else {
+            ret = xmlCharEncOutput(out, 0);
+            if (ret < 0)
+                return(-1);
+        }
 
-	    /*
-	     * convert as much as possible to the parser reading buffer.
-	     */
-            if (xmlBufUse(out->buffer) < 256) {
-                ret = 0;
-            } else {
-                ret = xmlCharEncOutput(out, 0);
-                if (ret < 0)
-                    return(-1);
+        if (out->writecallback)
+            buf = out->conv;
+        else
+            written = ret;
+    } else {
+        if (out->writecallback)
+            buf = out->buffer;
+        else
+            written = len;
+    }
+
+    if ((buf != NULL) && (out->writecallback)) {
+        /*
+         * second write the stuff to the I/O channel
+         */
+        while (1) {
+            size_t nbchars = xmlBufUse(buf);
+
+            if (nbchars < MINLEN)
+                break;
+
+            ret = out->writecallback(out->context,
+                       (const char *)xmlBufContent(buf), nbchars);
+            if (ret < 0) {
+                out->error = (ret == -1) ? XML_IO_WRITE : -ret;
+                return(-1);
+            }
+            if ((ret == 0) || ((size_t) ret > nbchars)) {
+                out->error = XML_ERR_INTERNAL_ERROR;
+                return(-1);
             }
 
-            if (out->writecallback)
-                buf = out->conv;
+            xmlBufShrink(buf, ret);
+            written += ret;
+            if (out->written > INT_MAX - ret)
+                out->written = INT_MAX;
             else
-                written += ret;
-	} else {
-            if (out->writecallback)
-	        buf = out->buffer;
-            else
-                written += chunk;
-	}
-	data += chunk;
-	len -= chunk;
-
-	if ((buf != NULL) && (out->writecallback)) {
-	    /*
-	     * second write the stuff to the I/O channel
-	     */
-	    while (1) {
-                size_t nbchars = xmlBufUse(buf);
-
-                if (nbchars < MINLEN)
-                    break;
-                if (nbchars > 256 * 1024)
-                    nbchars = 256 * 1024;
-
-		ret = out->writecallback(out->context,
-                           (const char *)xmlBufContent(buf), nbchars);
-                if (ret < 0) {
-                    out->error = (ret == -1) ? XML_IO_WRITE : -ret;
-                    return(-1);
-                }
-                if ((ret == 0) || ((size_t) ret > nbchars)) {
-                    out->error = XML_ERR_INTERNAL_ERROR;
-                    return(-1);
-                }
-
-		xmlBufShrink(buf, ret);
-	        written += ret;
-                if (out->written > INT_MAX - ret)
-                    out->written = INT_MAX;
-                else
-                    out->written += ret;
-            }
-	}
+                out->written += ret;
+        }
     }
 
     return(written <= INT_MAX ? written : INT_MAX);
@@ -2646,6 +2638,8 @@ int
 xmlRegisterInputCallbacks(xmlInputMatchCallback matchFunc,
 	xmlInputOpenCallback openFunc, xmlInputReadCallback readFunc,
 	xmlInputCloseCallback closeFunc) {
+    xmlInitParser();
+
     if (xmlInputCallbackNr >= MAX_INPUT_CALLBACK) {
 	return(-1);
     }
@@ -2677,6 +2671,8 @@ xmlRegisterDefaultInputCallbacks(void) {
 int
 xmlPopInputCallbacks(void)
 {
+    xmlInitParser();
+
     if (xmlInputCallbackNr <= 0)
         return(-1);
 
@@ -2694,6 +2690,8 @@ xmlPopInputCallbacks(void)
 void
 xmlCleanupInputCallbacks(void)
 {
+    xmlInitParser();
+
     xmlInputCallbackNr = 0;
 }
 
@@ -2713,6 +2711,8 @@ int
 xmlRegisterOutputCallbacks(xmlOutputMatchCallback matchFunc,
 	xmlOutputOpenCallback openFunc, xmlOutputWriteCallback writeFunc,
 	xmlOutputCloseCallback closeFunc) {
+    xmlInitParser();
+
     if (xmlOutputCallbackNr >= MAX_OUTPUT_CALLBACK) {
 	return(-1);
     }
@@ -2744,6 +2744,8 @@ xmlRegisterDefaultOutputCallbacks (void) {
 int
 xmlPopOutputCallbacks(void)
 {
+    xmlInitParser();
+
     if (xmlOutputCallbackNr <= 0)
         return(-1);
 
@@ -2761,6 +2763,8 @@ xmlPopOutputCallbacks(void)
 void
 xmlCleanupOutputCallbacks(void)
 {
+    xmlInitParser();
+
     xmlOutputCallbackNr = 0;
 }
 
