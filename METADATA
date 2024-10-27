@@ -16,13 +16,13 @@ third_party {
   }
   last_upgrade_date {
     year: 2024
-    month: 9
-    day: 11
+    month: 10
+    day: 22
   }
   homepage: "http://www.xmlsoft.org/"
   identifier {
     type: "Git"
     value: "https://github.com/GNOME/libxml2/"
-    version: "5e7874015ef5ed8b2705eb2f7b0960f56f7760ea"
+    version: "b7c0f9d2dd0641822eed7a2316109aeb19bf650b"
   }
 }
