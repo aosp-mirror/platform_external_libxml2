@@ -62,6 +62,7 @@
 #include <libxml/xmlIO.h>
 #include <libxml/uri.h>
 #include <libxml/SAX2.h>
+#include <libxml/HTMLparser.h>
 #ifdef LIBXML_CATALOG_ENABLED
 #include <libxml/catalog.h>
 #endif
@@ -113,10 +114,6 @@ struct _xmlParserNsData {
     unsigned elementId;
     int defaultNsIndex;
     int minNsIndex;
-};
-
-struct _xmlAttrHashBucket {
-    int index;
 };
 
 static int
@@ -1959,6 +1956,11 @@ inputPush(xmlParserCtxtPtr ctxt, xmlParserInputPtr value)
         }
     }
 
+    if (ctxt->input_id >= INT_MAX) {
+        xmlFatalErrMsg(ctxt, XML_ERR_RESOURCE_LIMIT, "Input ID overflow\n");
+        return(-1);
+    }
+
     ctxt->inputTab[ctxt->inputNr] = value;
     ctxt->input = value;
 
@@ -1966,6 +1968,13 @@ inputPush(xmlParserCtxtPtr ctxt, xmlParserInputPtr value)
         xmlFree(ctxt->directory);
         ctxt->directory = directory;
     }
+
+    /*
+     * Internally, the input ID is only used to detect parameter entity
+     * boundaries. But there are entity loaders in downstream code that
+     * detect the main document by checking for "input_id == 1".
+     */
+    value->id = ctxt->input_id++;
 
     return(ctxt->inputNr++);
 }
@@ -7609,7 +7618,7 @@ xmlHandleUndeclaredEntity(xmlParserCtxtPtr ctxt, const xmlChar *name) {
 
 static xmlEntityPtr
 xmlLookupGeneralEntity(xmlParserCtxtPtr ctxt, const xmlChar *name, int inAttr) {
-    xmlEntityPtr ent;
+    xmlEntityPtr ent = NULL;
 
     /*
      * Predefined entities override any extra definition
@@ -7877,19 +7886,11 @@ xmlParsePEReference(xmlParserCtxtPtr ctxt)
                 return;
             }
 
-            if (ctxt->input_id >= INT_MAX) {
-                xmlFatalErr(ctxt, XML_ERR_RESOURCE_LIMIT,
-                            "Input ID overflow\n");
-                return;
-            }
-
 	    input = xmlNewEntityInputStream(ctxt, entity);
 	    if (xmlPushInput(ctxt, input) < 0) {
                 xmlFreeInputStream(input);
 		return;
             }
-
-            input->id = ++ctxt->input_id;
 
             entity->flags |= XML_ENT_EXPANDING;
 
@@ -9372,8 +9373,8 @@ next_attr:
 	if (defaults != NULL) {
 	    for (i = 0; i < defaults->nbAttrs; i++) {
                 xmlDefAttr *attr = &defaults->attrs[i];
-                const xmlChar *nsuri;
-                unsigned hashValue, uriHashValue;
+                const xmlChar *nsuri = NULL;
+                unsigned hashValue, uriHashValue = 0;
                 int res;
 
 	        attname = attr->name.name;
@@ -9388,11 +9389,11 @@ next_attr:
                     nsIndex = NS_INDEX_EMPTY;
                     nsuri = NULL;
                     uriHashValue = URI_HASH_EMPTY;
-                } if (aprefix == ctxt->str_xml) {
+                } else if (aprefix == ctxt->str_xml) {
                     nsIndex = NS_INDEX_XML;
                     nsuri = ctxt->str_xml_ns;
                     uriHashValue = URI_HASH_XML;
-                } else if (aprefix != NULL) {
+                } else {
                     nsIndex = xmlParserNsLookup(ctxt, &attr->prefix, NULL);
                     if ((nsIndex == INT_MAX) ||
                         (nsIndex < ctxt->nsdb->minNsIndex)) {
@@ -11010,74 +11011,6 @@ xmlParseLookupInternalSubset(xmlParserCtxtPtr ctxt) {
 }
 
 /**
- * xmlCheckCdataPush:
- * @cur: pointer to the block of characters
- * @len: length of the block in bytes
- * @complete: 1 if complete CDATA block is passed in, 0 if partial block
- *
- * Check that the block of characters is okay as SCdata content [20]
- *
- * Returns the number of bytes to pass if okay, a negative index where an
- *         UTF-8 error occurred otherwise
- */
-static int
-xmlCheckCdataPush(const xmlChar *utf, int len, int complete) {
-    int ix;
-    unsigned char c;
-    int codepoint;
-
-    if ((utf == NULL) || (len <= 0))
-        return(0);
-
-    for (ix = 0; ix < len;) {      /* string is 0-terminated */
-        c = utf[ix];
-        if ((c & 0x80) == 0x00) {	/* 1-byte code, starts with 10 */
-	    if (c >= 0x20)
-		ix++;
-	    else if ((c == 0xA) || (c == 0xD) || (c == 0x9))
-	        ix++;
-	    else
-	        return(-ix);
-	} else if ((c & 0xe0) == 0xc0) {/* 2-byte code, starts with 110 */
-	    if (ix + 2 > len) return(complete ? -ix : ix);
-	    if ((utf[ix+1] & 0xc0 ) != 0x80)
-	        return(-ix);
-	    codepoint = (utf[ix] & 0x1f) << 6;
-	    codepoint |= utf[ix+1] & 0x3f;
-	    if (!xmlIsCharQ(codepoint))
-	        return(-ix);
-	    ix += 2;
-	} else if ((c & 0xf0) == 0xe0) {/* 3-byte code, starts with 1110 */
-	    if (ix + 3 > len) return(complete ? -ix : ix);
-	    if (((utf[ix+1] & 0xc0) != 0x80) ||
-	        ((utf[ix+2] & 0xc0) != 0x80))
-		    return(-ix);
-	    codepoint = (utf[ix] & 0xf) << 12;
-	    codepoint |= (utf[ix+1] & 0x3f) << 6;
-	    codepoint |= utf[ix+2] & 0x3f;
-	    if (!xmlIsCharQ(codepoint))
-	        return(-ix);
-	    ix += 3;
-	} else if ((c & 0xf8) == 0xf0) {/* 4-byte code, starts with 11110 */
-	    if (ix + 4 > len) return(complete ? -ix : ix);
-	    if (((utf[ix+1] & 0xc0) != 0x80) ||
-	        ((utf[ix+2] & 0xc0) != 0x80) ||
-		((utf[ix+3] & 0xc0) != 0x80))
-		    return(-ix);
-	    codepoint = (utf[ix] & 0x7) << 18;
-	    codepoint |= (utf[ix+1] & 0x3f) << 12;
-	    codepoint |= (utf[ix+2] & 0x3f) << 6;
-	    codepoint |= utf[ix+3] & 0x3f;
-	    if (!xmlIsCharQ(codepoint))
-	        return(-ix);
-	    ix += 4;
-	} else				/* unknown encoding */
-	    return(-ix);
-      }
-      return(ix);
-}
-
-/**
  * xmlParseTryOrFinish:
  * @ctxt:  an XML parser context
  * @terminate:  last chunk indicator
@@ -11304,8 +11237,12 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
                                 (ctxt->input->cur[6] == 'T') &&
                                 (ctxt->input->cur[7] == 'A') &&
                                 (ctxt->input->cur[8] == '[')) {
-                                SKIP(9);
+                                if ((!terminate) &&
+                                    (!xmlParseLookupString(ctxt, 9, "]]>", 3)))
+                                    goto done;
                                 ctxt->instate = XML_PARSER_CDATA_SECTION;
+                                xmlParseCDSect(ctxt);
+                                ctxt->instate = XML_PARSER_CONTENT;
                                 break;
                             }
                         }
@@ -11357,89 +11294,6 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
 		    ctxt->instate = XML_PARSER_CONTENT;
 		}
 		break;
-            case XML_PARSER_CDATA_SECTION: {
-	        /*
-		 * The Push mode need to have the SAX callback for
-		 * cdataBlock merge back contiguous callbacks.
-		 */
-		const xmlChar *term;
-
-                if (terminate) {
-                    /*
-                     * Don't call xmlParseLookupString. If 'terminate'
-                     * is set, checkIndex is invalid.
-                     */
-                    term = BAD_CAST strstr((const char *) ctxt->input->cur,
-                                           "]]>");
-                } else {
-		    term = xmlParseLookupString(ctxt, 0, "]]>", 3);
-                }
-
-		if (term == NULL) {
-		    int tmp, size;
-
-                    if (terminate) {
-                        /* Unfinished CDATA section */
-                        size = ctxt->input->end - ctxt->input->cur;
-                    } else {
-                        if (avail < XML_PARSER_BIG_BUFFER_SIZE + 2)
-                            goto done;
-                        ctxt->checkIndex = 0;
-                        /* XXX: Why don't we pass the full buffer? */
-                        size = XML_PARSER_BIG_BUFFER_SIZE;
-                    }
-                    tmp = xmlCheckCdataPush(ctxt->input->cur, size, 0);
-                    if (tmp <= 0) {
-                        tmp = -tmp;
-                        ctxt->input->cur += tmp;
-                        goto encoding_error;
-                    }
-                    if ((ctxt->sax != NULL) && (!ctxt->disableSAX)) {
-                        if (ctxt->sax->cdataBlock != NULL)
-                            ctxt->sax->cdataBlock(ctxt->userData,
-                                                  ctxt->input->cur, tmp);
-                        else if (ctxt->sax->characters != NULL)
-                            ctxt->sax->characters(ctxt->userData,
-                                                  ctxt->input->cur, tmp);
-                    }
-                    SKIPL(tmp);
-		} else {
-                    int base = term - CUR_PTR;
-		    int tmp;
-
-		    tmp = xmlCheckCdataPush(ctxt->input->cur, base, 1);
-		    if ((tmp < 0) || (tmp != base)) {
-			tmp = -tmp;
-			ctxt->input->cur += tmp;
-			goto encoding_error;
-		    }
-		    if ((ctxt->sax != NULL) && (base == 0) &&
-		        (ctxt->sax->cdataBlock != NULL) &&
-		        (!ctxt->disableSAX)) {
-			/*
-			 * Special case to provide identical behaviour
-			 * between pull and push parsers on enpty CDATA
-			 * sections
-			 */
-			 if ((ctxt->input->cur - ctxt->input->base >= 9) &&
-			     (!strncmp((const char *)&ctxt->input->cur[-9],
-			               "<![CDATA[", 9)))
-			     ctxt->sax->cdataBlock(ctxt->userData,
-			                           BAD_CAST "", 0);
-		    } else if ((ctxt->sax != NULL) && (base > 0) &&
-			(!ctxt->disableSAX)) {
-			if (ctxt->sax->cdataBlock != NULL)
-			    ctxt->sax->cdataBlock(ctxt->userData,
-						  ctxt->input->cur, base);
-			else if (ctxt->sax->characters != NULL)
-			    ctxt->sax->characters(ctxt->userData,
-						  ctxt->input->cur, base);
-		    }
-		    SKIPL(base + 3);
-		    ctxt->instate = XML_PARSER_CONTENT;
-		}
-		break;
-	    }
             case XML_PARSER_MISC:
             case XML_PARSER_PROLOG:
             case XML_PARSER_EPILOG:
@@ -11542,13 +11396,6 @@ xmlParseTryOrFinish(xmlParserCtxtPtr ctxt, int terminate) {
     }
 done:
     return(ret);
-encoding_error:
-    /* Only report the first error */
-    if ((ctxt->input->flags & XML_INPUT_ENCODING_ERROR) == 0) {
-        xmlCtxtErrIO(ctxt, XML_ERR_INVALID_ENCODING, NULL);
-        ctxt->input->flags |= XML_INPUT_ENCODING_ERROR;
-    }
-    return(0);
 }
 
 /**
@@ -13526,7 +13373,10 @@ xmlCtxtSetOptionsInternal(xmlParserCtxtPtr ctxt, int options, int keepMask)
               XML_PARSE_OLDSAX |
               XML_PARSE_IGNORE_ENC |
               XML_PARSE_BIG_LINES |
-              XML_PARSE_NO_XXE;
+              XML_PARSE_NO_XXE |
+              XML_PARSE_NO_UNZIP |
+              XML_PARSE_NO_SYS_CATALOG |
+              XML_PARSE_NO_CATALOG_PI;
 
     ctxt->options = (ctxt->options & keepMask) | (options & allMask);
 
@@ -13623,6 +13473,8 @@ xmlCtxtSetOptionsInternal(xmlParserCtxtPtr ctxt, int options, int keepMask)
  * XML_PARSE_NO_XXE
  *
  * Disables loading of external DTDs or entities.
+ *
+ * Available since 2.13.0.
  *
  * XML_PARSE_NOERROR
  *
@@ -13744,6 +13596,11 @@ xmlCtxtSetOptionsInternal(xmlParserCtxtPtr ctxt, int options, int keepMask)
 int
 xmlCtxtSetOptions(xmlParserCtxtPtr ctxt, int options)
 {
+#ifdef LIBXML_HTML_ENABLED
+    if ((ctxt != NULL) && (ctxt->html))
+        return(htmlCtxtSetOptions(ctxt, options));
+#endif
+
     return(xmlCtxtSetOptionsInternal(ctxt, options, 0));
 }
 
@@ -13795,6 +13652,11 @@ int
 xmlCtxtUseOptions(xmlParserCtxtPtr ctxt, int options)
 {
     int keepMask;
+
+#ifdef LIBXML_HTML_ENABLED
+    if ((ctxt != NULL) && (ctxt->html))
+        return(htmlCtxtUseOptions(ctxt, options));
+#endif
 
     /*
      * For historic reasons, some options can only be enabled.
