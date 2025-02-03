@@ -20,6 +20,37 @@
 #include "private/globals.h"
 #include "private/string.h"
 
+/**
+ * xmlIsCatastrophicError:
+ * @level:  error level
+ * @code:  error code
+ *
+ * Returns true if an error is catastrophic.
+ */
+int
+xmlIsCatastrophicError(int level, int code) {
+    int fatal = 0;
+
+    if (level != XML_ERR_FATAL)
+        return(0);
+
+    switch (code) {
+        case XML_ERR_NO_MEMORY:
+        /* case XML_ERR_RESOURCE_LIMIT: */
+        case XML_ERR_SYSTEM:
+        case XML_ERR_ARGUMENT:
+        case XML_ERR_INTERNAL_ERROR:
+            fatal = 1;
+            break;
+        default:
+            if ((code >= 1500) && (code <= 1599))
+                fatal = 1;
+            break;
+    }
+
+    return(fatal);
+}
+
 /************************************************************************
  *									*
  *			Error struct					*
@@ -750,7 +781,7 @@ xmlVRaiseError(xmlStructuredErrorFunc schannel,
  * @channel: the old callback channel
  * @data: the callback data
  * @ctx: the parser context or NULL
- * @nod: the node or NULL
+ * @node: the node or NULL
  * @domain: the domain for the error
  * @code: the code for the error
  * @level: the xmlErrorLevel for the error
@@ -1329,11 +1360,25 @@ xmlErrString(xmlParserErrors code) {
     return(errmsg);
 }
 
+/**
+ * xmlVPrintErrorMessage:
+ * @fmt:  printf format string
+ * @ap:  arguments
+ *
+ * Prints to stderr.
+ */
 void
 xmlVPrintErrorMessage(const char *fmt, va_list ap) {
     vfprintf(stderr, fmt, ap);
 }
 
+/**
+ * xmlPrintErrorMessage:
+ * @fmt:  printf format string
+ * @...:  arguments
+ *
+ * Prints to stderr.
+ */
 void
 xmlPrintErrorMessage(const char *fmt, ...) {
     va_list ap;
@@ -1343,6 +1388,13 @@ xmlPrintErrorMessage(const char *fmt, ...) {
     va_end(ap);
 }
 
+/**
+ * xmlAbort:
+ * @fmt:  printf format string
+ * @...:  arguments
+ *
+ * Print message to stderr and abort.
+ */
 void
 xmlAbort(const char *fmt, ...) {
     va_list ap;
