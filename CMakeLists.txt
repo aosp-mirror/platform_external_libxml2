@@ -10,6 +10,8 @@ endif()
 
 project(libxml2 VERSION ${VERSION} LANGUAGES C)
 
+set(CMAKE_C_STANDARD 11)
+
 include(CheckCSourceCompiles)
 include(CheckFunctionExists)
 include(CheckIncludeFiles)
@@ -23,10 +25,8 @@ include(FindPkgConfig)
 include(GNUInstallDirs)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
-set(LIBXML2_WITH_AUTOMATA ON)
 option(LIBXML2_WITH_CATALOG "Add the Catalog support" ON)
 option(LIBXML2_WITH_DEBUG "Add the debugging module" ON)
-set(LIBXML2_WITH_EXPR ON)
 option(LIBXML2_WITH_HTML "Add the HTML support" ON)
 option(LIBXML2_WITH_HTTP "Add the HTTP support" OFF)
 option(LIBXML2_WITH_ICONV "Add ICONV support" ON)
@@ -46,8 +46,8 @@ option(LIBXML2_WITH_SAX1 "Add the older SAX1 interface" ON)
 option(LIBXML2_WITH_TESTS "Build tests" ON)
 option(LIBXML2_WITH_THREADS "Add multithread support" ON)
 option(LIBXML2_WITH_TLS "Enable thread-local storage" OFF)
-set(LIBXML2_WITH_UNICODE ON)
 option(LIBXML2_WITH_VALID "Add the DTD validation support" ON)
+option(LIBXML2_WITH_XINCLUDE "Add the XInclude support" ON)
 option(LIBXML2_WITH_XPATH "Add the XPATH support" ON)
 option(LIBXML2_WITH_ZLIB "Use libz" OFF)
 
@@ -73,9 +73,6 @@ cmake_dependent_option(
     LIBXML2_WITH_WRITER "Add the xmlWriter saving interface" ON
     "LIBXML2_WITH_OUTPUT;LIBXML2_WITH_PUSH" OFF)
 cmake_dependent_option(
-    LIBXML2_WITH_XINCLUDE "Add the XInclude support" ON
-    "LIBXML2_WITH_XPATH" OFF)
-cmake_dependent_option(
     LIBXML2_WITH_XPTR "Add the XPointer support" ON
     "LIBXML2_WITH_XPATH" OFF)
 
@@ -88,7 +85,7 @@ if(LIBXML2_WITH_PYTHON)
         CACHE PATH "Python bindings install directory")
 endif()
 
-foreach(VARIABLE IN ITEMS WITH_AUTOMATA WITH_C14N WITH_CATALOG WITH_DEBUG WITH_EXPR WITH_HTML WITH_HTTP WITH_ICONV WITH_ICU WITH_ISO8859X WITH_LEGACY WITH_LZMA WITH_MODULES WITH_OUTPUT WITH_PATTERN WITH_PUSH WITH_READER WITH_REGEXPS WITH_SAX1 WITH_SCHEMAS WITH_SCHEMATRON WITH_THREADS WITH_THREAD_ALLOC WITH_UNICODE WITH_VALID WITH_WRITER WITH_XINCLUDE WITH_XPATH WITH_XPTR WITH_ZLIB)
+foreach(VARIABLE IN ITEMS WITH_C14N WITH_CATALOG WITH_DEBUG WITH_HTML WITH_HTTP WITH_ICONV WITH_ICU WITH_ISO8859X WITH_LEGACY WITH_LZMA WITH_MODULES WITH_OUTPUT WITH_PATTERN WITH_PUSH WITH_READER WITH_REGEXPS WITH_SAX1 WITH_SCHEMAS WITH_SCHEMATRON WITH_THREADS WITH_THREAD_ALLOC WITH_VALID WITH_WRITER WITH_XINCLUDE WITH_XPATH WITH_XPTR WITH_ZLIB)
     if(LIBXML2_${VARIABLE})
         set(${VARIABLE} 1)
     else()
@@ -106,19 +103,12 @@ math(EXPR LIBXML_VERSION_NUMBER "
 
 set(MODULE_EXTENSION "${CMAKE_SHARED_LIBRARY_SUFFIX}")
 
-set(PACKAGE "libxml2")
-set(PACKAGE_NAME "libxml2")
-set(PACKAGE_STRING "libxml2 ${VERSION}")
-set(PACKAGE_TARNAME "libxml2")
-set(PACKAGE_URL "https://gitlab.gnome.org/GNOME/libxml2")
-set(PACKAGE_VERSION ${VERSION})
-
 if(LIBXML2_WITH_ICONV)
     find_package(Iconv REQUIRED)
 endif()
 
 if(LIBXML2_WITH_ICU)
-    find_package(ICU REQUIRED COMPONENTS data i18n uc)
+    find_package(ICU REQUIRED COMPONENTS uc)
 endif()
 
 if(LIBXML2_WITH_LZMA)
@@ -234,48 +224,79 @@ set(
 set(
     LIBXML2_SRCS
     buf.c
-    c14n.c
-    catalog.c
     chvalid.c
-    debugXML.c
     dict.c
     encoding.c
     entities.c
     error.c
     globals.c
     hash.c
-    HTMLparser.c
-    HTMLtree.c
-    legacy.c
     list.c
-    nanohttp.c
     parser.c
     parserInternals.c
-    pattern.c
-    relaxng.c
     SAX2.c
-    schematron.c
     threads.c
     tree.c
     uri.c
     valid.c
-    xinclude.c
-    xlink.c
     xmlIO.c
     xmlmemory.c
-    xmlmodule.c
-    xmlreader.c
-    xmlregexp.c
-    xmlsave.c
-    xmlschemas.c
-    xmlschemastypes.c
     xmlstring.c
-    xmlunicode.c
-    xmlwriter.c
-    xpath.c
-    xpointer.c
-    xzlib.c
 )
+if(LIBXML2_WITH_C14N)
+    list(APPEND LIBXML2_SRCS c14n.c)
+endif()
+if(LIBXML2_WITH_CATALOG)
+    list(APPEND LIBXML2_SRCS catalog.c)
+endif()
+if(LIBXML2_WITH_DEBUG)
+    list(APPEND LIBXML2_SRCS debugXML.c)
+endif()
+if(LIBXML2_WITH_HTML)
+    list(APPEND LIBXML2_SRCS HTMLparser.c HTMLtree.c)
+endif()
+if(LIBXML2_WITH_HTTP)
+    list(APPEND LIBXML2_SRCS nanohttp.c)
+endif()
+if(LIBXML2_WITH_LEGACY)
+    list(APPEND LIBXML2_SRCS legacy.c)
+endif()
+if(LIBXML2_WITH_LZMA)
+    list(APPEND LIBXML2_SRCS xzlib.c)
+endif()
+if(LIBXML2_WITH_MODULES)
+    list(APPEND LIBXML2_SRCS xmlmodule.c)
+endif()
+if(LIBXML2_WITH_OUTPUT)
+    list(APPEND LIBXML2_SRCS xmlsave.c)
+endif()
+if(LIBXML2_WITH_PATTERN)
+    list(APPEND LIBXML2_SRCS pattern.c)
+endif()
+if(LIBXML2_WITH_READER)
+    list(APPEND LIBXML2_SRCS xmlreader.c)
+endif()
+if(LIBXML2_WITH_REGEXPS)
+    list(APPEND LIBXML2_SRCS xmlregexp.c xmlunicode.c)
+endif()
+if(LIBXML2_WITH_SCHEMAS)
+    list(APPEND LIBXML2_SRCS relaxng.c xmlschemas.c xmlschemastypes.c)
+endif()
+if(LIBXML2_WITH_SCHEMATRON)
+    list(APPEND LIBXML2_SRCS schematron.c)
+endif()
+if(LIBXML2_WITH_WRITER)
+    list(APPEND LIBXML2_SRCS xmlwriter.c)
+endif()
+if(LIBXML2_WITH_XINCLUDE)
+    list(APPEND LIBXML2_SRCS xinclude.c)
+endif()
+if(LIBXML2_WITH_XPATH)
+    list(APPEND LIBXML2_SRCS xpath.c)
+endif()
+if(LIBXML2_WITH_XPTR)
+    list(APPEND LIBXML2_SRCS xlink.c xpointer.c)
+endif()
 
 if(WIN32)
     list(APPEND LIBXML2_SRCS win32/libxml2.rc)
@@ -291,8 +312,6 @@ endif()
 
 add_library(LibXml2 ${LIBXML2_HDRS} ${LIBXML2_SRCS})
 add_library(LibXml2::LibXml2 ALIAS LibXml2)
-
-target_compile_definitions(LibXml2 PRIVATE SYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
 
 target_include_directories(
     LibXml2
@@ -322,10 +341,12 @@ if(UNIX)
 endif()
 
 if(WIN32)
-    target_link_libraries(LibXml2 PRIVATE ws2_32)
-    set(WINSOCK_LIBS "-lws2_32")
     target_link_libraries(LibXml2 PRIVATE bcrypt)
     set(CRYPTO_LIBS "-lbcrypt")
+    if(LIBXML2_WITH_HTTP)
+        target_link_libraries(LibXml2 PRIVATE ws2_32)
+        set(WINSOCK_LIBS "-lws2_32")
+    endif()
 endif()
 
 if(LIBXML2_WITH_ICONV)
@@ -336,16 +357,12 @@ if(LIBXML2_WITH_ICONV)
 endif()
 
 if(LIBXML2_WITH_ICU)
-    target_link_libraries(LibXml2 PRIVATE ICU::data ICU::i18n ICU::uc)
-    if(WIN32)
-        set(ICU_LDFLAGS "-licudt -licuin -licuuc")
-    else()
-        set(ICU_LDFLAGS "-licudata -licui18n -licuuc")
-    endif()
+    target_link_libraries(LibXml2 PRIVATE ICU::uc)
+    set(ICU_LDFLAGS "-licuuc")
     list(APPEND XML_PRIVATE_LIBS "${ICU_LDFLAGS}")
-    pkg_check_modules(ICU_PC IMPORTED_TARGET icu-i18n)
+    pkg_check_modules(ICU_PC IMPORTED_TARGET icu-uc)
     if(ICU_PC_FOUND)
-        list(APPEND XML_PC_REQUIRES icu-i18n)
+        list(APPEND XML_PC_REQUIRES icu-uc)
     else()
         list(APPEND XML_PC_LIBS "${ICU_LDFLAGS}")
     endif()
@@ -427,6 +444,8 @@ if(MSVC)
     endif()
 endif()
 
+set(XML_SYSCONFDIR "${CMAKE_INSTALL_FULL_SYSCONFDIR}")
+
 install(FILES ${LIBXML2_HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libxml2/libxml COMPONENT development)
 
 install(
@@ -442,16 +461,14 @@ if(MSVC AND BUILD_SHARED_LIBS)
 endif()
 
 if(LIBXML2_WITH_PROGRAMS)
-    add_executable(xmllint xmllint.c shell.c)
-    add_executable(xmlcatalog xmlcatalog.c)
-    set(
-        PROGRAMS
-        xmlcatalog
-        xmllint
-    )
+    add_executable(xmllint xmllint.c shell.c lintmain.c)
+    set(PROGRAMS xmllint)
+    if(LIBXML2_WITH_CATALOG AND LIBXML2_WITH_OUTPUT)
+        add_executable(xmlcatalog xmlcatalog.c)
+        list(APPEND PROGRAMS xmlcatalog)
+    endif()
     foreach(PROGRAM ${PROGRAMS})
         add_executable(LibXml2::${PROGRAM} ALIAS ${PROGRAM})
-        target_compile_definitions(${PROGRAM} PRIVATE SYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
         target_link_libraries(${PROGRAM} LibXml2)
         if(HAVE_LIBHISTORY)
             target_link_libraries(${PROGRAM} history)
@@ -480,7 +497,6 @@ if(LIBXML2_WITH_TESTS)
     )
     foreach(TEST ${TESTS})
         add_executable(${TEST} ${TEST}.c)
-        target_compile_definitions(${TEST} PRIVATE SYSCONFDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}")
         target_link_libraries(${TEST} LibXml2)
     endforeach()
     if(Threads_FOUND)
@@ -518,7 +534,7 @@ if(LIBXML2_WITH_PYTHON)
     file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/libxml2.py.in "${LIBXML2CLASS_PY}")
     configure_file(${CMAKE_CURRENT_BINARY_DIR}/libxml2.py.in libxml2.py COPYONLY)
     add_library(
-        LibXml2Mod
+        LibXml2Mod SHARED
         libxml2-py.c
         libxml2-py.h
         python/libxml.c
@@ -583,7 +599,7 @@ install(
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/libxml2-config-version.cmake
     VERSION ${PROJECT_VERSION}
-    COMPATIBILITY ExactVersion
+    COMPATIBILITY SameMajorVersion
 )
 
 install(
