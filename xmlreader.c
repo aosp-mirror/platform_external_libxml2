@@ -41,8 +41,9 @@
 
 #include "private/buf.h"
 #include "private/error.h"
-#include "private/tree.h"
+#include "private/memory.h"
 #include "private/parser.h"
+#include "private/tree.h"
 #ifdef LIBXML_XINCLUDE_ENABLED
 #include "private/xinclude.h"
 #endif
@@ -574,11 +575,16 @@ static int
 xmlTextReaderEntPush(xmlTextReaderPtr reader, xmlNodePtr value)
 {
     if (reader->entNr >= reader->entMax) {
-        size_t newSize = reader->entMax == 0 ? 10 : reader->entMax * 2;
         xmlNodePtr *tmp;
+        int newSize;
 
-        tmp = (xmlNodePtr *) xmlRealloc(reader->entTab,
-                                        newSize * sizeof(*tmp));
+        newSize = xmlGrowCapacity(reader->entMax, sizeof(tmp[0]),
+                                  10, XML_MAX_ITEMS);
+        if (newSize < 0) {
+            xmlTextReaderErrMemory(reader);
+            return (-1);
+        }
+        tmp = xmlRealloc(reader->entTab, newSize * sizeof(tmp[0]));
         if (tmp == NULL) {
             xmlTextReaderErrMemory(reader);
             return (-1);
@@ -1458,8 +1464,11 @@ node_found:
         if (xmlXIncludeProcessNode(reader->xincctxt, reader->node) < 0) {
             int err = xmlXIncludeGetLastError(reader->xincctxt);
 
-            if (err == XML_ERR_NO_MEMORY)
-                xmlTextReaderErrMemory(reader);
+            if (xmlIsCatastrophicError(XML_ERR_FATAL, err)) {
+                xmlFatalErr(reader->ctxt, err, NULL);
+                reader->mode = XML_TEXTREADER_MODE_ERROR;
+                reader->state = XML_TEXTREADER_ERROR;
+            }
             return(-1);
         }
     }
@@ -1733,8 +1742,9 @@ xmlTextReaderReadOuterXml(xmlTextReaderPtr reader)
  *
  * Reads the contents of an element or a text node as a string.
  *
- * Returns a string containing the contents of the Element or Text node,
- *         or NULL if the reader is positioned on any other type of node.
+ * Returns a string containing the contents of the non-empty Element or
+ *         Text node (including CDATA sections), or NULL if the reader
+ *         is positioned on any other type of node.
  *         The string must be deallocated by the caller.
  */
 xmlChar *
@@ -1753,14 +1763,12 @@ xmlTextReaderReadString(xmlTextReaderPtr reader)
         case XML_CDATA_SECTION_NODE:
             break;
         case XML_ELEMENT_NODE:
-            if (xmlTextReaderDoExpand(reader) == -1)
+            if ((xmlTextReaderDoExpand(reader) == -1) ||
+                (node->children == NULL))
                 return(NULL);
             break;
-        case XML_ATTRIBUTE_NODE:
-            /* TODO */
-            break;
         default:
-            break;
+            return(NULL);
     }
 
     buf = xmlBufCreate(50);
@@ -3947,27 +3955,23 @@ xmlTextReaderPreservePattern(xmlTextReaderPtr reader, const xmlChar *pattern,
     if (comp == NULL)
         return(-1);
 
-    if (reader->patternMax <= 0) {
-	reader->patternMax = 4;
-	reader->patternTab = (xmlPatternPtr *) xmlMalloc(reader->patternMax *
-					      sizeof(reader->patternTab[0]));
-        if (reader->patternTab == NULL) {
-            xmlTextReaderErrMemory(reader);
-            return (-1);
-        }
-    }
     if (reader->patternNr >= reader->patternMax) {
         xmlPatternPtr *tmp;
-        reader->patternMax *= 2;
-	tmp = (xmlPatternPtr *) xmlRealloc(reader->patternTab,
-                                      reader->patternMax *
-                                      sizeof(reader->patternTab[0]));
+        int newSize;
+
+        newSize = xmlGrowCapacity(reader->patternMax, sizeof(tmp[0]),
+                                  4, XML_MAX_ITEMS);
+        if (newSize < 0) {
+            xmlTextReaderErrMemory(reader);
+            return(-1);
+        }
+	tmp = xmlRealloc(reader->patternTab, newSize * sizeof(tmp[0]));
         if (tmp == NULL) {
             xmlTextReaderErrMemory(reader);
-	    reader->patternMax /= 2;
-            return (-1);
+            return(-1);
         }
 	reader->patternTab = tmp;
+        reader->patternMax = newSize;
     }
     reader->patternTab[reader->patternNr] = comp;
     return(reader->patternNr++);
@@ -4918,7 +4922,7 @@ xmlTextReaderSetup(xmlTextReaderPtr reader,
 	    inputStream->buf = buf;
             xmlBufResetInput(buf->buffer, inputStream);
 
-            if (inputPush(reader->ctxt, inputStream) < 0) {
+            if (xmlCtxtPushInput(reader->ctxt, inputStream) < 0) {
                 xmlFreeInputStream(inputStream);
                 return(-1);
             }
@@ -5005,6 +5009,8 @@ xmlTextReaderSetup(xmlTextReaderPtr reader,
 void
 xmlTextReaderSetMaxAmplification(xmlTextReaderPtr reader, unsigned maxAmpl)
 {
+    if (reader == NULL)
+        return;
     xmlCtxtSetMaxAmplification(reader->ctxt, maxAmpl);
 }
 
@@ -5019,7 +5025,7 @@ xmlTextReaderSetMaxAmplification(xmlTextReaderPtr reader, unsigned maxAmpl)
 const xmlError *
 xmlTextReaderGetLastError(xmlTextReaderPtr reader)
 {
-    if (reader == NULL)
+    if ((reader == NULL) || (reader->ctxt == NULL))
         return(NULL);
     return(&reader->ctxt->lastError);
 }

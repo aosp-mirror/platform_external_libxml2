@@ -68,16 +68,16 @@ void
 xmlFuzzMemSetup(void);
 
 void
-xmlFuzzMemSetLimit(size_t limit);
+xmlFuzzInjectFailure(size_t failurePos);
 
 int
 xmlFuzzMallocFailed(void);
 
 void
-xmlFuzzResetMallocFailed(void);
+xmlFuzzResetFailure(void);
 
 void
-xmlFuzzCheckMallocFailure(const char *func, int expect);
+xmlFuzzCheckFailureReport(const char *func, int oomReport, int ioReport);
 
 void
 xmlFuzzDataInit(const char *data, size_t size);
@@ -116,11 +116,14 @@ int
 xmlFuzzResourceLoader(void *data, const char *URL, const char *ID,
                       xmlResourceType type, int flags, xmlParserInputPtr *out);
 
-xmlParserInputPtr
-xmlFuzzEntityLoader(const char *URL, const char *ID, xmlParserCtxtPtr ctxt);
-
 char *
 xmlSlurpFile(const char *path, size_t *size);
+
+int
+xmlFuzzOutputWrite(void *ctxt, const char *buffer, int len);
+
+int
+xmlFuzzOutputClose(void *ctxt);
 
 #ifdef __cplusplus
 }
