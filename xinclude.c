@@ -28,6 +28,7 @@
 
 #include "private/buf.h"
 #include "private/error.h"
+#include "private/memory.h"
 #include "private/parser.h"
 #include "private/tree.h"
 #include "private/xinclude.h"
@@ -102,7 +103,9 @@ struct _xmlXIncludeCtxt {
     int			depth; /* recursion depth */
     int		     isStream; /* streaming mode */
 
+#ifdef LIBXML_XPTR_ENABLED
     xmlXPathContextPtr xpctxt;
+#endif
 
     xmlStructuredErrorFunc errorHandler;
     void *errorCtxt;
@@ -162,6 +165,11 @@ xmlXIncludeErr(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node, int error,
     void *data = NULL;
     int res;
 
+    if (error == XML_ERR_NO_MEMORY) {
+        xmlXIncludeErrMemory(ctxt);
+        return;
+    }
+
     if (ctxt->fatalErr != 0)
         return;
     ctxt->nbErrors++;
@@ -183,6 +191,14 @@ xmlXIncludeErr(xmlXIncludeCtxtPtr ctxt, xmlNodePtr node, int error,
         ctxt->fatalErr = 1;
     } else {
         ctxt->errNo = error;
+        /*
+         * Note that we treat IO errors except ENOENT as fatal
+         * although the XInclude spec could be interpreted in a
+         * way that at least some IO errors should be handled
+         * gracefully.
+         */
+        if (xmlIsCatastrophicError(XML_ERR_FATAL, error))
+            ctxt->fatalErr = 1;
     }
 }
 
@@ -294,8 +310,10 @@ xmlXIncludeFreeContext(xmlXIncludeCtxtPtr ctxt) {
 	}
 	xmlFree(ctxt->txtTab);
     }
+#ifdef LIBXML_XPTR_ENABLED
     if (ctxt->xpctxt != NULL)
 	xmlXPathFreeContext(ctxt->xpctxt);
+#endif
     xmlFree(ctxt);
 }
 
@@ -351,7 +369,7 @@ xmlXIncludeParseFile(xmlXIncludeCtxtPtr ctxt, const char *URL) {
     if (inputStream == NULL)
         goto error;
 
-    if (inputPush(pctxt, inputStream) < 0) {
+    if (xmlCtxtPushInput(pctxt, inputStream) < 0) {
         xmlFreeInputStream(inputStream);
         goto error;
     }
@@ -369,8 +387,8 @@ xmlXIncludeParseFile(xmlXIncludeCtxtPtr ctxt, const char *URL) {
     }
 
 error:
-    if (pctxt->errNo == XML_ERR_NO_MEMORY)
-        xmlXIncludeErrMemory(ctxt);
+    if (xmlCtxtIsCatastrophicError(pctxt))
+        xmlXIncludeErr(ctxt, NULL, pctxt->errNo, "parser error", NULL);
     xmlFreeParserCtxt(pctxt);
 
     return(ret);
@@ -549,14 +567,15 @@ xmlXIncludeAddNode(xmlXIncludeCtxtPtr ctxt, xmlNodePtr cur) {
 
     if (ctxt->incNr >= ctxt->incMax) {
         xmlXIncludeRefPtr *table;
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-        size_t newSize = ctxt->incMax ? ctxt->incMax * 2 : 1;
-#else
-        size_t newSize = ctxt->incMax ? ctxt->incMax * 2 : 4;
-#endif
+        int newSize;
 
-        table = (xmlXIncludeRefPtr *) xmlRealloc(ctxt->incTab,
-	             newSize * sizeof(ctxt->incTab[0]));
+        newSize = xmlGrowCapacity(ctxt->incMax, sizeof(table[0]),
+                                  4, XML_MAX_ITEMS);
+        if (newSize < 0) {
+	    xmlXIncludeErrMemory(ctxt);
+	    goto error;
+	}
+        table = xmlRealloc(ctxt->incTab, newSize * sizeof(table[0]));
         if (table == NULL) {
 	    xmlXIncludeErrMemory(ctxt);
 	    goto error;
@@ -1120,13 +1139,16 @@ xmlXIncludeLoadDoc(xmlXIncludeCtxtPtr ctxt, xmlXIncludeRefPtr ref) {
     /* Also cache NULL docs */
     if (ctxt->urlNr >= ctxt->urlMax) {
         xmlXIncludeDoc *tmp;
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-        size_t newSize = ctxt->urlMax ? ctxt->urlMax * 2 : 1;
-#else
-        size_t newSize = ctxt->urlMax ? ctxt->urlMax * 2 : 8;
-#endif
+        int newSize;
 
-        tmp = xmlRealloc(ctxt->urlTab, sizeof(xmlXIncludeDoc) * newSize);
+        newSize = xmlGrowCapacity(ctxt->urlMax, sizeof(tmp[0]),
+                                  8, XML_MAX_ITEMS);
+        if (newSize < 0) {
+            xmlXIncludeErrMemory(ctxt);
+            xmlFreeDoc(doc);
+            goto error;
+        }
+        tmp = xmlRealloc(ctxt->urlTab, newSize * sizeof(tmp[0]));
         if (tmp == NULL) {
             xmlXIncludeErrMemory(ctxt);
             xmlFreeDoc(doc);
@@ -1313,9 +1335,10 @@ loaded:
         ref->inc = xmlXIncludeCopyXPointer(ctxt, xptr, ref->base);
         xmlXPathFreeObject(xptr);
     }
-#endif
 
 done:
+#endif
+
     ret = 0;
 
 error:
@@ -1471,13 +1494,15 @@ xmlXIncludeLoadTxt(xmlXIncludeCtxtPtr ctxt, xmlXIncludeRefPtr ref) {
 
     if (ctxt->txtNr >= ctxt->txtMax) {
         xmlXIncludeTxt *tmp;
-#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-        size_t newSize = ctxt->txtMax ? ctxt->txtMax * 2 : 1;
-#else
-        size_t newSize = ctxt->txtMax ? ctxt->txtMax * 2 : 8;
-#endif
+        int newSize;
 
-        tmp = xmlRealloc(ctxt->txtTab, sizeof(xmlXIncludeTxt) * newSize);
+        newSize = xmlGrowCapacity(ctxt->txtMax, sizeof(tmp[0]),
+                                  8, XML_MAX_ITEMS);
+        if (newSize < 0) {
+            xmlXIncludeErrMemory(ctxt);
+	    goto error;
+        }
+        tmp = xmlRealloc(ctxt->txtTab, newSize * sizeof(tmp[0]));
         if (tmp == NULL) {
             xmlXIncludeErrMemory(ctxt);
 	    goto error;

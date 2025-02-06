@@ -45,6 +45,7 @@
 #include "private/enc.h"
 #include "private/entities.h"
 #include "private/error.h"
+#include "private/memory.h"
 
 #ifdef LIBXML_ICU_ENABLED
 #include <unicode/ucnv.h>
@@ -213,9 +214,9 @@ static const xmlCharEncodingHandler defaultHandlers[31] = {
     MAKE_HANDLER("UCS-4LE", NULL, NULL),
     MAKE_HANDLER("UCS-4BE", NULL, NULL),
     MAKE_HANDLER("IBM037", NULL, NULL),
-    MAKE_HANDLER("ISO-10646-UCS-4", NULL, NULL), /* UCS4_2143 */
-    MAKE_HANDLER("ISO-10646-UCS-4", NULL, NULL), /* UCS4_2143 */
-    MAKE_HANDLER("ISO-10646-UCS-2", NULL, NULL),
+    MAKE_HANDLER(NULL, NULL, NULL), /* UCS4_2143 */
+    MAKE_HANDLER(NULL, NULL, NULL), /* UCS4_3412 */
+    MAKE_HANDLER("UCS-2", NULL, NULL),
     MAKE_HANDLER("ISO-8859-1", latin1ToUTF8, UTF8ToLatin1),
     MAKE_ISO_HANDLER("ISO-8859-2", 2),
     MAKE_ISO_HANDLER("ISO-8859-3", 3),
@@ -286,12 +287,6 @@ xmlDetectCharEncoding(const unsigned char* in, int len)
 	if ((in[0] == 0x3C) && (in[1] == 0x00) &&
 	    (in[2] == 0x00) && (in[3] == 0x00))
 	    return(XML_CHAR_ENCODING_UCS4LE);
-	if ((in[0] == 0x00) && (in[1] == 0x00) &&
-	    (in[2] == 0x3C) && (in[3] == 0x00))
-	    return(XML_CHAR_ENCODING_UCS4_2143);
-	if ((in[0] == 0x00) && (in[1] == 0x3C) &&
-	    (in[2] == 0x00) && (in[3] == 0x00))
-	    return(XML_CHAR_ENCODING_UCS4_3412);
 	if ((in[0] == 0x4C) && (in[1] == 0x6F) &&
 	    (in[2] == 0xA7) && (in[3] == 0x94))
 	    return(XML_CHAR_ENCODING_EBCDIC);
@@ -424,13 +419,13 @@ xmlAddEncodingAlias(const char *name, const char *alias) {
 
     if (xmlCharEncodingAliasesNb >= xmlCharEncodingAliasesMax) {
         xmlCharEncodingAliasPtr tmp;
-        size_t newSize = xmlCharEncodingAliasesMax ?
-                         xmlCharEncodingAliasesMax * 2 :
-                         20;
+        int newSize;
 
-        tmp = (xmlCharEncodingAliasPtr)
-              xmlRealloc(xmlCharEncodingAliases,
-                         newSize * sizeof(xmlCharEncodingAlias));
+        newSize = xmlGrowCapacity(xmlCharEncodingAliasesMax, sizeof(tmp[0]),
+                                  20, XML_MAX_ITEMS);
+        if (newSize < 0)
+            return(-1);
+        tmp = xmlRealloc(xmlCharEncodingAliases, newSize * sizeof(tmp[0]));
         if (tmp == NULL)
             return(-1);
         xmlCharEncodingAliases = tmp;
@@ -572,9 +567,9 @@ xmlGetCharEncodingName(xmlCharEncoding enc) {
         case XML_CHAR_ENCODING_UTF16BE:
 	    return("UTF-16");
         case XML_CHAR_ENCODING_UCS4LE:
-            return("ISO-10646-UCS-4");
+            return("UCS-4");
         case XML_CHAR_ENCODING_UCS4BE:
-            return("ISO-10646-UCS-4");
+            return("UCS-4");
         default:
             break;
     }
@@ -1122,6 +1117,14 @@ xmlIconvConvert(unsigned char *out, int *outlen,
          */
         if (errno == EINVAL)
             return(XML_ENC_ERR_SUCCESS);
+#ifdef __APPLE__
+        /*
+         * Apple's new libiconv can return EOPNOTSUPP under
+         * unknown circumstances (detected when fuzzing).
+         */
+        if (errno == EOPNOTSUPP)
+            return(XML_ENC_ERR_INPUT);
+#endif
         return(XML_ENC_ERR_INTERNAL);
     }
     return(XML_ENC_ERR_SUCCESS);
@@ -1144,6 +1147,38 @@ xmlCharEncIconv(void *vctxt, const char *name, xmlCharEncConverter *conv) {
     iconv_t icv_in;
     iconv_t icv_out;
     int ret;
+
+    /*
+     * POSIX allows "indicator suffixes" like "//IGNORE" to be
+     * passed to iconv_open. This can change the behavior in
+     * unexpected ways.
+     *
+     * Many iconv implementations also support non-standard
+     * codesets like "wchar_t", "char" or the empty string "".
+     * It would make sense to disallow them, but codeset names
+     * are matched fuzzily, so a string like "w-C.hA_rt" could
+     * be interpreted as "wchar_t".
+     *
+     * When escaping characters that aren't supported in the
+     * target encoding, we also rely on GNU libiconv behavior to
+     * stop conversion without trying any kind of fallback.
+     * This violates the POSIX spec which says:
+     *
+     * > If iconv() encounters a character in the input buffer
+     * > that is valid, but for which an identical character does
+     * > not exist in the output codeset [...] iconv() shall
+     * > perform an implementation-defined conversion on the
+     * > character.
+     *
+     * See: https://sourceware.org/bugzilla/show_bug.cgi?id=29913
+     *
+     * Unfortunately, strict POSIX compliance makes it impossible
+     * to detect untranslatable characters.
+     */
+    if (strstr(name, "//") != NULL) {
+        ret = XML_ERR_UNSUPPORTED_ENCODING;
+        goto error;
+    }
 
     inputCtxt = xmlMalloc(sizeof(xmlIconvCtxt));
     if (inputCtxt == NULL) {
@@ -1228,7 +1263,7 @@ struct _uconv_t {
 
 /**
  * xmlUconvConvert:
- * @vctxt:  converison context
+ * @vctxt:  conversion context
  * @out:  a pointer to an array of bytes to store the result
  * @outlen:  the length of @out
  * @in:  a pointer to an array of input bytes

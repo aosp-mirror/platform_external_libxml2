@@ -29,14 +29,28 @@
 #include "config.h"
 #include <libxml/xmlversion.h>
 
-/*
- * Due to some Autotools limitations, this variable must be passed as
- * compiler flag. Define a default value if the macro wasn't set by the
- * build system.
- */
-#ifndef SYSCONFDIR
-  #define SYSCONFDIR "/etc"
+#if __STDC_VERSION__ >= 199901L
+  #define XML_INLINE inline
+#elif defined(_MSC_VER)
+  #if _MSC_VER >= 1900
+    #define XML_INLINE inline
+  #else
+    #define XML_INLINE _inline
+  #endif
+#else
+  #define XML_INLINE
 #endif
+
+#if __STDC_VERSION__ >= 199901L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+  #include <stdint.h>
+  #define XML_INTPTR_T intptr_t
+#else
+  #include <stddef.h>
+  #define XML_INTPTR_T ptrdiff_t
+#endif
+
+#define XML_PTR_TO_INT(p) ((XML_INTPTR_T) (p))
+#define XML_INT_TO_PTR(i) ((void *) (XML_INTPTR_T) (i))
 
 #if !defined(_WIN32) && \
     !defined(__CYGWIN__) && \
@@ -57,6 +71,13 @@
   #define ATTRIBUTE_DESTRUCTOR __attribute__((destructor))
 #endif
 
+#if (defined(__clang__) && __clang_major__ >= 18) || \
+    (defined(__GNUC__) && __GNUC__ >= 15)
+  #define ATTRIBUTE_COUNTED_BY(c) __attribute__((__counted_by__(c)))
+#else
+  #define ATTRIBUTE_COUNTED_BY(c)
+#endif
+
 #if defined(__clang__) || \
     (defined(__GNUC__) && (__GNUC__ >= 8) && !defined(__EDG__))
   #define ATTRIBUTE_NO_SANITIZE(arg) __attribute__((no_sanitize(arg)))
@@ -65,7 +86,8 @@
 #endif
 
 #ifdef __clang__
-  #if __clang_major__ >= 12
+  #if (!defined(__apple_build_version__) && __clang_major__ >= 12) || \
+      (defined(__apple_build_version__) && __clang_major__ >= 13)
     #define ATTRIBUTE_NO_SANITIZE_INTEGER \
       ATTRIBUTE_NO_SANITIZE("unsigned-integer-overflow") \
       ATTRIBUTE_NO_SANITIZE("unsigned-shift-base")

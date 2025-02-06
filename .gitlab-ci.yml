@@ -18,7 +18,7 @@ gcc:c89:
   extends: .test
   variables:
     CONFIG: "--without-python"
-    CFLAGS: "-O2 -std=c89 -D_XOPEN_SOURCE=600"
+    CFLAGS: "-O2 -std=c89 -D_XOPEN_SOURCE=600 -Wno-error=unused-function"
 
 gcc:minimum:
   extends: .test
@@ -30,7 +30,7 @@ gcc:medium:
   extends: .test
   variables:
     BASE_CONFIG: "--with-minimum"
-    CONFIG: "--with-threads --with-tree --with-xpath --with-output --with-html --with-iso8859x"
+    CONFIG: "--with-threads --with-tree --with-xpath --with-output --with-html --with-iso8859x --with-valid"
     CFLAGS: "-O2"
 
 gcc:legacy:
@@ -154,6 +154,11 @@ cmake:linux:clang:static:
     CC: clang
     SUFFIX: linux-clang-static
 
+# cmake:mingw is currently broken for unknown reasons.
+#
+# Executing /mingw64/bin/cmake.exe with any arguments fails without error
+# message and exit code 127 since 2025-01-21.
+
 .cmake:mingw:
   tags:
     - win32-ps
@@ -193,6 +198,8 @@ cmake:mingw:w64-i686:static:
 
 cmake:mingw:w64-x86_64:shared:
   extends: .cmake:mingw
+  only:
+    - schedules
   variables:
     BUILD_SHARED_LIBS: "ON"
     MSYSTEM: MINGW64
@@ -285,6 +292,14 @@ cmake:linux:gcc:shared:
     BUILD_SHARED_LIBS: "ON"
     CC: gcc
     SUFFIX: linux-gcc-shared
+
+dist:
+  image: registry.gitlab.gnome.org/gnome/libxml2
+  script:
+    - sh .gitlab-ci/dist.sh
+  artifacts:
+    paths:
+      - libxml2-dist/*.tar.xz
 
 pages:
   script:
