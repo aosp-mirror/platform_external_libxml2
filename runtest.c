@@ -1797,6 +1797,8 @@ htmlTokenizerTest(const char *filename, const char *result,
         config.startTag = BAD_CAST startTag;
         config.inCharacters = 0;
         ctxt->_private = &config;
+        /* Skip charset auto-detection */
+        ctxt->instate = XML_PARSER_XML_DECL;
         htmlCtxtUseOptions(ctxt, options | HTML_PARSE_HTML5);
         htmlParseChunk(ctxt, data, size, 1);
         htmlFreeParserCtxt(ctxt);
@@ -2254,9 +2256,13 @@ pushBoundaryTest(const char *filename, const char *result,
                 if ((options & XML_PARSE_HTML) &&
                     (ctxt->endCheckState)) {
                     max = strlen((const char *) ctxt->name) + 2;
+                } else if (c == '&') {
+                    max = (options & XML_PARSE_HTML) ? 32 : 1;
+                } else if (c == '<') {
+                    max = 1;
                 } else {
                     /* 3 bytes for partial UTF-8 */
-                    max = ((c == '<') || (c == '&')) ? 1 : 3;
+                    max = 3;
                 }
             } else if (ctxt->instate == XML_PARSER_CDATA_SECTION) {
                 /* 2 bytes for terminator, 3 bytes for UTF-8 */
@@ -3389,8 +3395,11 @@ static int urip_rlen;
  */
 static int
 uripMatch(const char * URI) {
-    if ((URI == NULL) || (!strcmp(URI, "file://" SYSCONFDIR "/xml/catalog")))
+#ifdef LIBXML_CATALOG_ENABLED
+    if ((URI == NULL) ||
+        (!strcmp(URI, "file://" XML_SYSCONFDIR "/xml/catalog")))
         return(0);
+#endif
     /* Verify we received the escaped URL */
     if (strcmp(urip_rcvsURLs[urip_current], URI))
 	urip_success = 0;
@@ -3408,8 +3417,11 @@ uripMatch(const char * URI) {
  */
 static void *
 uripOpen(const char * URI) {
-    if ((URI == NULL) || (!strcmp(URI, "file://" SYSCONFDIR "/xml/catalog")))
+#ifdef LIBXML_CATALOG_ENABLED
+    if ((URI == NULL) ||
+        (!strcmp(URI, "file://" XML_SYSCONFDIR "/xml/catalog")))
         return(NULL);
+#endif
     /* Verify we received the escaped URL */
     if (strcmp(urip_rcvsURLs[urip_current], URI))
 	urip_success = 0;

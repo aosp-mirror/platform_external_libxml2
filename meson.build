@@ -3,7 +3,11 @@ project(
     'c',
     version: files('VERSION'),
     license: 'MIT',
-    default_options: ['buildtype=debug', 'warning_level=3'],
+    default_options: [
+        'c_std=c11,c99,c89',
+        'buildtype=debug',
+        'warning_level=3',
+    ],
     meson_version: '>= 0.61',
 )
 
@@ -52,6 +56,29 @@ endif
 # binaries
 cc = meson.get_compiler('c')
 
+# global compiler flags
+
+global_args = [
+    '-D_XOPEN_SOURCE=600',
+
+    # Enabled by warning_level=3
+    # '-pedantic',
+    # '-Wall',
+    # '-Wextra',
+
+    '-Wshadow',
+    '-Wpointer-arith',
+    '-Wcast-align',
+    '-Wwrite-strings',
+    '-Wstrict-prototypes',
+    '-Wmissing-prototypes',
+    '-Wno-long-long',
+    '-Wno-format-extra-args',
+    '-Wno-array-bounds',
+]
+global_args = cc.get_supported_arguments(global_args)
+add_project_arguments(global_args, language: 'c')
+
 # options
 
 # disabled by default
@@ -93,6 +120,9 @@ want_threads = want_minimum ? feature.enabled() : feature.allowed()
 
 feature = get_option('valid')
 want_valid = want_minimum ? feature.enabled() : feature.allowed()
+
+feature = get_option('xinclude')
+want_xinclude = want_minimum ? feature.enabled() : feature.allowed()
 
 # default depends on legacy option
 
@@ -138,7 +168,6 @@ feature = get_option('xpath')
 want_xpath = not want_minimum \
     or get_option('c14n').enabled() \
     or get_option('schematron').enabled() \
-    or get_option('xinclude').enabled() \
     or get_option('xptr').enabled() ? \
     feature.allowed() : feature.enabled()
 
@@ -169,10 +198,6 @@ feature = get_option('writer') \
     .require(want_output, error_message: 'writer requires output') \
     .require(want_push, error_message: 'writer requires push')
 want_writer = want_minimum ? feature.enabled() : feature.allowed()
-
-feature = get_option('xinclude') \
-    .require(want_xpath, error_message: 'xinclude requires xpath')
-want_xinclude = want_minimum ? feature.enabled() : feature.allowed()
 
 feature = get_option('xptr') \
     .require(want_xpath, error_message: 'xptr requires xpath')
@@ -225,12 +250,8 @@ endforeach
 
 ## config.h
 config_h = configuration_data()
-config_h.set_quoted('PACKAGE_NAME', meson.project_name())
-config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
-config_h.set_quoted('PACKAGE_BIN_DIR', dir_bin)
-config_h.set_quoted('PACKAGE_LIB_DIR', dir_lib)
-config_h.set_quoted('PACKAGE_DATA_DIR', dir_data)
-config_h.set_quoted('LOCALEDIR', dir_locale)
+config_h.set_quoted('XML_SYSCONFDIR',
+                    get_option('prefix') / get_option('sysconfdir'))
 
 # header files
 xml_check_headers = [
@@ -374,8 +395,8 @@ endif
 
 # icu
 if want_icu
-    icu_dep = dependency('icu-i18n', method: 'pkg-config')
-    defs = icu_dep.get_variable(pkgconfig: 'DEFS')
+    icu_dep = dependency('icu-uc')
+    defs = icu_dep.get_variable(pkgconfig: 'DEFS', default_value: '')
     if cc.has_argument(defs)
         libxml2_cflags += defs
     endif
@@ -431,7 +452,6 @@ xml_opt_src = [
     [want_reader, ['xmlreader.c']],
     [want_regexps, ['xmlregexp.c', 'xmlunicode.c']],
     [want_schemas, ['relaxng.c', 'xmlschemas.c', 'xmlschemastypes.c']],
-    [want_schemas and not want_xpath, ['xpath.c']],
     [want_schematron, ['schematron.c']],
     [want_writer, ['xmlwriter.c']],
     [want_xinclude, ['xinclude.c']],
@@ -474,7 +494,7 @@ meson.override_dependency('libxml-2.0', xml_dep)
 
 executable(
     'xmllint',
-    files('xmllint.c', 'shell.c'),
+    files('xmllint.c', 'shell.c', 'lintmain.c'),
     dependencies: [xml_dep, xmllint_deps],
     include_directories: config_dir,
     install: true,
@@ -482,13 +502,15 @@ executable(
 
 ## xmlcatalog tool
 
-executable(
-    'xmlcatalog',
-    files('xmlcatalog.c'),
-    dependencies: [xml_dep, xmllint_deps],
-    include_directories: config_dir,
-    install: true,
-)
+if want_catalog and want_output
+    executable(
+        'xmlcatalog',
+        files('xmlcatalog.c'),
+        dependencies: [xml_dep, xmllint_deps],
+        include_directories: config_dir,
+        install: true,
+    )
+endif
 
 ## testdso module
 
@@ -555,6 +577,7 @@ config_cmake.set('LIBXML_MAJOR_VERSION', v_maj)
 config_cmake.set('LIBXML_MINOR_VERSION', v_min)
 config_cmake.set('LIBXML_MICRO_VERSION', v_mic)
 config_cmake.set('VERSION', meson.project_version())
+config_cmake.set('WITH_HTTP', want_http.to_int().to_string())
 config_cmake.set('WITH_ICONV', want_iconv.to_int().to_string())
 config_cmake.set('WITH_ICU', want_icu.to_int().to_string())
 config_cmake.set('WITH_LZMA', want_lzma.to_int().to_string())

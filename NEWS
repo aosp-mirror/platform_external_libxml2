@@ -15,12 +15,16 @@ existing parser context was added.
 
 The xmlSave API now has additional options to replace global settings.
 
-Parser options XML_PARSE_NO_UNZIP, XML_PARSE_NO_SYS_CATALOG and
-XML_PARSE_NO_CATALOG_PI were added.
+Parser options XML_PARSE_UNZIP, XML_PARSE_NO_SYS_CATALOG and
+XML_PARSE_CATALOG_PI were added.
 
 The serialization API will now take user-provided or default encodings
 into account when serializing attribute values, matching the
 serialization of text and avoiding unnecessary escaping.
+
+An API function to install a custom character encoding converter is
+now available. This makes it possible to use ICU for encoding conversion
+even if libxml2 was complied without ICU support, see example/icu.c.
 
 Access to many public struct members is now deprecated. Several accessor
 functions were added.

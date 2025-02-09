@@ -35,7 +35,7 @@
 #include <libxml/relaxng.h>
 #endif
 
-#include "private/shell.h"
+#include "private/lint.h"
 
 #ifndef STDIN_FILENO
   #define STDIN_FILENO 0
@@ -1096,7 +1096,6 @@ xmllintShellReadline(char *prompt) {
  * xmllintShell:
  * @doc:  the initial document
  * @filename:  the output buffer
- * @input:  the line reading function
  * @output:  the output FILE*, defaults to stdout if NULL
  *
  * Implements the XML shell
