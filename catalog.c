@@ -40,6 +40,8 @@
 #include "private/cata.h"
 #include "private/buf.h"
 #include "private/error.h"
+#include "private/memory.h"
+#include "private/parser.h"
 #include "private/threads.h"
 
 #define MAX_DELEGATE	50
@@ -54,10 +56,10 @@
 #define XML_URN_PUBID "urn:publicid:"
 #define XML_CATAL_BREAK ((xmlChar *) -1)
 #ifndef XML_XML_DEFAULT_CATALOG
-#define XML_XML_DEFAULT_CATALOG "file://" SYSCONFDIR "/xml/catalog"
+#define XML_XML_DEFAULT_CATALOG "file://" XML_SYSCONFDIR "/xml/catalog"
 #endif
 #ifndef XML_SGML_DEFAULT_CATALOG
-#define XML_SGML_DEFAULT_CATALOG "file://" SYSCONFDIR "/sgml/catalog"
+#define XML_SGML_DEFAULT_CATALOG "file://" XML_SYSCONFDIR "/sgml/catalog"
 #endif
 
 static xmlChar *xmlCatalogNormalizePublic(const xmlChar *pubID);
@@ -897,7 +899,7 @@ xmlParseCatalogFile(const char *filename) {
     inputStream->buf = buf;
     xmlBufResetInput(buf->buffer, inputStream);
 
-    if (inputPush(ctxt, inputStream) < 0) {
+    if (xmlCtxtPushInput(ctxt, inputStream) < 0) {
         xmlFreeInputStream(inputStream);
         xmlFreeParserCtxt(ctxt);
         return(NULL);
@@ -2128,7 +2130,7 @@ xmlParseSGMLCatalogComment(const xmlChar *cur) {
  */
 static const xmlChar *
 xmlParseSGMLCatalogPubid(const xmlChar *cur, xmlChar **id) {
-    xmlChar *buf = NULL, *tmp;
+    xmlChar *buf = NULL;
     int len = 0;
     int size = 50;
     xmlChar stop;
@@ -2155,14 +2157,23 @@ xmlParseSGMLCatalogPubid(const xmlChar *cur, xmlChar **id) {
 	if ((stop == ' ') && (IS_BLANK_CH(*cur)))
 	    break;
 	if (len + 1 >= size) {
-	    size *= 2;
-	    tmp = (xmlChar *) xmlRealloc(buf, size);
+            xmlChar *tmp;
+            int newSize;
+
+            newSize = xmlGrowCapacity(size, 1, 1, XML_MAX_ITEMS);
+            if (newSize < 0) {
+		xmlCatalogErrMemory();
+		xmlFree(buf);
+		return(NULL);
+            }
+	    tmp = xmlRealloc(buf, newSize);
 	    if (tmp == NULL) {
 		xmlCatalogErrMemory();
 		xmlFree(buf);
 		return(NULL);
 	    }
 	    buf = tmp;
+            size = newSize;
 	}
 	buf[len++] = *cur;
 	NEXT;
@@ -3409,7 +3420,7 @@ xmlCatalogConvert(void) {
  * xmlCatalogGetDefaults:
  *
  * DEPRECATED: Use XML_PARSE_NO_SYS_CATALOG and
- * XML_PARSE_NO_CATALOG_PI.
+ * XML_PARSE_CATALOG_PI.
  *
  * Used to get the user preference w.r.t. to what catalogs should
  * be accepted
@@ -3426,7 +3437,7 @@ xmlCatalogGetDefaults(void) {
  * @allow:  what catalogs should be accepted
  *
  * DEPRECATED: Use XML_PARSE_NO_SYS_CATALOG and
- * XML_PARSE_NO_CATALOG_PI.
+ * XML_PARSE_CATALOG_PI.
  *
  * Used to set the user preference w.r.t. to what catalogs should
  * be accepted

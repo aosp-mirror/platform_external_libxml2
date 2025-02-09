@@ -1,5 +1,12 @@
-# The image is also used for libxslt, that's why we need git and
-# libgcrypt-dev.
+# The image is also used for libxslt.
+#
+# package           required for
+# ------------------------------------------------------------
+# libclang-rt-dev   sanitizer runtimes
+# llvm              llvm-symbolizer (for sanitizer backtraces)
+# git               libxslt
+# libgcrypt-dev     libxslt
+# xz-utils          make dist
 
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,7 +18,8 @@ RUN apt-get update && \
         make gcc clang llvm libclang-rt-dev \
         zlib1g-dev liblzma-dev libgcrypt-dev \
         python3-dev \
-        cmake meson
+        cmake meson \
+        xz-utils
 WORKDIR /tests
 RUN curl https://www.w3.org/XML/Test/xmlts20080827.tar.gz |tar xz
 
